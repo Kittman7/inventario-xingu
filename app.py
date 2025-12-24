@@ -8,8 +8,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Xingu Cloud", page_icon="🍇", layout="wide")
 
-# --- 1. DICCIONARIO DE IDIOMAS (EL CEREBRO DE LA TRADUCCIÓN) ---
-# Aquí definimos cada palabra en los 3 idiomas
+# --- 1. DICCIONARIO DE IDIOMAS (TRADUCCIÓN COMPLETA) ---
 TR = {
     "Português": {
         "menu_dash": "📊 Painel (Gráficos)",
@@ -17,8 +16,11 @@ TR = {
         "menu_admin": "🛠️ Administrar (Editar)",
         "menu_log": "📜 Histórico",
         "title_dash": "Visão Geral de Vendas",
+        "search_label": "🔎 Buscar Cliente / Empresa:",
+        "search_ph": "Digite o nome...",
         "total_val": "Valor Total",
         "total_kg": "Total Kg",
+        "total_sales": "Vendas Totais",
         "chart_title": "Vendas por Empresa",
         "form_emp": "Empresa",
         "form_prod": "Produto",
@@ -30,10 +32,8 @@ TR = {
         "msg_success": "Salvo com sucesso!",
         "msg_update": "Atualizado com sucesso!",
         "msg_delete": "Venda apagada!",
-        "msg_confirm": "Tem certeza?",
         "select_edit": "🔍 Selecione para editar:",
-        "log_action": "Ação",
-        "log_details": "Detalhes"
+        "no_results": "Nenhum resultado encontrado para"
     },
     "Español": {
         "menu_dash": "📊 Dashboard (Gráficos)",
@@ -41,8 +41,11 @@ TR = {
         "menu_admin": "🛠️ Administrar (Editar)",
         "menu_log": "📜 Historial",
         "title_dash": "Resumen de Ventas",
+        "search_label": "🔎 Buscar Cliente / Empresa:",
+        "search_ph": "Escribe el nombre...",
         "total_val": "Valor Total",
         "total_kg": "Total Kg",
+        "total_sales": "Ventas Totales",
         "chart_title": "Ventas por Empresa",
         "form_emp": "Empresa",
         "form_prod": "Producto",
@@ -54,10 +57,8 @@ TR = {
         "msg_success": "¡Guardado con éxito!",
         "msg_update": "¡Actualizado con éxito!",
         "msg_delete": "¡Venta eliminada!",
-        "msg_confirm": "Seguro?",
         "select_edit": "🔍 Selecciona para editar:",
-        "log_action": "Acción",
-        "log_details": "Detalles"
+        "no_results": "No se encontraron resultados para"
     },
     "English": {
         "menu_dash": "📊 Dashboard (Charts)",
@@ -65,8 +66,11 @@ TR = {
         "menu_admin": "🛠️ Manage (Edit)",
         "menu_log": "📜 History Log",
         "title_dash": "Sales Overview",
+        "search_label": "🔎 Search Client / Company:",
+        "search_ph": "Type name...",
         "total_val": "Total Value",
         "total_kg": "Total Kg",
+        "total_sales": "Total Sales",
         "chart_title": "Sales by Company",
         "form_emp": "Company",
         "form_prod": "Product",
@@ -78,10 +82,8 @@ TR = {
         "msg_success": "Saved successfully!",
         "msg_update": "Updated successfully!",
         "msg_delete": "Sale deleted!",
-        "msg_confirm": "Are you sure?",
         "select_edit": "🔍 Select to edit:",
-        "log_action": "Action",
-        "log_details": "Details"
+        "no_results": "No results found for"
     }
 }
 
@@ -107,22 +109,20 @@ def registrar_historial(book, accion, detalles):
         hora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         sheet_log.append_row([hora, accion, detalles])
     except:
-        pass # Si falla el historial, no rompemos la app
+        pass
 
 # --- 3. APP PRINCIPAL ---
 def main():
-    # --- BARRA LATERAL (IDIOMA) ---
-    st.sidebar.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=50) # Icono decorativo
+    # --- BARRA LATERAL ---
+    st.sidebar.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=50)
     lang = st.sidebar.selectbox("Language / Idioma", ["Español", "Português", "English"])
     
-    # Cargar diccionario del idioma seleccionado
     t = TR[lang]
     rate = RATES[lang]["rate"]
     symbol = RATES[lang]["symbol"]
 
     st.title(f"🍇 Xingu Fruit - {lang}")
 
-    # Conexión
     try:
         book = get_google_services()
         sheet = book.sheet1
@@ -130,17 +130,15 @@ def main():
         st.error(f"Error Conexión: {e}")
         st.stop()
 
-    # --- MENÚ PRINCIPAL (TRADUCIDO) ---
     opciones_menu = [t['menu_dash'], t['menu_add'], t['menu_admin'], t['menu_log']]
     menu = st.sidebar.radio("Navegación", opciones_menu)
 
     # ==========================================
-    # 📊 SECCIÓN 1: DASHBOARD (GRÁFICOS)
+    # 📊 SECCIÓN 1: DASHBOARD CON BUSCADOR
     # ==========================================
     if menu == t['menu_dash']:
         st.header(t['title_dash'])
         
-        # Leer datos
         try:
             data = sheet.get_all_records()
             df = pd.DataFrame(data)
@@ -148,46 +146,59 @@ def main():
             df = pd.DataFrame()
 
         if not df.empty:
-            # Convertir a números
+            # Limpieza y Conversión
             df['Valor_BRL'] = pd.to_numeric(df['Valor_BRL'], errors='coerce').fillna(0)
             df['Kg'] = pd.to_numeric(df['Kg'], errors='coerce').fillna(0)
-            
-            # Crear columna con moneda convertida
             df['Valor_View'] = df['Valor_BRL'] * rate
-
-            # TARJETAS DE TOTALES (KPIs)
-            c1, c2, c3 = st.columns(3)
-            total_dinero = df['Valor_View'].sum()
-            total_kg = df['Kg'].sum()
             
-            c1.metric(f"{t['total_val']} ({symbol})", f"{symbol} {total_dinero:,.2f}")
-            c2.metric(t['total_kg'], f"{total_kg:,.0f} Kg")
-            c3.metric("Total Ventas", len(df))
+            # --- BUSCADOR ---
+            st.markdown("---")
+            filtro = st.text_input(t['search_label'], placeholder=t['search_ph'])
+            
+            if filtro:
+                # Filtrar DataFrame buscando el texto (sin importar mayúsculas/minúsculas)
+                df_filtrado = df[df['Empresa'].str.contains(filtro, case=False, na=False)]
+                if df_filtrado.empty:
+                    st.warning(f"{t['no_results']} '{filtro}'")
+                else:
+                    st.success(f"Resultados para: {filtro}")
+            else:
+                df_filtrado = df # Si no hay filtro, usar todo
 
-            st.divider()
+            # --- MOSTRAR DATOS (FILTRADOS O TOTALES) ---
+            if not df_filtrado.empty:
+                c1, c2, c3 = st.columns(3)
+                total_dinero = df_filtrado['Valor_View'].sum()
+                total_kg = df_filtrado['Kg'].sum()
+                
+                # Aquí usamos las etiquetas traducidas correctamente
+                c1.metric(f"{t['total_val']} ({symbol})", f"{symbol} {total_dinero:,.2f}")
+                c2.metric(t['total_kg'], f"{total_kg:,.0f} Kg")
+                c3.metric(t['total_sales'], len(df_filtrado))
 
-            # GRÁFICO DE BARRAS
-            # Usamos Plotly y le ponemos el título traducido
-            fig = px.bar(
-                df, 
-                x='Empresa', 
-                y='Valor_View', 
-                color='Producto',
-                title=f"{t['chart_title']} ({symbol})",
-                text_auto='.2s',
-                labels={'Valor_View': f"Valor ({symbol})", 'Empresa': t['form_emp']}
-            )
-            fig.update_layout(xaxis_title=t['form_emp'], yaxis_title=f"Valor ({symbol})")
-            st.plotly_chart(fig, use_container_width=True)
+                st.divider()
 
-            # Tabla abajo
-            with st.expander("Ver Tabla de Datos"):
-                st.dataframe(df)
+                # GRÁFICO
+                fig = px.bar(
+                    df_filtrado, 
+                    x='Empresa', 
+                    y='Valor_View', 
+                    color='Producto',
+                    title=f"{t['chart_title']} ({symbol})",
+                    text_auto='.2s',
+                    labels={'Valor_View': f"{t['form_val']} ({symbol})", 'Empresa': t['form_emp']}
+                )
+                fig.update_layout(xaxis_title=t['form_emp'], yaxis_title=f"Valor ({symbol})")
+                st.plotly_chart(fig, use_container_width=True)
+
+                with st.expander("Ver Datos / See Data"):
+                    st.dataframe(df_filtrado)
+
         else:
-            st.info("Ainda não há dados / No hay datos todavía.")
+            st.info("Sin datos / No data")
 
     # ==========================================
-    # ➕ SECCIÓN 2: REGISTRAR
+    # ➕ SECCIÓN 2: REGISTRAR (IGUAL)
     # ==========================================
     elif menu == t['menu_add']:
         st.header(t['menu_add'])
@@ -206,10 +217,10 @@ def main():
                     st.success(t['msg_success'])
                     st.balloons()
                 else:
-                    st.warning("Nombre obligatorio / Nome obrigatório")
+                    st.warning("Nombre obligatorio")
 
     # ==========================================
-    # 🛠️ SECCIÓN 3: ADMINISTRAR (EDITAR/BORRAR)
+    # 🛠️ SECCIÓN 3: ADMINISTRAR (IGUAL)
     # ==========================================
     elif menu == t['menu_admin']:
         st.header(t['menu_admin'])
@@ -217,7 +228,6 @@ def main():
         df = pd.DataFrame(data)
         
         if not df.empty:
-            # Lista para seleccionar
             opciones = [f"{i+2}. {row['Empresa']} | {row['Producto']} | R$ {row['Valor_BRL']}" for i, row in df.iterrows()]
             seleccion = st.selectbox(t['select_edit'], options=opciones)
             
@@ -227,13 +237,12 @@ def main():
 
             with st.form("edit_form"):
                 c1, c2 = st.columns(2)
-                # Valores por defecto vienen de la base de datos
                 new_emp = c1.text_input(t['form_emp'], value=datos['Empresa'])
-                # Lógica para el selectbox (si el producto no está en la lista, usa "Outro")
+                
                 lista_prods = ["AÇAI MÉDIO", "AÇAI POP", "CUPUAÇU", "Outro"]
                 idx_prod = lista_prods.index(datos['Producto']) if datos['Producto'] in lista_prods else 3
-                
                 new_prod = c2.selectbox(t['form_prod'], lista_prods, index=idx_prod)
+                
                 new_kg = c1.number_input(t['form_kg'], min_value=0.0, value=float(datos['Kg']))
                 new_val = c2.number_input(t['form_val'], min_value=0.0, value=float(datos['Valor_BRL']))
                 
@@ -254,10 +263,10 @@ def main():
                     st.error(t['msg_delete'])
                     st.rerun()
         else:
-            st.info("Sin datos / Sem dados")
+            st.info("Sin datos / No data")
 
     # ==========================================
-    # 📜 SECCIÓN 4: HISTORIAL
+    # 📜 SECCIÓN 4: HISTORIAL (IGUAL)
     # ==========================================
     elif menu == t['menu_log']:
         st.header(t['menu_log'])
@@ -270,7 +279,7 @@ def main():
             else:
                 st.info("Log vacío")
         except:
-            st.warning("Crea la hoja 'Historial' en Google Sheets.")
+            st.warning("Falta hoja 'Historial'")
 
 if __name__ == "__main__":
     main()
