@@ -152,7 +152,7 @@ def main():
     with st.sidebar:
         st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=60)
         lang = st.selectbox("Language / Idioma", ["Español", "Português", "English"])
-        st.caption("v12.0 Final")
+        st.caption("v13.0 Final")
     
     t = TR[lang]
     s = RATES[lang]["s"]
@@ -179,11 +179,12 @@ def main():
     
     productos = sorted(list(set(["AÇAI MÉDIO", "AÇAI POP", "CUPUAÇU"] + prods_db)))
 
-    # --- MENU LATERAL: EXTRAS ---
+    # --- SIDEBAR: BACKUP Y LOGOUT ---
     with st.sidebar:
         st.divider()
         if not df.empty:
-            csv = df.to_csv(index=False).encode('utf-8')
+            # CORRECCIÓN EXCEL: Usamos ; como separador y utf-8-sig para acentos
+            csv = df.to_csv(index=False, sep=';', decimal=',').encode('utf-8-sig')
             st.download_button(
                 label=t['download_label'],
                 data=csv,
@@ -191,14 +192,14 @@ def main():
                 mime='text/csv'
             )
         
-        # --- BOTÓN DE LOGOUT ---
-        st.write("") # Espacio
+        st.write("")
         if st.button(t['logout_label'], type="secondary"):
             st.session_state.password_correct = False
             st.rerun()
 
     tab_dash, tab_add, tab_admin, tab_log = st.tabs(t['tabs'])
 
+    # --- PESTAÑA DASHBOARD ---
     with tab_dash:
         st.title(t['headers'][0])
         if not df.empty:
@@ -248,6 +249,7 @@ def main():
         else:
             st.info(t['msgs'][2])
 
+    # --- PESTAÑA VENDER ---
     with tab_add:
         st.header(t['headers'][1])
         with st.container(border=True):
@@ -267,6 +269,7 @@ def main():
                     st.success(t['msgs'][0])
                     st.rerun()
 
+    # --- PESTAÑA ADMINISTRAR ---
     with tab_admin:
         st.header(t['headers'][2])
         with st.expander(t['bulk_label'], expanded=False):
@@ -309,6 +312,7 @@ def main():
                             log_action(book, "EDITAR", f"{r['Empresa']}")
                             st.rerun()
 
+    # --- PESTAÑA HISTORIAL ---
     with tab_log:
         st.title(t['headers'][3])
         try:
