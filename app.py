@@ -40,7 +40,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- SEGURIDAD (LOGIN) ---
+# --- SEGURIDAD ---
 def check_password():
     if "password_correct" not in st.session_state:
         st.session_state.password_correct = False
@@ -179,24 +179,20 @@ def main():
     with st.sidebar:
         st.divider()
         if not df.empty:
-            # 1. Creamos una COPIA para exportar (no tocamos la original)
+            # 1. Copia y Procesamiento para Excel
             df_export = df.copy()
-            
-            # 2. Convertimos la fecha a formato DateTime
             df_export['Fecha_Temp'] = pd.to_datetime(df_export['Fecha_Registro'], errors='coerce')
             
-            # 3. SEPARACIÓN DE PODERES: Dividimos Fecha y Hora
-            # Esto evita que la columna sea muy ancha y salgan los #######
+            # 2. AQUÍ ESTÁ EL TRUCO: Dividimos en dos columnas cortas
             df_export['Fecha'] = df_export['Fecha_Temp'].dt.strftime('%d/%m/%Y')
             df_export['Hora'] = df_export['Fecha_Temp'].dt.strftime('%H:%M')
             
-            # 4. Limpiamos y ordenamos columnas para el Excel
+            # 3. Seleccionamos columnas finales (Sin "Fecha_Registro" larga)
             cols_ordenadas = ['Fecha', 'Hora', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']
-            # Filtramos solo si las columnas existen
             cols_final = [c for c in cols_ordenadas if c in df_export.columns]
             df_export = df_export[cols_final]
 
-            # 5. Generamos el CSV optimizado para Excel Latino (Separador ;)
+            # 4. Generar CSV con punto y coma
             csv = df_export.to_csv(index=False, sep=';', decimal=',').encode('utf-8-sig')
             
             st.download_button(
