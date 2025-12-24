@@ -14,14 +14,12 @@ st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    
     div[data-testid="stMetric"] {
         background-color: #1E1E1E;
         border-radius: 10px;
         padding: 15px;
         border: 1px solid #333;
     }
-    
     .stTabs [data-baseweb="tab-list"] { gap: 8px; }
     .stTabs [data-baseweb="tab"] {
         height: 50px;
@@ -33,7 +31,6 @@ st.markdown("""
         background-color: #262730;
         border-bottom: 3px solid #FF4B4B;
     }
-    
     .stButton>button {
         width: 100%;
         border-radius: 8px;
@@ -43,7 +40,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- SEGURIDAD (LOGIN SIMPLE) ---
+# --- SEGURIDAD (LOGIN) ---
 def check_password():
     """Retorna True si el usuario ingresó la clave correcta."""
     if "password_correct" not in st.session_state:
@@ -53,19 +50,25 @@ def check_password():
         return True
 
     # Pantalla de Login
-    st.markdown("<h1 style='text-align: center;'>🔒 Xingu Cloud Access</h1>", unsafe_allow_html=True)
-    password = st.text_input("Senha / Contraseña / Password", type="password")
-    
-    if st.button("Entrar", type="primary"):
-        # Verifica contra st.secrets
-        if password == st.secrets["passwords"]["admin_password"]:
-            st.session_state.password_correct = True
-            st.rerun()
-        else:
-            st.error("🚫 Incorrecto / Incorreto")
+    c1, c2, c3 = st.columns([1,2,1])
+    with c2:
+        st.markdown("<h1 style='text-align: center;'>🔒 Xingu Cloud Access</h1>", unsafe_allow_html=True)
+        st.write("")
+        password = st.text_input("Senha / Contraseña", type="password")
+        
+        if st.button("Entrar", type="primary"):
+            # Verifica contra st.secrets
+            try:
+                if password == st.secrets["passwords"]["admin_password"]:
+                    st.session_state.password_correct = True
+                    st.rerun()
+                else:
+                    st.error("🚫 Incorrecto / Incorreto")
+            except:
+                st.error("⚠️ Error: Configura [passwords] en Secrets.")
     return False
 
-# --- DICCIONARIO IDIOMAS ---
+# --- IDIOMAS ---
 TR = {
     "Português": {
         "tabs": ["📊 Dashboard", "➕ Vender", "🛠️ Gerir", "📜 Histórico"],
@@ -141,11 +144,11 @@ def log_action(book, action, detail):
 
 # --- APP PRINCIPAL ---
 def main():
-    # 1. VERIFICAR CONTRASEÑA ANTES DE MOSTRAR NADA
+    # 🛑 BLOQUEO DE SEGURIDAD
     if not check_password():
-        return # Si no hay login, detiene la app aquí.
+        return # Si no hay clave, la app se detiene aquí y no muestra nada más.
 
-    # 2. SIDEBAR
+    # 🔓 SI HAY CLAVE, SIGUE EL CÓDIGO NORMAL:
     with st.sidebar:
         st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=60)
         lang = st.selectbox("Language / Idioma", ["Español", "Português", "English"])
@@ -176,11 +179,9 @@ def main():
     
     productos = sorted(list(set(["AÇAI MÉDIO", "AÇAI POP", "CUPUAÇU"] + prods_db)))
 
-    # --- BOTÓN DE BACKUP EN SIDEBAR ---
     with st.sidebar:
         st.divider()
         if not df.empty:
-            # Convertir DF a CSV para descarga
             csv = df.to_csv(index=False).encode('utf-8')
             st.download_button(
                 label=t['download_label'],
@@ -189,10 +190,8 @@ def main():
                 mime='text/csv'
             )
 
-    # --- TABS ---
     tab_dash, tab_add, tab_admin, tab_log = st.tabs(t['tabs'])
 
-    # 1️⃣ DASHBOARD EVOLUCIONADO
     with tab_dash:
         st.title(t['headers'][0])
         if not df.empty:
@@ -200,7 +199,6 @@ def main():
             kg_total = df['Kg'].sum()
             com_total = (df['Valor_BRL'].sum() * 0.02) * r
             
-            # KPIs
             k1, k2, k3 = st.columns(3)
             k1.metric(t['metrics'][0], f"{s} {val_total:,.0f}")
             k2.metric(t['metrics'][1], f"{kg_total:,.0f}")
@@ -208,16 +206,13 @@ def main():
             
             st.divider()
 
-            # --- NUEVO: GRÁFICO DE TENDENCIA (Línea de Tiempo) ---
-            # Convertimos fecha a formato fecha real
+            # Evolución
             df['Fecha_DT'] = pd.to_datetime(df['Fecha_Registro'], errors='coerce')
-            df['Fecha_Dia'] = df['Fecha_DT'].dt.date # Agrupar por día
+            df['Fecha_Dia'] = df['Fecha_DT'].dt.date
             df['Valor_View'] = df['Valor_BRL'] * r
-            
-            # Agrupar ventas por día
             df_trend = df.groupby('Fecha_Dia')['Valor_View'].sum().reset_index()
             
-            st.subheader(t['charts'][0]) # "Evolución de Ventas"
+            st.subheader(t['charts'][0])
             fig_line = px.line(df_trend, x='Fecha_Dia', y='Valor_View', markers=True)
             fig_line.update_layout(xaxis_title="", yaxis_title=s, height=300)
             fig_line.update_traces(line_color='#FF4B4B', line_width=3)
@@ -225,15 +220,14 @@ def main():
 
             st.markdown("<br>", unsafe_allow_html=True)
 
-            # GRÁFICOS ORIGINALES (Torta y Tabla)
             c_izq, c_der = st.columns([1, 2])
             with c_izq:
-                st.subheader(t['charts'][1]) # Mix
+                st.subheader(t['charts'][1])
                 fig_pie = px.pie(df, names='Producto', values='Kg', hole=0.5)
                 fig_pie.update_layout(legend=dict(orientation="v"), margin=dict(t=0, b=0, l=0, r=0))
                 st.plotly_chart(fig_pie, use_container_width=True)
             with c_der:
-                st.subheader(t['table_title']) # Tabla
+                st.subheader(t['table_title'])
                 df_table = df.copy()
                 df_table['Val_Show'] = df_table['Valor_BRL'] * r
                 df_table['Com_Show'] = (df_table['Valor_BRL'] * 0.02) * r
@@ -247,7 +241,6 @@ def main():
         else:
             st.info(t['msgs'][2])
 
-    # 2️⃣ VENDER
     with tab_add:
         st.header(t['headers'][1])
         with st.container(border=True):
@@ -267,7 +260,6 @@ def main():
                     st.success(t['msgs'][0])
                     st.rerun()
 
-    # 3️⃣ GESTIONAR
     with tab_admin:
         st.header(t['headers'][2])
         with st.expander(t['bulk_label'], expanded=False):
@@ -310,7 +302,6 @@ def main():
                             log_action(book, "EDITAR", f"{r['Empresa']}")
                             st.rerun()
 
-    # 4️⃣ HISTORIAL
     with tab_log:
         st.title(t['headers'][3])
         try:
@@ -328,7 +319,6 @@ def main():
                     if st.button(t['actions'][4], key="btn_h", type="primary"):
                         if sel_h:
                             dts_h = [x.split(" | ")[0] for x in sel_h]
-                            # Lógica borrado historial
                             all_rows = sh_log.get_all_values()
                             dels = []
                             for i, row in enumerate(all_rows):
