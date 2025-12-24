@@ -10,18 +10,15 @@ st.set_page_config(page_title="Xingu Cloud", page_icon="🍇", layout="wide")
 
 # --- CONEXIÓN CLÁSICA A GOOGLE SHEETS ---
 def get_google_sheet_data():
-    # Definimos los permisos
     scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
     
-    # Cargamos las credenciales desde los Secretos de Streamlit
-    # Streamlit convierte el TOML automáticamente en un diccionario
-    creds_dict = st.secrets["connections.gsheets"]
+    # AQUI ESTABA EL ERROR: Ahora usamos el nombre correcto [google_credentials]
+    creds_dict = st.secrets["google_credentials"]
     
-    # Creamos la credencial
     creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
     client = gspread.authorize(creds)
     
-    # Abrimos la hoja
+    # Abre la hoja
     sheet = client.open("Inventario_Xingu_DB").sheet1
     return sheet
 
@@ -40,7 +37,7 @@ translations = {
 
 # --- APP PRINCIPAL ---
 def main():
-    st.title("🍇 Xingu Fruit - Versión Clásica")
+    st.title("🍇 Xingu Fruit - Versión Final")
     
     # Selector Idioma
     lang = st.sidebar.selectbox("Idioma", ["Português", "Español", "English"])
@@ -53,6 +50,7 @@ def main():
         sheet = get_google_sheet_data()
     except Exception as e:
         st.error(f"Error de conexión: {e}")
+        st.info("Verifica que el nombre en Secrets sea [google_credentials] y que hayas compartido la hoja con el email del robot.")
         st.stop()
 
     # 1. FORMULARIO
@@ -65,7 +63,6 @@ def main():
         
         if st.form_submit_button("💾 Guardar"):
             if emp:
-                # Datos a guardar
                 row = [
                     emp, 
                     prod, 
@@ -86,11 +83,8 @@ def main():
         df = pd.DataFrame()
 
     if not df.empty:
-        # Asegurar números
         df['Valor_BRL'] = pd.to_numeric(df['Valor_BRL'], errors='coerce').fillna(0)
         df['Kg'] = pd.to_numeric(df['Kg'], errors='coerce').fillna(0)
-        
-        # Visualizar
         df['Valor_View'] = df['Valor_BRL'] * rate
         
         c1, c2 = st.columns(2)
@@ -106,7 +100,7 @@ def main():
             fig = px.bar(df, x='Empresa', y='Valor_View', color='Producto')
             st.plotly_chart(fig, use_container_width=True)
     else:
-        st.info("Base de datos vacía o cargando...")
+        st.info("Esperando datos... (Si acabas de crear la hoja, agrega una venta primero)")
 
 if __name__ == "__main__":
     main()
