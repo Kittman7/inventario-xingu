@@ -57,7 +57,6 @@ def check_password():
         password = st.text_input("Senha / Contraseña", type="password")
         
         if st.button("Entrar", type="primary"):
-            # Verifica contra st.secrets
             try:
                 if password == st.secrets["passwords"]["admin_password"]:
                     st.session_state.password_correct = True
@@ -81,6 +80,7 @@ TR = {
         "bulk_label": "🗑️ Apagar Vários (Seleção Múltipla)",
         "clean_hist_label": "🗑️ Limpar Histórico",
         "download_label": "📥 Baixar Backup (Excel/CSV)",
+        "logout_label": "🔒 Sair / Cerrar Sesión",
         "msgs": ["Sucesso!", "Dados apagados!", "Sem dados", "Selecione itens"],
         "new_labels": ["Nome do Cliente:", "Nome do Produto:"],
         "col_map": {"Fecha_Hora": "📅 Data/Hora", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"},
@@ -98,6 +98,7 @@ TR = {
         "bulk_label": "🗑️ Borrado Masivo (Selección Múltiple)",
         "clean_hist_label": "🗑️ Limpiar Historial",
         "download_label": "📥 Descargar Backup (Excel/CSV)",
+        "logout_label": "🔒 Cerrar Sesión / Sair",
         "msgs": ["¡Éxito!", "¡Datos borrados!", "Sin datos", "Selecciona ítems"],
         "new_labels": ["Nombre Cliente:", "Nombre Producto:"],
         "col_map": {"Fecha_Hora": "📅 Fecha/Hora", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"},
@@ -115,6 +116,7 @@ TR = {
         "bulk_label": "🗑️ Bulk Delete (Multi-Select)",
         "clean_hist_label": "🗑️ Clear History",
         "download_label": "📥 Download Backup (CSV)",
+        "logout_label": "🔒 Log Out",
         "msgs": ["Success!", "Data deleted!", "No data", "Select items"],
         "new_labels": ["Client Name:", "Product Name:"],
         "col_map": {"Fecha_Hora": "📅 Date/Time", "Accion": "⚡ Action", "Detalles": "📝 Details"},
@@ -144,15 +146,13 @@ def log_action(book, action, detail):
 
 # --- APP PRINCIPAL ---
 def main():
-    # 🛑 BLOQUEO DE SEGURIDAD
     if not check_password():
-        return # Si no hay clave, la app se detiene aquí y no muestra nada más.
+        return
 
-    # 🔓 SI HAY CLAVE, SIGUE EL CÓDIGO NORMAL:
     with st.sidebar:
         st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=60)
         lang = st.selectbox("Language / Idioma", ["Español", "Português", "English"])
-        st.caption("v11.0 Enterprise")
+        st.caption("v12.0 Final")
     
     t = TR[lang]
     s = RATES[lang]["s"]
@@ -179,6 +179,7 @@ def main():
     
     productos = sorted(list(set(["AÇAI MÉDIO", "AÇAI POP", "CUPUAÇU"] + prods_db)))
 
+    # --- MENU LATERAL: EXTRAS ---
     with st.sidebar:
         st.divider()
         if not df.empty:
@@ -189,6 +190,12 @@ def main():
                 file_name=f'Backup_Xingu_{datetime.now().strftime("%Y%m%d")}.csv',
                 mime='text/csv'
             )
+        
+        # --- BOTÓN DE LOGOUT ---
+        st.write("") # Espacio
+        if st.button(t['logout_label'], type="secondary"):
+            st.session_state.password_correct = False
+            st.rerun()
 
     tab_dash, tab_add, tab_admin, tab_log = st.tabs(t['tabs'])
 
