@@ -50,7 +50,7 @@ TR = {
         "headers": ["Gestão de Vendas", "Nova Venda", "Administração", "Histórico de Atividades"],
         "metrics": ["Valor Total", "Quantidade (Kg)", "Comissão (2%)"],
         "charts": ["Mix de Produtos", "Vendas por Empresa"],
-        "table_title": "Detalhe das Vendas",
+        "table_title": "Detalhe",
         "forms": ["Cliente / Empresa", "Produto", "Quantidade (Kg)", "Valor (R$)", "Salvar Venda"],
         "actions": ["Atualizar", "APAGAR", "Buscar...", "Novo...", "Apagar Selecionados"],
         "bulk_label": "🗑️ Apagar Vários (Seleção Múltipla)",
@@ -72,7 +72,7 @@ TR = {
         "headers": ["Gestión de Ventas", "Nueva Venta", "Administración", "Historial de Actividades"],
         "metrics": ["Valor Total", "Cantidad (Kg)", "Comisión (2%)"],
         "charts": ["Mix de Productos", "Ventas por Empresa"],
-        "table_title": "Detalle de Ventas",
+        "table_title": "Detalle",
         "forms": ["Cliente / Empresa", "Producto", "Cantidad (Kg)", "Valor (R$)", "Guardar Venta"],
         "actions": ["Actualizar", "BORRAR", "Buscar...", "Nuevo...", "Borrar Seleccionados"],
         "bulk_label": "🗑️ Borrado Masivo (Selección Múltiple)",
@@ -94,7 +94,7 @@ TR = {
         "headers": ["Sales Management", "New Sale", "Administration", "Activity History"],
         "metrics": ["Total Value", "Quantity (Kg)", "Commission (2%)"],
         "charts": ["Product Mix", "Sales by Company"],
-        "table_title": "Sales Detail",
+        "table_title": "Details",
         "forms": ["Client / Company", "Product", "Quantity (Kg)", "Value (R$)", "Save Sale"],
         "actions": ["Update", "DELETE", "Search...", "New...", "Delete Selected"],
         "bulk_label": "🗑️ Bulk Delete (Multi-Select)",
@@ -137,7 +137,7 @@ def main():
     with st.sidebar:
         st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=60)
         lang = st.selectbox("Language / Idioma", ["Español", "Português", "English"])
-        st.caption("v8.0 Full Dash")
+        st.caption("v9.0 Exact Design")
 
     t = TR[lang]
     s = RATES[lang]["s"]
@@ -167,11 +167,11 @@ def main():
     # --- PESTAÑAS ---
     tab_dash, tab_add, tab_admin, tab_log = st.tabs(t['tabs'])
 
-    # 1️⃣ DASHBOARD (KPIs + Gráficos + Tabla Nueva)
+    # 1️⃣ DASHBOARD (DISEÑO EXACTO A TU FOTO)
     with tab_dash:
         st.title(t['headers'][0])
         if not df.empty:
-            # 1. KPIs
+            # 1. KPIs Arriba
             val_total = df['Valor_BRL'].sum() * r
             kg_total = df['Kg'].sum()
             com_total = (df['Valor_BRL'].sum() * 0.02) * r
@@ -183,46 +183,49 @@ def main():
             
             st.divider()
             
-            # 2. Gráficos
-            g1, g2 = st.columns([1, 2])
-            with g1:
-                st.subheader(t['charts'][0])
+            # 2. COLUMNAS: Izquierda (Torta) | Derecha (Tabla)
+            # Usamos columnas [1, 2] para que la tabla tenga más espacio
+            col_left, col_right = st.columns([1, 2])
+            
+            with col_left:
+                st.subheader(t['charts'][0]) # "Mix de Productos"
                 fig_pie = px.pie(df, names='Producto', values='Kg', hole=0.5)
-                fig_pie.update_layout(showlegend=False, margin=dict(t=20, b=0, l=0, r=0))
+                # Leyenda a la derecha para que se parezca a tu foto
+                fig_pie.update_layout(legend=dict(orientation="v", yanchor="top", y=1, xanchor="left", x=1))
+                fig_pie.update_layout(margin=dict(t=20, b=0, l=0, r=0))
                 st.plotly_chart(fig_pie, use_container_width=True)
-            with g2:
-                st.subheader(t['charts'][1])
-                df_chart = df.copy()
-                df_chart['Valor_View'] = df_chart['Valor_BRL'] * r
-                fig_bar = px.bar(df_chart, x='Empresa', y='Valor_View', color='Producto')
-                fig_bar.update_layout(xaxis_title="", yaxis_title=s)
-                st.plotly_chart(fig_bar, use_container_width=True)
             
-            # 3. NUEVA TABLA DETALLADA (Estilo Image)
+            with col_right:
+                st.subheader(t['table_title']) # "Detalle"
+                
+                # Preparamos la tabla
+                df_table = df.copy()
+                df_table['Val_Show'] = df_table['Valor_BRL'] * r
+                df_table['Com_Show'] = (df_table['Valor_BRL'] * 0.02) * r
+                
+                # Seleccionamos columnas
+                cols_to_show = ['Empresa', 'Producto', 'Kg', 'Val_Show', 'Com_Show']
+                
+                # Renombramos (Traducimos)
+                df_table = df_table[cols_to_show].rename(columns={
+                    'Empresa': t['dash_cols']['emp'],
+                    'Producto': t['dash_cols']['prod'],
+                    'Kg': t['dash_cols']['kg'],
+                    'Val_Show': f"{t['dash_cols']['val']} ({s})",
+                    'Com_Show': f"{t['dash_cols']['com']} ({s})"
+                })
+                
+                # Mostramos la tabla
+                st.dataframe(df_table.iloc[::-1], use_container_width=True, height=400)
+
+            # 3. Gráfico de Barras abajo (Opcional, para complementar)
             st.write("---")
-            st.subheader(t['table_title'])
-            
-            # Preparamos los datos para la tabla (formateados)
-            df_table = df.copy()
-            # Calculamos valores en la moneda seleccionada
-            df_table['Val_Show'] = df_table['Valor_BRL'] * r
-            df_table['Com_Show'] = (df_table['Valor_BRL'] * 0.02) * r
-            
-            # Seleccionamos y renombramos columnas para que se vean bonitas
-            cols_to_show = ['Empresa', 'Producto', 'Kg', 'Val_Show', 'Com_Show']
-            df_table = df_table[cols_to_show] # Filtramos solo estas
-            
-            # Renombramos usando el diccionario de traducción
-            df_table = df_table.rename(columns={
-                'Empresa': t['dash_cols']['emp'],
-                'Producto': t['dash_cols']['prod'],
-                'Kg': t['dash_cols']['kg'],
-                'Val_Show': f"{t['dash_cols']['val']} ({s})",
-                'Com_Show': f"{t['dash_cols']['com']} ({s})"
-            })
-            
-            # Mostramos la tabla (usando iloc[::-1] para ver lo más nuevo arriba)
-            st.dataframe(df_table.iloc[::-1], use_container_width=True)
+            st.caption(t['charts'][1])
+            df_chart = df.copy()
+            df_chart['Valor_View'] = df_chart['Valor_BRL'] * r
+            fig_bar = px.bar(df_chart, x='Empresa', y='Valor_View', color='Producto')
+            fig_bar.update_layout(xaxis_title="", yaxis_title=s)
+            st.plotly_chart(fig_bar, use_container_width=True)
 
         else:
             st.info(t['msgs'][2])
