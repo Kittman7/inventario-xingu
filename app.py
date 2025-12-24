@@ -8,7 +8,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Xingu Cloud", page_icon="🍇", layout="wide")
 
-# --- 1. DICCIONARIO DE IDIOMAS (TRADUCCIÓN COMPLETA) ---
+# --- 1. DICCIONARIO DE IDIOMAS ---
 TR = {
     "Português": {
         "menu_dash": "📊 Painel (Gráficos)",
@@ -22,7 +22,7 @@ TR = {
         "total_kg": "Total Kg",
         "total_sales": "Vendas Totais",
         "chart_title": "Vendas por Empresa",
-        "form_emp": "Empresa",
+        "form_emp": "Empresa / Cliente",
         "form_prod": "Produto",
         "form_kg": "Quantidade (Kg)",
         "form_val": "Valor (R$)",
@@ -33,7 +33,10 @@ TR = {
         "msg_update": "Atualizado com sucesso!",
         "msg_delete": "Venda apagada!",
         "select_edit": "🔍 Selecione para editar:",
-        "no_results": "Nenhum resultado encontrado para"
+        "no_results": "Nenhum resultado encontrado para",
+        "opt_new": "✍️ Digitar Novo...",
+        "lbl_new_emp": "Digite o nome do Novo Cliente:",
+        "lbl_new_prod": "Digite o nome do Novo Produto:"
     },
     "Español": {
         "menu_dash": "📊 Dashboard (Gráficos)",
@@ -47,7 +50,7 @@ TR = {
         "total_kg": "Total Kg",
         "total_sales": "Ventas Totales",
         "chart_title": "Ventas por Empresa",
-        "form_emp": "Empresa",
+        "form_emp": "Empresa / Cliente",
         "form_prod": "Producto",
         "form_kg": "Cantidad (Kg)",
         "form_val": "Valor (R$)",
@@ -58,7 +61,10 @@ TR = {
         "msg_update": "¡Actualizado con éxito!",
         "msg_delete": "¡Venta eliminada!",
         "select_edit": "🔍 Selecciona para editar:",
-        "no_results": "No se encontraron resultados para"
+        "no_results": "No se encontraron resultados para",
+        "opt_new": "✍️ Escribir Nuevo...",
+        "lbl_new_emp": "Escribe el nombre del Nuevo Cliente:",
+        "lbl_new_prod": "Escribe el nombre del Nuevo Producto:"
     },
     "English": {
         "menu_dash": "📊 Dashboard (Charts)",
@@ -72,7 +78,7 @@ TR = {
         "total_kg": "Total Kg",
         "total_sales": "Total Sales",
         "chart_title": "Sales by Company",
-        "form_emp": "Company",
+        "form_emp": "Company / Client",
         "form_prod": "Product",
         "form_kg": "Quantity (Kg)",
         "form_val": "Value (R$)",
@@ -83,7 +89,10 @@ TR = {
         "msg_update": "Updated successfully!",
         "msg_delete": "Sale deleted!",
         "select_edit": "🔍 Select to edit:",
-        "no_results": "No results found for"
+        "no_results": "No results found for",
+        "opt_new": "✍️ Type New...",
+        "lbl_new_emp": "Type New Client Name:",
+        "lbl_new_prod": "Type New Product Name:"
     }
 }
 
@@ -113,7 +122,6 @@ def registrar_historial(book, accion, detalles):
 
 # --- 3. APP PRINCIPAL ---
 def main():
-    # --- BARRA LATERAL ---
     st.sidebar.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=50)
     lang = st.sidebar.selectbox("Language / Idioma", ["Español", "Português", "English"])
     
@@ -123,62 +131,69 @@ def main():
 
     st.title(f"🍇 Xingu Fruit - {lang}")
 
+    # Conectar y leer datos al principio para tener las listas listas
     try:
         book = get_google_services()
         sheet = book.sheet1
+        raw_data = sheet.get_all_records()
+        df = pd.DataFrame(raw_data)
     except Exception as e:
         st.error(f"Error Conexión: {e}")
         st.stop()
+
+    # --- OBTENER LISTAS INTELIGENTES ---
+    # Si la base de datos tiene datos, sacamos los únicos. Si no, usamos listas vacías.
+    if not df.empty:
+        # sorted() ordena alfabéticamente
+        lista_empresas_db = sorted(list(set(df['Empresa'].astype(str).tolist())))
+        lista_productos_db = sorted(list(set(df['Producto'].astype(str).tolist())))
+    else:
+        lista_empresas_db = []
+        lista_productos_db = []
+
+    # Productos base que siempre queremos que estén
+    productos_base = ["AÇAI MÉDIO", "AÇAI POP", "CUPUAÇU"]
+    # Unimos los base con los de la DB y quitamos duplicados
+    lista_productos_final = sorted(list(set(productos_base + lista_productos_db)))
 
     opciones_menu = [t['menu_dash'], t['menu_add'], t['menu_admin'], t['menu_log']]
     menu = st.sidebar.radio("Navegación", opciones_menu)
 
     # ==========================================
-    # 📊 SECCIÓN 1: DASHBOARD CON BUSCADOR
+    # 📊 SECCIÓN 1: DASHBOARD
     # ==========================================
     if menu == t['menu_dash']:
         st.header(t['title_dash'])
         
-        try:
-            data = sheet.get_all_records()
-            df = pd.DataFrame(data)
-        except:
-            df = pd.DataFrame()
-
         if not df.empty:
-            # Limpieza y Conversión
             df['Valor_BRL'] = pd.to_numeric(df['Valor_BRL'], errors='coerce').fillna(0)
             df['Kg'] = pd.to_numeric(df['Kg'], errors='coerce').fillna(0)
             df['Valor_View'] = df['Valor_BRL'] * rate
             
-            # --- BUSCADOR ---
+            # Buscador
             st.markdown("---")
             filtro = st.text_input(t['search_label'], placeholder=t['search_ph'])
             
             if filtro:
-                # Filtrar DataFrame buscando el texto (sin importar mayúsculas/minúsculas)
                 df_filtrado = df[df['Empresa'].str.contains(filtro, case=False, na=False)]
                 if df_filtrado.empty:
                     st.warning(f"{t['no_results']} '{filtro}'")
                 else:
-                    st.success(f"Resultados para: {filtro}")
+                    st.success(f"Resultados: {len(df_filtrado)}")
             else:
-                df_filtrado = df # Si no hay filtro, usar todo
+                df_filtrado = df
 
-            # --- MOSTRAR DATOS (FILTRADOS O TOTALES) ---
             if not df_filtrado.empty:
                 c1, c2, c3 = st.columns(3)
                 total_dinero = df_filtrado['Valor_View'].sum()
                 total_kg = df_filtrado['Kg'].sum()
                 
-                # Aquí usamos las etiquetas traducidas correctamente
                 c1.metric(f"{t['total_val']} ({symbol})", f"{symbol} {total_dinero:,.2f}")
                 c2.metric(t['total_kg'], f"{total_kg:,.0f} Kg")
                 c3.metric(t['total_sales'], len(df_filtrado))
 
                 st.divider()
 
-                # GRÁFICO
                 fig = px.bar(
                     df_filtrado, 
                     x='Empresa', 
@@ -186,49 +201,65 @@ def main():
                     color='Producto',
                     title=f"{t['chart_title']} ({symbol})",
                     text_auto='.2s',
-                    labels={'Valor_View': f"{t['form_val']} ({symbol})", 'Empresa': t['form_emp']}
+                    labels={'Valor_View': f"Valor ({symbol})", 'Empresa': t['form_emp']}
                 )
-                fig.update_layout(xaxis_title=t['form_emp'], yaxis_title=f"Valor ({symbol})")
                 st.plotly_chart(fig, use_container_width=True)
 
                 with st.expander("Ver Datos / See Data"):
                     st.dataframe(df_filtrado)
-
         else:
             st.info("Sin datos / No data")
 
     # ==========================================
-    # ➕ SECCIÓN 2: REGISTRAR (IGUAL)
+    # ➕ SECCIÓN 2: REGISTRAR (INTELIGENTE)
     # ==========================================
     elif menu == t['menu_add']:
         st.header(t['menu_add'])
         with st.form("entry_form"):
             c1, c2 = st.columns(2)
-            emp = c1.text_input(t['form_emp'])
-            prod = c2.selectbox(t['form_prod'], ["AÇAI MÉDIO", "AÇAI POP", "CUPUAÇU", "Outro"])
+            
+            # --- SELECTOR INTELIGENTE EMPRESA ---
+            # Añadimos la opción "Nuevo" al principio de la lista
+            opciones_emp = [t['opt_new']] + lista_empresas_db
+            sel_emp = c1.selectbox(t['form_emp'], opciones_emp)
+            
+            # Lógica: Si elige "Nuevo", mostramos una caja de texto. Si no, usamos lo que eligió.
+            if sel_emp == t['opt_new']:
+                final_emp = c1.text_input(t['lbl_new_emp'])
+            else:
+                final_emp = sel_emp
+
+            # --- SELECTOR INTELIGENTE PRODUCTO ---
+            opciones_prod = [t['opt_new']] + lista_productos_final
+            sel_prod = c2.selectbox(t['form_prod'], opciones_prod)
+            
+            if sel_prod == t['opt_new']:
+                final_prod = c2.text_input(t['lbl_new_prod'])
+            else:
+                final_prod = sel_prod
+
             kg = c1.number_input(t['form_kg'], min_value=0.0, step=10.0)
             val_brl = c2.number_input(t['form_val'], min_value=0.0, step=100.0)
             
             if st.form_submit_button(t['btn_save']):
-                if emp:
-                    row = [emp, prod, kg, val_brl, val_brl * 0.02, datetime.now().strftime("%Y-%m-%d %H:%M:%S")]
+                # Validamos que haya escrito algo en los campos finales
+                if final_emp and final_prod:
+                    row = [final_emp, final_prod, kg, val_brl, val_brl * 0.02, datetime.now().strftime("%Y-%m-%d %H:%M:%S")]
                     sheet.append_row(row)
-                    registrar_historial(book, "NEW", f"{emp} - {kg}kg")
+                    registrar_historial(book, "NEW", f"{final_emp} - {final_prod}")
                     st.success(t['msg_success'])
-                    st.balloons()
+                    # Rerun para que el nuevo nombre aparezca en la lista inmediatamente
+                    st.rerun()
                 else:
-                    st.warning("Nombre obligatorio")
+                    st.warning("⚠️ Nombre de Empresa y Producto obligatorios.")
 
     # ==========================================
-    # 🛠️ SECCIÓN 3: ADMINISTRAR (IGUAL)
+    # 🛠️ SECCIÓN 3: ADMINISTRAR
     # ==========================================
     elif menu == t['menu_admin']:
         st.header(t['menu_admin'])
-        data = sheet.get_all_records()
-        df = pd.DataFrame(data)
-        
         if not df.empty:
-            opciones = [f"{i+2}. {row['Empresa']} | {row['Producto']} | R$ {row['Valor_BRL']}" for i, row in df.iterrows()]
+            opciones = [f"{i+2}. {row['Empresa']} | {row['Producto']} | {row['Fecha_Registro']}" for i, row in df.iterrows()]
             seleccion = st.selectbox(t['select_edit'], options=opciones)
             
             index_selec = opciones.index(seleccion)
@@ -237,11 +268,9 @@ def main():
 
             with st.form("edit_form"):
                 c1, c2 = st.columns(2)
+                # Al editar, usamos cajas de texto simples para dar libertad total
                 new_emp = c1.text_input(t['form_emp'], value=datos['Empresa'])
-                
-                lista_prods = ["AÇAI MÉDIO", "AÇAI POP", "CUPUAÇU", "Outro"]
-                idx_prod = lista_prods.index(datos['Producto']) if datos['Producto'] in lista_prods else 3
-                new_prod = c2.selectbox(t['form_prod'], lista_prods, index=idx_prod)
+                new_prod = c2.text_input(t['form_prod'], value=datos['Producto'])
                 
                 new_kg = c1.number_input(t['form_kg'], min_value=0.0, value=float(datos['Kg']))
                 new_val = c2.number_input(t['form_val'], min_value=0.0, value=float(datos['Valor_BRL']))
@@ -266,7 +295,7 @@ def main():
             st.info("Sin datos / No data")
 
     # ==========================================
-    # 📜 SECCIÓN 4: HISTORIAL (IGUAL)
+    # 📜 HISTORIAL
     # ==========================================
     elif menu == t['menu_log']:
         st.header(t['menu_log'])
