@@ -6,38 +6,52 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import time
 import io
-import xlsxwriter # Importante para los estilos
+import xlsxwriter
 
 # --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(page_title="Xingu Enterprise", page_icon="🍇", layout="wide")
+st.set_page_config(page_title="Xingu CEO", page_icon="🍇", layout="wide")
 
-# --- ESTILO CSS ---
+# --- ESTILO CSS PRO ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+    
+    /* Tarjetas de Métricas */
     div[data-testid="stMetric"] {
         background-color: #1E1E1E;
         border-radius: 10px;
         padding: 15px;
         border: 1px solid #333;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
     }
+    
+    /* Pestañas */
     .stTabs [data-baseweb="tab-list"] { gap: 8px; }
     .stTabs [data-baseweb="tab"] {
         height: 50px;
         background-color: #0E1117;
         border-radius: 5px;
         padding: 10px;
+        font-weight: bold;
     }
     .stTabs [aria-selected="true"] {
         background-color: #262730;
         border-bottom: 3px solid #FF4B4B;
+        color: #FF4B4B;
     }
+    
+    /* Botones */
     .stButton>button {
         width: 100%;
         border-radius: 8px;
         height: 3em;
-        font-weight: 600;
+        font-weight: 700;
+        border: none;
+        transition: 0.3s;
+    }
+    .stButton>button:hover {
+        transform: scale(1.02);
     }
     </style>
 """, unsafe_allow_html=True)
@@ -51,7 +65,7 @@ def check_password():
     
     c1, c2, c3 = st.columns([1,2,1])
     with c2:
-        st.markdown("<h1 style='text-align: center;'>🔒 Xingu Cloud Access</h1>", unsafe_allow_html=True)
+        st.markdown("<h1 style='text-align: center;'>🔒 Xingu Cloud</h1>", unsafe_allow_html=True)
         st.write("")
         password = st.text_input("Senha / Contraseña", type="password")
         if st.button("Entrar", type="primary"):
@@ -68,58 +82,64 @@ def check_password():
 # --- IDIOMAS ---
 TR = {
     "Português": {
-        "tabs": ["📊 Dashboard", "➕ Vender", "🛠️ Gerir", "📜 Histórico"],
-        "headers": ["Visão Geral & Tendências", "Nova Venda", "Administração", "Histórico de Atividades"],
-        "metrics": ["Valor Total", "Quantidade (Kg)", "Comissão (2%)"],
-        "charts": ["Evolução de Vendas (Diária)", "Mix de Produtos", "Vendas por Empresa"],
-        "table_title": "Detalhe",
-        "forms": ["Cliente / Empresa", "Produto", "Quantidade (Kg)", "Valor (R$)", "Salvar Venda"],
-        "actions": ["Atualizar", "APAGAR", "Buscar...", "Novo...", "Apagar Selecionados"],
-        "bulk_label": "🗑️ Apagar Vários (Seleção Múltipla)",
-        "clean_hist_label": "🗑️ Limpar Histórico",
-        "download_label": "📥 Baixar Relatório Executivo (Excel)",
-        "logout_label": "🔒 Sair / Cerrar Sesión",
-        "msgs": ["Sucesso!", "Dados apagados!", "Sem dados", "Selecione itens"],
-        "new_labels": ["Nome do Cliente:", "Nome do Produto:"],
-        "col_map": {"Fecha_Hora": "📅 Data/Hora", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"},
-        "dash_cols": {"emp": "Empresa", "prod": "Produto", "kg": "Quantidade (Kg)", "val": "Valor", "com": "Comissão"},
-        "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "EDITAR": "✏️ Edição", "BORRAR": "🗑️ Apagado", "BORRADO_MASIVO": "🔥 Apagar Vários", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limpeza"}
+        "tabs": ["📊 CEO Dashboard", "➕ Nova Venda", "🛠️ Admin", "📜 Log"],
+        "headers": ["Inteligência de Negócios", "Registrar Venda", "Gestão", "Auditoria"],
+        "metrics": ["Faturamento Total", "Volume (Kg)", "Comissão (2%)", "Ticket Médio", "Melhor Cliente"],
+        "charts": ["Tendência (Diária)", "Ranking de Produtos", "Top Clientes"],
+        "table_title": "Detalhamento",
+        "forms": ["Cliente", "Produto", "Kg", "Valor (R$)", "✅ Confirmar Venda"],
+        "actions": ["Salvar Edição", "DELETAR", "Buscar...", "Outro...", "🗑️ Apagar Seleção"],
+        "bulk_label": "Gestão em Massa (Apagar Vários)",
+        "clean_hist_label": "Limpeza de Histórico",
+        "download_label": "📥 Relatório Executivo (.xlsx)",
+        "logout_label": "🔒 Sair do Sistema",
+        "goal_label": "🎯 Meta Mensal (R$)",
+        "goal_text": "Progresso da Meta",
+        "msgs": ["Venda Registrada!", "Apagado com sucesso!", "Sem dados", "Selecione algo"],
+        "new_labels": ["Nome Cliente:", "Nome Produto:"],
+        "col_map": {"Fecha_Hora": "📅 Data", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"},
+        "dash_cols": {"emp": "Empresa", "prod": "Produto", "kg": "Kg", "val": "Valor", "com": "Comissão"},
+        "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp"}
     },
     "Español": {
-        "tabs": ["📊 Dashboard", "➕ Vender", "🛠️ Gestionar", "📜 Historial"],
-        "headers": ["Visión General & Tendencias", "Nueva Venta", "Administración", "Historial de Actividades"],
-        "metrics": ["Valor Total", "Cantidad (Kg)", "Comisión (2%)"],
-        "charts": ["Evolución de Ventas (Diaria)", "Mix de Productos", "Ventas por Empresa"],
+        "tabs": ["📊 CEO Dashboard", "➕ Nueva Venta", "🛠️ Admin", "📜 Log"],
+        "headers": ["Inteligencia de Negocios", "Registrar Venta", "Gestión", "Auditoría"],
+        "metrics": ["Facturación Total", "Volumen (Kg)", "Comisión (2%)", "Ticket Medio", "Mejor Cliente"],
+        "charts": ["Tendencia (Diaria)", "Ranking de Productos", "Top Clientes"],
         "table_title": "Detalle",
-        "forms": ["Cliente / Empresa", "Producto", "Cantidad (Kg)", "Valor (R$)", "Guardar Venta"],
-        "actions": ["Actualizar", "BORRAR", "Buscar...", "Nuevo...", "Borrar Seleccionados"],
-        "bulk_label": "🗑️ Borrado Masivo (Selección Múltiple)",
-        "clean_hist_label": "🗑️ Limpiar Historial",
-        "download_label": "📥 Descargar Reporte Ejecutivo (Excel)",
-        "logout_label": "🔒 Cerrar Sesión / Sair",
-        "msgs": ["¡Éxito!", "¡Datos borrados!", "Sin datos", "Selecciona ítems"],
+        "forms": ["Cliente", "Producto", "Kg", "Valor (R$)", "✅ Confirmar Venta"],
+        "actions": ["Guardar Edición", "BORRAR", "Buscar...", "Otro...", "🗑️ Borrar Selección"],
+        "bulk_label": "Gestión Masiva (Borrar Varios)",
+        "clean_hist_label": "Limpieza de Historial",
+        "download_label": "📥 Reporte Ejecutivo (.xlsx)",
+        "logout_label": "🔒 Cerrar Sesión",
+        "goal_label": "🎯 Meta Mensual (R$)",
+        "goal_text": "Progreso de Meta",
+        "msgs": ["¡Venta Registrada!", "¡Borrado con éxito!", "Sin datos", "Selecciona algo"],
         "new_labels": ["Nombre Cliente:", "Nombre Producto:"],
-        "col_map": {"Fecha_Hora": "📅 Fecha/Hora", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"},
-        "dash_cols": {"emp": "Empresa", "prod": "Producto", "kg": "Cantidad (Kg)", "val": "Valor", "com": "Comisión"},
-        "val_map": {"NEW": "🆕 Nuevo", "VENTA": "💰 Venta", "EDITAR": "✏️ Edición", "BORRAR": "🗑️ Borrado", "BORRADO_MASIVO": "🔥 Borrado Masivo", "CREAR": "✨ Crear", "HIST_DEL": "🧹 Limpieza"}
+        "col_map": {"Fecha_Hora": "📅 Fecha", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"},
+        "dash_cols": {"emp": "Empresa", "prod": "Producto", "kg": "Kg", "val": "Valor", "com": "Comisión"},
+        "val_map": {"NEW": "🆕 Nuevo", "VENTA": "💰 Venta", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Masa", "CREAR": "✨ Crear", "HIST_DEL": "🧹 Limp"}
     },
     "English": {
-        "tabs": ["📊 Dashboard", "➕ New Sale", "🛠️ Manage", "📜 History"],
-        "headers": ["Overview & Trends", "New Sale", "Administration", "Activity History"],
-        "metrics": ["Total Value", "Quantity (Kg)", "Commission (2%)"],
-        "charts": ["Sales Evolution (Daily)", "Product Mix", "Sales by Company"],
+        "tabs": ["📊 CEO Dashboard", "➕ New Sale", "🛠️ Admin", "📜 Log"],
+        "headers": ["Business Intelligence", "Register Sale", "Management", "Audit Log"],
+        "metrics": ["Total Revenue", "Volume (Kg)", "Commission (2%)", "Avg. Ticket", "Top Client"],
+        "charts": ["Trend (Daily)", "Product Ranking", "Top Clients"],
         "table_title": "Details",
-        "forms": ["Client / Company", "Product", "Quantity (Kg)", "Value (R$)", "Save Sale"],
-        "actions": ["Update", "DELETE", "Search...", "New...", "Delete Selected"],
-        "bulk_label": "🗑️ Bulk Delete (Multi-Select)",
-        "clean_hist_label": "🗑️ Clear History",
-        "download_label": "📥 Download Executive Report (Excel)",
+        "forms": ["Client", "Product", "Kg", "Value (R$)", "✅ Confirm Sale"],
+        "actions": ["Save Edit", "DELETE", "Search...", "Other...", "🗑️ Delete Selection"],
+        "bulk_label": "Bulk Management",
+        "clean_hist_label": "Clear History",
+        "download_label": "📥 Executive Report (.xlsx)",
         "logout_label": "🔒 Log Out",
-        "msgs": ["Success!", "Data deleted!", "No data", "Select items"],
+        "goal_label": "🎯 Monthly Goal (R$)",
+        "goal_text": "Goal Progress",
+        "msgs": ["Sale Registered!", "Deleted successfully!", "No data", "Select items"],
         "new_labels": ["Client Name:", "Product Name:"],
-        "col_map": {"Fecha_Hora": "📅 Date/Time", "Accion": "⚡ Action", "Detalles": "📝 Details"},
-        "dash_cols": {"emp": "Company", "prod": "Product", "kg": "Quantity (Kg)", "val": "Value", "com": "Commission"},
-        "val_map": {"NEW": "🆕 New", "VENTA": "💰 Sale", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Deleted", "BORRADO_MASIVO": "🔥 Bulk", "CREAR": "✨ Create", "HIST_DEL": "🧹 Clean"}
+        "col_map": {"Fecha_Hora": "📅 Date", "Accion": "⚡ Action", "Detalles": "📝 Details"},
+        "dash_cols": {"emp": "Company", "prod": "Product", "kg": "Kg", "val": "Value", "com": "Commission"},
+        "val_map": {"NEW": "🆕 New", "VENTA": "💰 Sale", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Bulk", "CREAR": "✨ Create", "HIST_DEL": "🧹 Clean"}
     }
 }
 
@@ -147,10 +167,12 @@ def main():
     if not check_password():
         return
 
+    # --- SIDEBAR MEJORADO ---
     with st.sidebar:
-        st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=60)
+        st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=70)
         lang = st.selectbox("Language / Idioma", ["Español", "Português", "English"])
-        st.caption("v18.0 Executive Report")
+        st.markdown("---")
+        st.caption("v19.0 CEO Edition")
     
     t = TR[lang]
     s = RATES[lang]["s"]
@@ -161,7 +183,7 @@ def main():
         sheet = book.sheet1
         df = pd.DataFrame(sheet.get_all_records())
     except:
-        st.error("Conectando...")
+        st.error("Conectando DB...")
         st.stop()
 
     if not df.empty:
@@ -177,81 +199,64 @@ def main():
     
     productos = sorted(list(set(["AÇAI MÉDIO", "AÇAI POP", "CUPUAÇU"] + prods_db)))
 
-    # --- SIDEBAR: EXCEL EJECUTIVO ---
+    # --- BARRA LATERAL: META Y DESCARGA ---
     with st.sidebar:
+        # 1. META MENSUAL (OBJETIVO)
+        st.subheader(t['goal_text'])
+        val_total_brl = df['Valor_BRL'].sum() if not df.empty else 0
+        val_total_curr = val_total_brl * r
+        
+        # Meta por defecto 50,000 (puedes cambiarlo)
+        meta = st.number_input(t['goal_label'], value=50000.0, step=1000.0) 
+        
+        if meta > 0:
+            progreso = min(val_total_curr / meta, 1.0)
+            st.progress(progreso)
+            porcentaje = (val_total_curr / meta) * 100
+            st.caption(f"{porcentaje:.1f}% ({s} {val_total_curr:,.0f} / {s} {meta:,.0f})")
+            if progreso >= 1.0:
+                st.balloons()
+        
         st.divider()
+
+        # 2. DESCARGA EXCEL PRO
         if not df.empty:
             buffer = io.BytesIO()
             df_export = df.copy()
             df_export['Fecha_Temp'] = pd.to_datetime(df_export['Fecha_Registro'], errors='coerce')
-            
             meses_pt = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto", 9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"}
             
-            # --- MOTOR DE EXCEL AVANZADO (ESTILOS) ---
             with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
                 workbook = writer.book
-                
-                # Definimos los estilos "Profesionales"
-                fmt_header = workbook.add_format({
-                    'bold': True, 'text_wrap': True, 'valign': 'top', 'fg_color': '#2C3E50', 
-                    'font_color': 'white', 'border': 1, 'align': 'center'
-                })
+                fmt_header = workbook.add_format({'bold': True, 'fg_color': '#2C3E50', 'font_color': 'white', 'border': 1, 'align': 'center'})
                 fmt_currency = workbook.add_format({'num_format': 'R$ #,##0.00', 'border': 1})
                 fmt_number = workbook.add_format({'num_format': '#,##0.00', 'border': 1})
-                fmt_center = workbook.add_format({'align': 'center', 'border': 1})
                 fmt_base = workbook.add_format({'border': 1})
                 fmt_total = workbook.add_format({'bold': True, 'bg_color': '#D3D3D3', 'num_format': 'R$ #,##0.00', 'border': 1})
-                fmt_total_label = workbook.add_format({'bold': True, 'bg_color': '#D3D3D3', 'align': 'right', 'border': 1})
 
                 df_export['Periodo'] = df_export['Fecha_Temp'].dt.to_period('M')
-                periodos = sorted(df_export['Periodo'].unique(), reverse=True)
-                
-                for periodo in periodos:
+                for periodo in sorted(df_export['Periodo'].unique(), reverse=True):
                     data_mes = df_export[df_export['Periodo'] == periodo].copy()
-                    
                     data_mes['Fecha'] = data_mes['Fecha_Temp'].dt.strftime('%d/%m/%Y')
                     data_mes['Hora'] = data_mes['Fecha_Temp'].dt.strftime('%H:%M')
-                    
-                    # Columnas a exportar
                     cols = ['Fecha', 'Hora', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']
                     data_final = data_mes[[c for c in cols if c in data_mes.columns]]
                     
-                    # Escribir Datos (Sin Header, lo pondremos manual bonito)
-                    nombre_pestana = f"{meses_pt[periodo.month]} {periodo.year}"
-                    data_final.to_excel(writer, sheet_name=nombre_pestana, startrow=1, header=False, index=False)
+                    name = f"{meses_pt[periodo.month]} {periodo.year}"
+                    data_final.to_excel(writer, sheet_name=name, startrow=1, header=False, index=False)
+                    ws = writer.sheets[name]
+                    for i, col in enumerate(data_final.columns): ws.write(0, i, col, fmt_header)
+                    ws.set_column('A:B', 10, fmt_base)
+                    ws.set_column('C:D', 22, fmt_base)
+                    ws.set_column('E:E', 10, fmt_number)
+                    ws.set_column('F:G', 15, fmt_currency)
                     
-                    worksheet = writer.sheets[nombre_pestana]
-                    
-                    # 1. Escribir Encabezados con Estilo
-                    for col_num, value in enumerate(data_final.columns):
-                        worksheet.write(0, col_num, value, fmt_header)
-                    
-                    # 2. Ajustar Ancho y Formato de Columnas
-                    # A(Fecha), B(Hora) -> Centrados
-                    worksheet.set_column('A:B', 12, fmt_center)
-                    # C(Empresa), D(Prod) -> Anchos, Texto Normal
-                    worksheet.set_column('C:D', 25, fmt_base)
-                    # E(Kg) -> Número
-                    worksheet.set_column('E:E', 12, fmt_number)
-                    # F(Valor), G(Comision) -> Moneda
-                    worksheet.set_column('F:G', 15, fmt_currency)
-                    
-                    # 3. FILA DE TOTALES (Al final)
-                    fila_total = len(data_final) + 1
-                    worksheet.write(fila_total, 4, "TOTALES:", fmt_total_label) # Etiqueta
-                    # Sumar Valor
-                    sum_valor = data_final['Valor_BRL'].sum()
-                    worksheet.write(fila_total, 5, sum_valor, fmt_total)
-                    # Sumar Comision
-                    sum_com = data_final['Comissao_BRL'].sum()
-                    worksheet.write(fila_total, 6, sum_com, fmt_total)
+                    rw = len(data_final)+1
+                    ws.write(rw, 4, "TOTAL:", fmt_total)
+                    ws.write(rw, 5, data_final['Valor_BRL'].sum(), fmt_total)
+                    ws.write(rw, 6, data_final['Comissao_BRL'].sum(), fmt_total)
 
-            st.download_button(
-                label=t['download_label'],
-                data=buffer,
-                file_name=f'Relatorio_Executivo_{datetime.now().strftime("%Y-%m")}.xlsx',
-                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            )
+            st.download_button(t['download_label'], data=buffer, file_name=f'Xingu_Report_{datetime.now().strftime("%Y-%m")}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         
         st.write("")
         if st.button(t['logout_label'], type="secondary"):
@@ -260,54 +265,75 @@ def main():
 
     tab_dash, tab_add, tab_admin, tab_log = st.tabs(t['tabs'])
 
+    # 1️⃣ DASHBOARD CEO
     with tab_dash:
         st.title(t['headers'][0])
         if not df.empty:
+            # Cálculos Avanzados
             val_total = df['Valor_BRL'].sum() * r
             kg_total = df['Kg'].sum()
             com_total = (df['Valor_BRL'].sum() * 0.02) * r
+            ticket_medio = val_total / len(df) if len(df) > 0 else 0
             
+            # Mejor Cliente
+            top_client_name = "---"
+            if not df.empty:
+                top_client = df.groupby('Empresa')['Valor_BRL'].sum().idxmax()
+                top_client_val = df.groupby('Empresa')['Valor_BRL'].sum().max() * r
+                top_client_name = f"{top_client} ({s} {top_client_val:,.0f})"
+
+            # Fila 1: KPIs Básicos
             k1, k2, k3 = st.columns(3)
-            k1.metric(t['metrics'][0], f"{s} {val_total:,.0f}")
-            k2.metric(t['metrics'][1], f"{kg_total:,.0f}")
+            k1.metric(t['metrics'][0], f"{s} {val_total:,.0f}", delta="Total")
+            k2.metric(t['metrics'][1], f"{kg_total:,.0f} kg")
             k3.metric(t['metrics'][2], f"{s} {com_total:,.0f}")
             
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            # Fila 2: KPIs Avanzados
+            k4, k5 = st.columns(2)
+            k4.metric(t['metrics'][3], f"{s} {ticket_medio:,.0f}", help="Valor promedio de cada venta")
+            k5.metric(t['metrics'][4], top_client_name, delta="VIP 👑")
+
             st.divider()
 
-            df['Fecha_DT'] = pd.to_datetime(df['Fecha_Registro'], errors='coerce')
-            df['Fecha_Dia'] = df['Fecha_DT'].dt.date
-            df['Valor_View'] = df['Valor_BRL'] * r
-            df_trend = df.groupby('Fecha_Dia')['Valor_View'].sum().reset_index()
+            # Gráficos
+            c_izq, c_der = st.columns([2, 1])
             
-            st.subheader(t['charts'][0])
-            fig_line = px.line(df_trend, x='Fecha_Dia', y='Valor_View', markers=True)
-            fig_line.update_layout(xaxis_title="", yaxis_title=s, height=300)
-            fig_line.update_traces(line_color='#FF4B4B', line_width=3)
-            st.plotly_chart(fig_line, use_container_width=True)
-
-            st.markdown("<br>", unsafe_allow_html=True)
-
-            c_izq, c_der = st.columns([1, 2])
             with c_izq:
-                st.subheader(t['charts'][1])
-                fig_pie = px.pie(df, names='Producto', values='Kg', hole=0.5)
-                fig_pie.update_layout(legend=dict(orientation="v"), margin=dict(t=0, b=0, l=0, r=0))
-                st.plotly_chart(fig_pie, use_container_width=True)
+                # Evolución
+                df['Fecha_DT'] = pd.to_datetime(df['Fecha_Registro'], errors='coerce')
+                df['Fecha_Dia'] = df['Fecha_DT'].dt.date
+                df['Valor_View'] = df['Valor_BRL'] * r
+                df_trend = df.groupby('Fecha_Dia')['Valor_View'].sum().reset_index()
+                
+                st.subheader(t['charts'][0])
+                fig_line = px.area(df_trend, x='Fecha_Dia', y='Valor_View', markers=True) # Area es más bonito
+                fig_line.update_layout(xaxis_title="", yaxis_title=s, height=350)
+                fig_line.update_traces(line_color='#FF4B4B', fillcolor='rgba(255, 75, 75, 0.2)')
+                st.plotly_chart(fig_line, use_container_width=True)
+
             with c_der:
-                st.subheader(t['table_title'])
-                df_table = df.copy()
-                df_table['Val_Show'] = df_table['Valor_BRL'] * r
-                df_table['Com_Show'] = (df_table['Valor_BRL'] * 0.02) * r
-                cols = ['Empresa', 'Producto', 'Kg', 'Val_Show', 'Com_Show']
-                df_table = df_table[cols].rename(columns={
-                    'Empresa': t['dash_cols']['emp'], 'Producto': t['dash_cols']['prod'],
-                    'Kg': t['dash_cols']['kg'], 'Val_Show': f"{t['dash_cols']['val']} ({s})",
-                    'Com_Show': f"{t['dash_cols']['com']} ({s})"
-                })
-                st.dataframe(df_table.iloc[::-1], use_container_width=True, height=350)
+                # Ranking Clientes (Top 5)
+                st.subheader(t['charts'][2])
+                df_ranking = df.groupby('Empresa')['Valor_View'].sum().sort_values(ascending=False).head(5).reset_index()
+                st.dataframe(
+                    df_ranking.rename(columns={"Valor_View": t['dash_cols']['val']}), 
+                    hide_index=True, 
+                    use_container_width=True
+                )
+                
+                # Ranking Productos (Pequeño)
+                st.write("")
+                st.caption(t['charts'][1])
+                fig_pie = px.pie(df, names='Producto', values='Kg', hole=0.6)
+                fig_pie.update_layout(showlegend=False, margin=dict(t=0,b=0,l=0,r=0), height=200)
+                st.plotly_chart(fig_pie, use_container_width=True)
+
         else:
             st.info(t['msgs'][2])
 
+    # 2️⃣ VENDER
     with tab_add:
         st.header(t['headers'][1])
         with st.container(border=True):
@@ -325,12 +351,38 @@ def main():
                     sheet.append_row(row)
                     log_action(book, "NEW", f"{emp} | {kg}kg")
                     st.success(t['msgs'][0])
+                    st.balloons() # ¡Celebración al vender!
+                    time.sleep(1.5)
                     st.rerun()
 
+    # 3️⃣ ADMIN
     with tab_admin:
         st.header(t['headers'][2])
-        with st.expander(t['bulk_label'], expanded=False):
-            if not df.empty:
+        # Buscador mejorado
+        filtro = st.text_input("🔍 " + t['actions'][2], placeholder="Ej: Julio, Açai...")
+        
+        if not df.empty:
+            df_show = df[df.astype(str).apply(lambda x: x.str.contains(filtro, case=False)).any(axis=1)] if filtro else df.tail(10).iloc[::-1]
+            
+            for i, r in df_show.iterrows():
+                with st.expander(f"📌 {r['Empresa']} | {r['Producto']} ({r['Fecha_Registro']})"):
+                    c1, c2 = st.columns(2)
+                    nk = c1.number_input("Kg", value=float(r['Kg']), key=f"k{i}")
+                    nv = c2.number_input("R$", value=float(r['Valor_BRL']), key=f"v{i}")
+                    if st.button(t['actions'][0], key=f"u{i}"):
+                        cel = sheet.find(str(r['Fecha_Registro']))
+                        if cel:
+                            sheet.update_cell(cel.row, 3, nk)
+                            sheet.update_cell(cel.row, 4, nv)
+                            sheet.update_cell(cel.row, 5, nv*0.02)
+                            log_action(book, "EDITAR", f"{r['Empresa']}")
+                            st.success("OK!")
+                            time.sleep(1)
+                            st.rerun()
+            
+            st.divider()
+            with st.expander(t['bulk_label']):
+                # Borrado masivo
                 df_rev = df.iloc[::-1].reset_index()
                 opc = [f"{r['Empresa']} | {r['Producto']} | {r['Fecha_Registro']}" for i, r in df_rev.iterrows()]
                 sels = st.multiselect(t['msgs'][3], opc)
@@ -342,33 +394,13 @@ def main():
                         for i, r in enumerate(all_recs):
                             if str(r['Fecha_Registro']) in dates: rows.append(i + 2)
                         rows.sort(reverse=True)
-                        p = st.progress(0)
-                        for idx, rw in enumerate(rows):
-                            sheet.delete_rows(rw)
-                            p.progress((idx + 1)/len(rows))
+                        for rw in rows: sheet.delete_rows(rw)
                         log_action(book, "BORRADO_MASIVO", f"{len(rows)}")
                         st.success(t['msgs'][1])
                         time.sleep(1)
                         st.rerun()
-            else: st.info(t['msgs'][2])
-        st.divider()
-        filt = st.text_input("🔍", placeholder=t['actions'][2], label_visibility="collapsed")
-        if not df.empty:
-            d_show = df[df['Empresa'].str.contains(filt, case=False)] if filt else df.tail(10).iloc[::-1]
-            for i, r in d_show.iterrows():
-                with st.expander(f"✏️ {r['Empresa']} - {r['Producto']}"):
-                    c1, c2 = st.columns(2)
-                    nk = c1.number_input("Kg", value=float(r['Kg']), key=f"k{i}")
-                    nv = c2.number_input("R$", value=float(r['Valor_BRL']), key=f"v{i}")
-                    if st.button(t['actions'][0], key=f"u{i}"):
-                        cel = sheet.find(str(r['Fecha_Registro']))
-                        if cel:
-                            sheet.update_cell(cel.row, 3, nk)
-                            sheet.update_cell(cel.row, 4, nv)
-                            sheet.update_cell(cel.row, 5, nv*0.02)
-                            log_action(book, "EDITAR", f"{r['Empresa']}")
-                            st.rerun()
 
+    # 4️⃣ HISTORIAL
     with tab_log:
         st.title(t['headers'][3])
         try:
@@ -378,6 +410,7 @@ def main():
                 show_log = h_dt.copy().rename(columns=t['col_map'])
                 show_log[t['col_map']["Accion"]] = show_log[t['col_map']["Accion"]].replace(t['val_map'])
                 st.dataframe(show_log.iloc[::-1], use_container_width=True)
+                
                 st.divider()
                 with st.expander(t['clean_hist_label']):
                     rev_h = h_dt.iloc[::-1].reset_index()
@@ -396,7 +429,6 @@ def main():
                             st.success(t['msgs'][1])
                             time.sleep(1)
                             st.rerun()
-            else: st.info("Log vacío")
         except: st.warning("Falta Hoja Historial")
 
 if __name__ == "__main__":
