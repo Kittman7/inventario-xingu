@@ -5,6 +5,7 @@ from datetime import datetime
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import time
+import io
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Xingu Enterprise", page_icon="🍇", layout="wide")
@@ -75,7 +76,7 @@ TR = {
         "actions": ["Atualizar", "APAGAR", "Buscar...", "Novo...", "Apagar Selecionados"],
         "bulk_label": "🗑️ Apagar Vários (Seleção Múltipla)",
         "clean_hist_label": "🗑️ Limpar Histórico",
-        "download_label": "📥 Baixar Backup (Excel Otimizado)",
+        "download_label": "📥 Baixar Excel (Mobile Friendly)",
         "logout_label": "🔒 Sair / Cerrar Sesión",
         "msgs": ["Sucesso!", "Dados apagados!", "Sem dados", "Selecione itens"],
         "new_labels": ["Nome do Cliente:", "Nome do Produto:"],
@@ -93,7 +94,7 @@ TR = {
         "actions": ["Actualizar", "BORRAR", "Buscar...", "Nuevo...", "Borrar Seleccionados"],
         "bulk_label": "🗑️ Borrado Masivo (Selección Múltiple)",
         "clean_hist_label": "🗑️ Limpiar Historial",
-        "download_label": "📥 Descargar Backup (Excel Optimizado)",
+        "download_label": "📥 Descargar Excel (Mobile Friendly)",
         "logout_label": "🔒 Cerrar Sesión / Sair",
         "msgs": ["¡Éxito!", "¡Datos borrados!", "Sin datos", "Selecciona ítems"],
         "new_labels": ["Nombre Cliente:", "Nombre Producto:"],
@@ -111,7 +112,7 @@ TR = {
         "actions": ["Update", "DELETE", "Search...", "New...", "Delete Selected"],
         "bulk_label": "🗑️ Bulk Delete (Multi-Select)",
         "clean_hist_label": "🗑️ Clear History",
-        "download_label": "📥 Download Backup (Excel Optimized)",
+        "download_label": "📥 Download Excel (Mobile Friendly)",
         "logout_label": "🔒 Log Out",
         "msgs": ["Success!", "Data deleted!", "No data", "Select items"],
         "new_labels": ["Client Name:", "Product Name:"],
@@ -148,7 +149,7 @@ def main():
     with st.sidebar:
         st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=60)
         lang = st.selectbox("Language / Idioma", ["Español", "Português", "English"])
-        st.caption("v14.0 Pro Excel")
+        st.caption("v17.0 Mobile Excel")
     
     t = TR[lang]
     s = RATES[lang]["s"]
@@ -175,31 +176,45 @@ def main():
     
     productos = sorted(list(set(["AÇAI MÉDIO", "AÇAI POP", "CUPUAÇU"] + prods_db)))
 
-    # --- SIDEBAR: EXPORTACIÓN INTELIGENTE ---
+    # --- SIDEBAR: EXCEL PRO ---
     with st.sidebar:
         st.divider()
         if not df.empty:
-            # 1. Copia y Procesamiento para Excel
+            buffer = io.BytesIO()
             df_export = df.copy()
             df_export['Fecha_Temp'] = pd.to_datetime(df_export['Fecha_Registro'], errors='coerce')
             
-            # 2. AQUÍ ESTÁ EL TRUCO: Dividimos en dos columnas cortas
-            df_export['Fecha'] = df_export['Fecha_Temp'].dt.strftime('%d/%m/%Y')
-            df_export['Hora'] = df_export['Fecha_Temp'].dt.strftime('%H:%M')
+            meses_pt = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto", 9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"}
             
-            # 3. Seleccionamos columnas finales (Sin "Fecha_Registro" larga)
-            cols_ordenadas = ['Fecha', 'Hora', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']
-            cols_final = [c for c in cols_ordenadas if c in df_export.columns]
-            df_export = df_export[cols_final]
-
-            # 4. Generar CSV con punto y coma
-            csv = df_export.to_csv(index=False, sep=';', decimal=',').encode('utf-8-sig')
+            with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+                df_export['Periodo'] = df_export['Fecha_Temp'].dt.to_period('M')
+                periodos = sorted(df_export['Periodo'].unique(), reverse=True)
+                
+                for periodo in periodos:
+                    data_mes = df_export[df_export['Periodo'] == periodo].copy()
+                    
+                    data_mes['Fecha'] = data_mes['Fecha_Temp'].dt.strftime('%d/%m/%Y')
+                    data_mes['Hora'] = data_mes['Fecha_Temp'].dt.strftime('%H:%M')
+                    
+                    cols = ['Fecha', 'Hora', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']
+                    data_final = data_mes[[c for c in cols if c in data_mes.columns]]
+                    
+                    nombre_pestana = f"{meses_pt[periodo.month]} {periodo.year}"
+                    data_final.to_excel(writer, sheet_name=nombre_pestana, index=False)
+                    
+                    # --- AUTO-AJUSTE DE COLUMNAS ---
+                    worksheet = writer.sheets[nombre_pestana]
+                    # Ajustamos ancho: A(Fecha)=12, B(Hora)=8, C(Empresa)=20, D(Prod)=20, etc.
+                    worksheet.set_column('A:A', 12)
+                    worksheet.set_column('B:B', 8)
+                    worksheet.set_column('C:D', 20)
+                    worksheet.set_column('E:G', 12)
             
             st.download_button(
                 label=t['download_label'],
-                data=csv,
-                file_name=f'Xingu_Reporte_{datetime.now().strftime("%Y-%m-%d")}.csv',
-                mime='text/csv'
+                data=buffer,
+                file_name=f'Relatorio_Xingu_{datetime.now().strftime("%Y-%m")}.xlsx',
+                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             )
         
         st.write("")
@@ -209,7 +224,6 @@ def main():
 
     tab_dash, tab_add, tab_admin, tab_log = st.tabs(t['tabs'])
 
-    # --- DASHBOARD ---
     with tab_dash:
         st.title(t['headers'][0])
         if not df.empty:
@@ -258,7 +272,6 @@ def main():
         else:
             st.info(t['msgs'][2])
 
-    # --- VENDER ---
     with tab_add:
         st.header(t['headers'][1])
         with st.container(border=True):
@@ -278,7 +291,6 @@ def main():
                     st.success(t['msgs'][0])
                     st.rerun()
 
-    # --- ADMINISTRAR ---
     with tab_admin:
         st.header(t['headers'][2])
         with st.expander(t['bulk_label'], expanded=False):
@@ -321,7 +333,6 @@ def main():
                             log_action(book, "EDITAR", f"{r['Empresa']}")
                             st.rerun()
 
-    # --- HISTORIAL ---
     with tab_log:
         st.title(t['headers'][3])
         try:
