@@ -9,13 +9,12 @@ import time
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Xingu Admin", page_icon="🍇", layout="wide")
 
-# --- ESTILO CSS PROFESIONAL ---
+# --- ESTILO CSS ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     
-    /* Métricas oscuras */
     div[data-testid="stMetric"] {
         background-color: #1E1E1E;
         border-radius: 10px;
@@ -23,10 +22,7 @@ st.markdown("""
         border: 1px solid #333;
     }
     
-    /* Pestañas estilo App */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-    }
+    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
     .stTabs [data-baseweb="tab"] {
         height: 50px;
         background-color: #0E1117;
@@ -38,7 +34,6 @@ st.markdown("""
         border-bottom: 3px solid #FF4B4B;
     }
     
-    /* Botones grandes */
     .stButton>button {
         width: 100%;
         border-radius: 8px;
@@ -48,7 +43,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 1. IDIOMAS (TRADUCCIÓN COMPLETA) ---
+# --- 1. DICCIONARIO DE IDIOMAS ---
 TR = {
     "Português": {
         "tabs": ["📊 Dashboard", "➕ Vender", "🛠️ Gerir", "📜 Histórico"],
@@ -59,7 +54,17 @@ TR = {
         "actions": ["Atualizar", "APAGAR", "Buscar...", "Novo...", "Apagar Selecionados"],
         "bulk_label": "🗑️ Apagar Vários (Seleção Múltipla)",
         "msgs": ["Sucesso!", "Dados apagados!", "Sem dados", "Selecione itens para apagar"],
-        "new_labels": ["Nome do Cliente:", "Nome do Produto:"]
+        "new_labels": ["Nome do Cliente:", "Nome do Produto:"],
+        # TRADUCCIÓN DE LA TABLA
+        "col_map": {"Fecha_Hora": "📅 Data/Hora", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"},
+        "val_map": {
+            "NEW": "🆕 Novo Registro", 
+            "VENTA": "💰 Venda", 
+            "EDITAR": "✏️ Edição", 
+            "BORRAR": "🗑️ Apagado", 
+            "BORRADO_MASIVO": "🔥 Apagar Vários",
+            "CREAR": "✨ Criar"
+        }
     },
     "Español": {
         "tabs": ["📊 Dashboard", "➕ Vender", "🛠️ Gestionar", "📜 Historial"],
@@ -70,7 +75,16 @@ TR = {
         "actions": ["Actualizar", "BORRAR", "Buscar...", "Nuevo...", "Borrar Seleccionados"],
         "bulk_label": "🗑️ Borrado Masivo (Selección Múltiple)",
         "msgs": ["¡Éxito!", "¡Datos borrados!", "Sin datos", "Selecciona ítems para borrar"],
-        "new_labels": ["Nombre Cliente:", "Nombre Producto:"]
+        "new_labels": ["Nombre Cliente:", "Nombre Producto:"],
+        "col_map": {"Fecha_Hora": "📅 Fecha/Hora", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"},
+        "val_map": {
+            "NEW": "🆕 Nuevo", 
+            "VENTA": "💰 Venta", 
+            "EDITAR": "✏️ Edición", 
+            "BORRAR": "🗑️ Borrado", 
+            "BORRADO_MASIVO": "🔥 Borrado Masivo",
+            "CREAR": "✨ Crear"
+        }
     },
     "English": {
         "tabs": ["📊 Dashboard", "➕ New Sale", "🛠️ Manage", "📜 History"],
@@ -81,7 +95,16 @@ TR = {
         "actions": ["Update", "DELETE", "Search...", "New...", "Delete Selected"],
         "bulk_label": "🗑️ Bulk Delete (Multi-Select)",
         "msgs": ["Success!", "Data deleted!", "No data", "Select items to delete"],
-        "new_labels": ["Client Name:", "Product Name:"]
+        "new_labels": ["Client Name:", "Product Name:"],
+        "col_map": {"Fecha_Hora": "📅 Date/Time", "Accion": "⚡ Action", "Detalles": "📝 Details"},
+        "val_map": {
+            "NEW": "🆕 New Record", 
+            "VENTA": "💰 Sale", 
+            "EDITAR": "✏️ Edit", 
+            "BORRAR": "🗑️ Deleted", 
+            "BORRADO_MASIVO": "🔥 Bulk Delete",
+            "CREAR": "✨ Create"
+        }
     }
 }
 
@@ -101,6 +124,8 @@ def get_data():
 
 def log_action(book, action, detail):
     try:
+        # Guardamos en la base de datos SIEMPRE en un código estándar (NEW, BORRAR, etc.)
+        # Luego lo traducimos solo al mostrarlo.
         book.worksheet("Historial").append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), action, detail])
     except: pass
 
@@ -109,7 +134,7 @@ def main():
     with st.sidebar:
         st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=60)
         lang = st.selectbox("Language / Idioma", ["Español", "Português", "English"])
-        st.caption("v6.0 Final")
+        st.caption("v7.0 Translation")
 
     t = TR[lang]
     s = RATES[lang]["s"]
@@ -120,17 +145,15 @@ def main():
         sheet = book.sheet1
         df = pd.DataFrame(sheet.get_all_records())
     except:
-        st.error("Conectando ao Google Sheets...")
+        st.error("Conectando...")
         st.stop()
 
-    # Limpieza de datos
     if not df.empty:
         for col in ['Valor_BRL', 'Kg', 'Comissao_BRL']:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
             else:
                 df[col] = 0.0
-        
         empresas = sorted(list(set(df['Empresa'].astype(str))))
         prods_db = sorted(list(set(df['Producto'].astype(str))))
     else:
@@ -141,10 +164,9 @@ def main():
     # --- PESTAÑAS ---
     tab_dash, tab_add, tab_admin, tab_log = st.tabs(t['tabs'])
 
-    # 1️⃣ DASHBOARD (Título Traducido)
+    # 1️⃣ DASHBOARD
     with tab_dash:
-        st.title(t['headers'][0]) # "Gestión de Ventas" traducido
-        
+        st.title(t['headers'][0])
         if not df.empty:
             val_total = df['Valor_BRL'].sum() * r
             kg_total = df['Kg'].sum()
@@ -154,7 +176,6 @@ def main():
             k1.metric(t['metrics'][0], f"{s} {val_total:,.0f}")
             k2.metric(t['metrics'][1], f"{kg_total:,.0f}")
             k3.metric(t['metrics'][2], f"{s} {com_total:,.0f}")
-            
             st.divider()
             
             g1, g2 = st.columns([1, 2])
@@ -178,7 +199,6 @@ def main():
         st.header(t['headers'][1])
         with st.container(border=True):
             c1, c2 = st.columns(2)
-            
             sel_emp = c1.selectbox(t['forms'][0], [t['actions'][3]] + empresas)
             emp = c1.text_input(t['new_labels'][0]) if sel_emp == t['actions'][3] else sel_emp
             
@@ -197,44 +217,29 @@ def main():
                     st.success(t['msgs'][0])
                     st.rerun()
 
-    # 3️⃣ GESTIONAR (Con Borrado Masivo)
+    # 3️⃣ GESTIONAR
     with tab_admin:
         st.header(t['headers'][2])
-        
-        # --- SECCIÓN A: BORRADO MASIVO ---
         with st.expander(t['bulk_label'], expanded=False):
             if not df.empty:
-                # Creamos una lista con ID visual
-                # Usamos el índice inverso para mostrar lo más reciente primero
                 df_display = df.iloc[::-1].reset_index()
-                
-                # Lista de opciones: "Nombre | Producto | Fecha"
                 opciones = [f"{row['Empresa']} | {row['Producto']} | {row['Fecha_Registro']}" for i, row in df_display.iterrows()]
-                
                 seleccionados = st.multiselect(t['msgs'][3], opciones)
                 
-                if st.button(t['actions'][4], type="primary"): # Botón Borrar Seleccionados
+                if st.button(t['actions'][4], type="primary"):
                     if seleccionados:
-                        # Extraemos las fechas (que son únicas) para saber qué borrar
                         fechas_a_borrar = [s.split(" | ")[-1] for s in seleccionados]
-                        
-                        # Buscamos y borramos (desde abajo hacia arriba para no romper índices)
-                        # Nota: gspread es lento borrando uno a uno, pero seguro.
                         filas_a_borrar = []
                         all_records = sheet.get_all_records()
-                        
-                        # Buscar filas que coincidan con las fechas
                         for i, record in enumerate(all_records):
                             if str(record['Fecha_Registro']) in fechas_a_borrar:
-                                filas_a_borrar.append(i + 2) # +2 por header y base 1
-                        
-                        # Ordenar descendente para borrar desde el final
+                                filas_a_borrar.append(i + 2)
                         filas_a_borrar.sort(reverse=True)
                         
-                        progress_bar = st.progress(0)
+                        prog = st.progress(0)
                         for idx, fila in enumerate(filas_a_borrar):
                             sheet.delete_rows(fila)
-                            progress_bar.progress((idx + 1) / len(filas_a_borrar))
+                            prog.progress((idx + 1) / len(filas_a_borrar))
                         
                         log_action(book, "BORRADO_MASIVO", f"{len(filas_a_borrar)} items")
                         st.success(t['msgs'][1])
@@ -244,13 +249,10 @@ def main():
                 st.info(t['msgs'][2])
 
         st.divider()
-
-        # --- SECCIÓN B: EDICIÓN INDIVIDUAL ---
-        st.subheader("Edición Rápida")
-        filtro = st.text_input("🔍 " + t['actions'][2])
+        st.subheader(t['actions'][2]) # "Buscar..."
+        filtro = st.text_input("🔍", placeholder=t['actions'][2], label_visibility="collapsed")
         if not df.empty:
             df_show = df[df['Empresa'].str.contains(filtro, case=False)] if filtro else df.tail(10).iloc[::-1]
-            
             for i, row in df_show.iterrows():
                 with st.expander(f"✏️ {row['Empresa']} - {row['Producto']}"):
                     c_a, c_b = st.columns(2)
@@ -263,16 +265,31 @@ def main():
                             sheet.update_cell(cell.row, 3, new_kg)
                             sheet.update_cell(cell.row, 4, new_val)
                             sheet.update_cell(cell.row, 5, new_val * 0.02)
-                            log_action(book, "EDIT", f"{row['Empresa']}")
-                            st.success(t['msgs'][0])
+                            log_action(book, "EDITAR", f"{row['Empresa']}")
                             st.rerun()
 
-    # 4️⃣ HISTORIAL (Título Traducido)
+    # 4️⃣ HISTORIAL (TRADUCIDO)
     with tab_log:
-        st.title(t['headers'][3]) # "Historial de Actividades" traducido
+        st.title(t['headers'][3])
         try:
             h_data = book.worksheet("Historial").get_all_records()
-            st.dataframe(pd.DataFrame(h_data).iloc[::-1], use_container_width=True)
+            df_log = pd.DataFrame(h_data)
+            
+            if not df_log.empty:
+                # 1. Renombrar Columnas (Fecha_Hora -> Data/Hora)
+                df_log = df_log.rename(columns=t['col_map'])
+                
+                # 2. Traducir los valores de la columna "Accion" / "Ação"
+                # Usamos el nombre traducido de la columna para acceder a ella
+                col_accion_traducida = t['col_map']["Accion"]
+                
+                # Reemplazamos los códigos (NEW, BORRAR) por texto bonito (Novo, Apagado)
+                df_log[col_accion_traducida] = df_log[col_accion_traducida].replace(t['val_map'])
+                
+                # Mostrar tabla ordenada
+                st.dataframe(df_log.iloc[::-1], use_container_width=True)
+            else:
+                st.info("Log vacío")
         except:
             st.warning("Crea la hoja 'Historial' en Google Sheets")
 
