@@ -96,8 +96,8 @@ TR = {
         "msgs": ["Venda Registrada!", "Apagado com sucesso!", "Sem dados", "Meta Atualizada!"],
         "new_labels": ["Nome Cliente:", "Nome Produto:"],
         "col_map": {"Fecha_Hora": "📅 Data", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"},
-        "dash_cols": {"emp": "Empresa", "prod": "Produto", "kg": "Quantidade (Kg)", "val": "Valor", "com": "Comissão"},
-        "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"}
+        "dash_cols": {"emp": "Empresa", "prod": "Produto", "kg": "Quantidade (Kg)", "val": "Valor", "com": "Comissão", "mes": "Mês"},
+        "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "EDITAR": "✏️ Edição", "BORRAR": "🗑️ Apagado", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"}
     },
     "Español": {
         "tabs": ["📊 CEO Dashboard", "➕ Nueva Venta", "🛠️ Admin", "📜 Log"],
@@ -117,7 +117,7 @@ TR = {
         "msgs": ["¡Venta Registrada!", "¡Borrado con éxito!", "Sin datos", "¡Meta Actualizada!"],
         "new_labels": ["Nombre Cliente:", "Nombre Producto:"],
         "col_map": {"Fecha_Hora": "📅 Fecha", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"},
-        "dash_cols": {"emp": "Empresa", "prod": "Producto", "kg": "Cantidad (Kg)", "val": "Valor", "com": "Comisión"},
+        "dash_cols": {"emp": "Empresa", "prod": "Producto", "kg": "Cantidad (Kg)", "val": "Valor", "com": "Comisión", "mes": "Mes"},
         "val_map": {"NEW": "🆕 Nuevo", "VENTA": "💰 Venta", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Masa", "CREAR": "✨ Crear", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"}
     },
     "English": {
@@ -138,7 +138,7 @@ TR = {
         "msgs": ["Sale Registered!", "Deleted successfully!", "No data", "Goal Updated!"],
         "new_labels": ["Client Name:", "Product Name:"],
         "col_map": {"Fecha_Hora": "📅 Date", "Accion": "⚡ Action", "Detalles": "📝 Details"},
-        "dash_cols": {"emp": "Company", "prod": "Product", "kg": "Quantity (Kg)", "val": "Value", "com": "Commission"},
+        "dash_cols": {"emp": "Company", "prod": "Product", "kg": "Quantity (Kg)", "val": "Value", "com": "Commission", "mes": "Month"},
         "val_map": {"NEW": "🆕 New", "VENTA": "💰 Sale", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Deleted", "BORRADO_MASIVO": "🔥 Bulk", "CREAR": "✨ Create", "HIST_DEL": "🧹 Clean", "META_UPDATE": "🎯 Goal"}
     }
 }
@@ -147,6 +147,13 @@ RATES = {
     "Português": {"s": "R$", "r": 1.0},
     "Español":   {"s": "$", "r": 165.0},
     "English":   {"s": "USD", "r": 0.18}
+}
+
+# --- NOMBRES DE MESES (GLOBAL) ---
+MESES_PT = {
+    1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+    5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+    9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
 }
 
 # --- CONEXIÓN ---
@@ -183,7 +190,7 @@ def main():
         st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=70)
         lang = st.selectbox("Language / Idioma", ["Español", "Português", "English"])
         st.markdown("---")
-        st.caption("v21.0 Full Details")
+        st.caption("v22.0 Auto-Month")
     
     t = TR[lang]
     s = RATES[lang]["s"]
@@ -210,7 +217,7 @@ def main():
     
     productos = sorted(list(set(["AÇAI MÉDIO", "AÇAI POP", "CUPUAÇU"] + prods_db)))
 
-    # --- SIDEBAR: META & EXCEL ---
+    # --- SIDEBAR ---
     with st.sidebar:
         st.subheader(t['goal_text'])
         db_goal = get_goal_from_db(book)
@@ -234,11 +241,11 @@ def main():
         
         st.divider()
 
+        # Excel
         if not df.empty:
             buffer = io.BytesIO()
             df_export = df.copy()
             df_export['Fecha_Temp'] = pd.to_datetime(df_export['Fecha_Registro'], errors='coerce')
-            meses_pt = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto", 9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"}
             
             with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
                 workbook = writer.book
@@ -256,7 +263,7 @@ def main():
                     cols = ['Fecha', 'Hora', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']
                     data_final = data_mes[[c for c in cols if c in data_mes.columns]]
                     
-                    name = f"{meses_pt[periodo.month]} {periodo.year}"
+                    name = f"{MESES_PT[periodo.month]} {periodo.year}"
                     data_final.to_excel(writer, sheet_name=name, startrow=1, header=False, index=False)
                     ws = writer.sheets[name]
                     for i, col in enumerate(data_final.columns): ws.write(0, i, col, fmt_header)
@@ -307,7 +314,7 @@ def main():
 
             st.divider()
 
-            # GRÁFICOS (Tendencia Izq | Torta Der)
+            # GRÁFICOS
             c_izq, c_der = st.columns([2, 1])
             with c_izq:
                 df['Fecha_DT'] = pd.to_datetime(df['Fecha_Registro'], errors='coerce')
@@ -322,30 +329,36 @@ def main():
                 st.plotly_chart(fig_line, use_container_width=True)
 
             with c_der:
-                st.subheader(t['charts'][1]) # Mix de Productos (Torta)
+                st.subheader(t['charts'][1]) 
                 fig_pie = px.pie(df, names='Producto', values='Kg', hole=0.6)
                 fig_pie.update_layout(showlegend=False, margin=dict(t=0,b=0,l=0,r=0), height=350)
                 st.plotly_chart(fig_pie, use_container_width=True)
 
-            # --- NUEVA SECCIÓN: TABLA DETALLADA COMPLETA (ABAJO) ---
+            # --- TABLA DETALLADA CON MES ---
             st.divider()
             st.subheader(t['table_title'])
             
-            # Preparar Tabla Detallada
             df_table = df.copy()
             df_table['Val_Show'] = df_table['Valor_BRL'] * r
             df_table['Com_Show'] = (df_table['Valor_BRL'] * 0.02) * r
             
-            cols_to_show = ['Empresa', 'Producto', 'Kg', 'Val_Show', 'Com_Show']
-            df_table = df_table[cols_to_show].rename(columns={
+            # Verificamos si la columna 'Mes' existe en la DB (para las ventas viejas)
+            if 'Mes' not in df_table.columns:
+                df_table['Mes'] = "-" # Si es venta vieja, ponemos guión
+
+            cols_to_show = ['Empresa', 'Producto', 'Kg', 'Val_Show', 'Com_Show', 'Mes']
+            # Solo mostramos Mes si existe, para no romper nada
+            cols_final = [c for c in cols_to_show if c in df_table.columns]
+
+            df_table = df_table[cols_final].rename(columns={
                 'Empresa': t['dash_cols']['emp'],
                 'Producto': t['dash_cols']['prod'],
                 'Kg': t['dash_cols']['kg'],
                 'Val_Show': f"{t['dash_cols']['val']} ({s})",
-                'Com_Show': f"{t['dash_cols']['com']} ({s})"
+                'Com_Show': f"{t['dash_cols']['com']} ({s})",
+                'Mes': t['dash_cols']['mes']
             })
             
-            # Mostrar Tabla Ancha
             st.dataframe(df_table.iloc[::-1], use_container_width=True)
 
         else:
@@ -365,7 +378,19 @@ def main():
             st.markdown("<br>", unsafe_allow_html=True)
             if st.button(t['forms'][4], type="primary"):
                 if emp and prod:
-                    row = [emp, prod, kg, val, val*0.02, datetime.now().strftime("%Y-%m-%d %H:%M:%S")]
+                    # --- AQUÍ OCURRE LA MAGIA DEL MES AUTOMÁTICO ---
+                    ahora = datetime.now()
+                    mes_actual = MESES_PT[ahora.month] # Ej: "Dezembro"
+                    
+                    row = [
+                        emp, 
+                        prod, 
+                        kg, 
+                        val, 
+                        val*0.02, 
+                        ahora.strftime("%Y-%m-%d %H:%M:%S"),
+                        mes_actual # <--- NUEVA COLUMNA AUTOMÁTICA
+                    ]
                     sheet.append_row(row)
                     log_action(book, "NEW", f"{emp} | {kg}kg")
                     st.success(t['msgs'][0])
