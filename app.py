@@ -54,6 +54,7 @@ TR = {
         "forms": ["Cliente / Empresa", "Produto", "Quantidade (Kg)", "Valor (R$)", "Salvar Venda"],
         "actions": ["Atualizar", "APAGAR", "Buscar...", "Novo...", "Apagar Selecionados"],
         "bulk_label": "🗑️ Apagar Vários (Seleção Múltipla)",
+        "clean_hist_label": "🗑️ Limpar Histórico (Apagar Registros)",
         "msgs": ["Sucesso!", "Dados apagados!", "Sem dados", "Selecione itens para apagar"],
         "new_labels": ["Nome do Cliente:", "Nome do Produto:"],
         "col_map": {"Fecha_Hora": "📅 Data/Hora", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"},
@@ -64,7 +65,8 @@ TR = {
             "EDITAR": "✏️ Edição", 
             "BORRAR": "🗑️ Apagado", 
             "BORRADO_MASIVO": "🔥 Apagar Vários",
-            "CREAR": "✨ Criar"
+            "CREAR": "✨ Criar",
+            "HIST_DEL": "🧹 Limpeza Histórico"
         }
     },
     "Español": {
@@ -76,6 +78,7 @@ TR = {
         "forms": ["Cliente / Empresa", "Producto", "Cantidad (Kg)", "Valor (R$)", "Guardar Venta"],
         "actions": ["Actualizar", "BORRAR", "Buscar...", "Nuevo...", "Borrar Seleccionados"],
         "bulk_label": "🗑️ Borrado Masivo (Selección Múltiple)",
+        "clean_hist_label": "🗑️ Limpiar Historial (Borrar Registros)",
         "msgs": ["¡Éxito!", "¡Datos borrados!", "Sin datos", "Selecciona ítems para borrar"],
         "new_labels": ["Nombre Cliente:", "Nombre Producto:"],
         "col_map": {"Fecha_Hora": "📅 Fecha/Hora", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"},
@@ -86,7 +89,8 @@ TR = {
             "EDITAR": "✏️ Edición", 
             "BORRAR": "🗑️ Borrado", 
             "BORRADO_MASIVO": "🔥 Borrado Masivo",
-            "CREAR": "✨ Crear"
+            "CREAR": "✨ Crear",
+            "HIST_DEL": "🧹 Limpieza Historial"
         }
     },
     "English": {
@@ -98,6 +102,7 @@ TR = {
         "forms": ["Client / Company", "Product", "Quantity (Kg)", "Value (R$)", "Save Sale"],
         "actions": ["Update", "DELETE", "Search...", "New...", "Delete Selected"],
         "bulk_label": "🗑️ Bulk Delete (Multi-Select)",
+        "clean_hist_label": "🗑️ Clear History (Delete Records)",
         "msgs": ["Success!", "Data deleted!", "No data", "Select items to delete"],
         "new_labels": ["Client Name:", "Product Name:"],
         "col_map": {"Fecha_Hora": "📅 Date/Time", "Accion": "⚡ Action", "Detalles": "📝 Details"},
@@ -108,7 +113,8 @@ TR = {
             "EDITAR": "✏️ Edit", 
             "BORRAR": "🗑️ Deleted", 
             "BORRADO_MASIVO": "🔥 Bulk Delete",
-            "CREAR": "✨ Create"
+            "CREAR": "✨ Create",
+            "HIST_DEL": "🧹 History Clean"
         }
     }
 }
@@ -137,7 +143,7 @@ def main():
     with st.sidebar:
         st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=60)
         lang = st.selectbox("Language / Idioma", ["Español", "Português", "English"])
-        st.caption("v9.0 Exact Design")
+        st.caption("v10.0 Full Control")
 
     t = TR[lang]
     s = RATES[lang]["s"]
@@ -167,11 +173,10 @@ def main():
     # --- PESTAÑAS ---
     tab_dash, tab_add, tab_admin, tab_log = st.tabs(t['tabs'])
 
-    # 1️⃣ DASHBOARD (DISEÑO EXACTO A TU FOTO)
+    # 1️⃣ DASHBOARD
     with tab_dash:
         st.title(t['headers'][0])
         if not df.empty:
-            # 1. KPIs Arriba
             val_total = df['Valor_BRL'].sum() * r
             kg_total = df['Kg'].sum()
             com_total = (df['Valor_BRL'].sum() * 0.02) * r
@@ -183,30 +188,23 @@ def main():
             
             st.divider()
             
-            # 2. COLUMNAS: Izquierda (Torta) | Derecha (Tabla)
-            # Usamos columnas [1, 2] para que la tabla tenga más espacio
+            # Layout Solicitado: Torta Izq | Tabla Der
             col_left, col_right = st.columns([1, 2])
             
             with col_left:
-                st.subheader(t['charts'][0]) # "Mix de Productos"
+                st.subheader(t['charts'][0])
                 fig_pie = px.pie(df, names='Producto', values='Kg', hole=0.5)
-                # Leyenda a la derecha para que se parezca a tu foto
                 fig_pie.update_layout(legend=dict(orientation="v", yanchor="top", y=1, xanchor="left", x=1))
                 fig_pie.update_layout(margin=dict(t=20, b=0, l=0, r=0))
                 st.plotly_chart(fig_pie, use_container_width=True)
             
             with col_right:
-                st.subheader(t['table_title']) # "Detalle"
-                
-                # Preparamos la tabla
+                st.subheader(t['table_title'])
                 df_table = df.copy()
                 df_table['Val_Show'] = df_table['Valor_BRL'] * r
                 df_table['Com_Show'] = (df_table['Valor_BRL'] * 0.02) * r
                 
-                # Seleccionamos columnas
                 cols_to_show = ['Empresa', 'Producto', 'Kg', 'Val_Show', 'Com_Show']
-                
-                # Renombramos (Traducimos)
                 df_table = df_table[cols_to_show].rename(columns={
                     'Empresa': t['dash_cols']['emp'],
                     'Producto': t['dash_cols']['prod'],
@@ -214,11 +212,8 @@ def main():
                     'Val_Show': f"{t['dash_cols']['val']} ({s})",
                     'Com_Show': f"{t['dash_cols']['com']} ({s})"
                 })
-                
-                # Mostramos la tabla
                 st.dataframe(df_table.iloc[::-1], use_container_width=True, height=400)
 
-            # 3. Gráfico de Barras abajo (Opcional, para complementar)
             st.write("---")
             st.caption(t['charts'][1])
             df_chart = df.copy()
@@ -302,17 +297,63 @@ def main():
                             log_action(book, "EDITAR", f"{row['Empresa']}")
                             st.rerun()
 
-    # 4️⃣ HISTORIAL
+    # 4️⃣ HISTORIAL (AHORA CON BORRADO)
     with tab_log:
         st.title(t['headers'][3])
         try:
-            h_data = book.worksheet("Historial").get_all_records()
+            sheet_log = book.worksheet("Historial")
+            h_data = sheet_log.get_all_records()
             df_log = pd.DataFrame(h_data)
+            
             if not df_log.empty:
-                df_log = df_log.rename(columns=t['col_map'])
+                # Mostrar Tabla Traducida
+                df_show_log = df_log.copy()
+                df_show_log = df_show_log.rename(columns=t['col_map'])
                 col_accion = t['col_map']["Accion"]
-                df_log[col_accion] = df_log[col_accion].replace(t['val_map'])
-                st.dataframe(df_log.iloc[::-1], use_container_width=True)
+                df_show_log[col_accion] = df_show_log[col_accion].replace(t['val_map'])
+                st.dataframe(df_show_log.iloc[::-1], use_container_width=True)
+                
+                # --- ZONA DE BORRADO DE HISTORIAL ---
+                st.divider()
+                with st.expander(t['clean_hist_label'], expanded=False):
+                    # Usamos la fecha como ID único
+                    # Mostramos: "Fecha | Accion | Detalle" para que sepas qué borras
+                    # df_log original (sin traducir headers) para lógica
+                    
+                    df_rev = df_log.iloc[::-1].reset_index()
+                    opciones_hist = [f"{row['Fecha_Hora']} | {row['Accion']} | {row['Detalles']}" for i, row in df_rev.iterrows()]
+                    
+                    seleccion_hist = st.multiselect(t['msgs'][3], opciones_hist, key="hist_del_multi")
+                    
+                    if st.button(t['actions'][4], key="btn_hist_del", type="primary"):
+                        if seleccion_hist:
+                            fechas_h = [s.split(" | ")[0] for s in seleccion_hist]
+                            rows_to_del = []
+                            
+                            # Buscar índices en la hoja Historial
+                            # sheet_log.get_all_records() devuelve dicts.
+                            # Para borrar row exacto es mejor traer todo como lista de listas
+                            all_rows = sheet_log.get_all_values() # Incluye header en index 0
+                            
+                            # Header es row 1. Datos empiezan row 2.
+                            for i, row_val in enumerate(all_rows):
+                                if i == 0: continue # Saltar header
+                                # row_val[0] es la fecha
+                                if row_val[0] in fechas_h:
+                                    rows_to_del.append(i + 1) # gspread usa base 1
+                            
+                            # Borrar desde el final
+                            rows_to_del.sort(reverse=True)
+                            
+                            ph = st.empty()
+                            ph.info("⏳ Eliminando...")
+                            for r_idx in rows_to_del:
+                                sheet_log.delete_rows(r_idx)
+                            
+                            ph.success(t['msgs'][1])
+                            time.sleep(1)
+                            st.rerun()
+
             else:
                 st.info("Log vacío")
         except:
