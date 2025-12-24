@@ -5,271 +5,252 @@ from datetime import datetime
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-# --- CONFIGURACIÓN ESTILO MÓVIL ---
-st.set_page_config(page_title="Xingu App", page_icon="🍇", layout="centered")
+# --- CONFIGURACIÓN DE PÁGINA ---
+st.set_page_config(page_title="Xingu Admin", page_icon="🍇", layout="wide")
 
-# Inyectamos CSS para que parezca una App nativa
+# --- ESTILO CSS PROFESIONAL (Basado en tu imagen) ---
 st.markdown("""
     <style>
-    /* Ocultar menú de hamburguesa y footer de Streamlit para look limpio */
+    /* Ocultar elementos innecesarios */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    header {visibility: hidden;}
     
-    /* Botones más grandes para dedos */
-    .stButton>button {
-        width: 100%;
-        border-radius: 12px;
-        height: 3em;
+    /* Tarjetas de Métricas (KPIs) */
+    div[data-testid="stMetric"] {
+        background-color: #1E1E1E;
+        border-radius: 10px;
+        padding: 15px;
+        border: 1px solid #333;
+    }
+    div[data-testid="stMetricLabel"] {
+        color: #B0B0B0; /* Gris claro */
+    }
+    div[data-testid="stMetricValue"] {
+        color: #FFFFFF; /* Blanco brillante */
         font-weight: bold;
     }
     
-    /* Tarjetas de datos (Cards) */
-    .st-emotion-cache-1r6slb0 {
-        border: 1px solid #e0e0e0;
-        border-radius: 10px;
-        padding: 15px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    /* Pestañas grandes */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 10px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        height: 50px;
+        white-space: pre-wrap;
+        background-color: #0E1117;
+        border-radius: 4px 4px 0px 0px;
+        gap: 1px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #262730;
+        border-bottom: 2px solid #FF4B4B;
     }
     
-    /* Títulos centrados */
-    h1, h2, h3 {
-        text-align: center;
+    /* Botones gruesos para móvil */
+    .stButton>button {
+        width: 100%;
+        border-radius: 8px;
+        height: 3em;
+        font-weight: 600;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 1. DICCIONARIO DE IDIOMAS ---
+# --- 1. IDIOMAS ---
 TR = {
     "Português": {
-        "tab_dash": "📊 Painel",
-        "tab_add": "➕ Nova Venda",
-        "tab_admin": "🛠️ Editar",
-        "search_ph": "🔍 Buscar cliente...",
-        "total_val": "Total",
-        "total_kg": "Kg",
-        "sales_count": "Vendas",
-        "form_emp": "Cliente / Empresa",
-        "form_prod": "Produto",
-        "btn_save": "💾 SALVAR",
-        "btn_update": "🔄 ATUALIZAR",
-        "btn_delete": "🗑️ APAGAR",
-        "msg_success": "✅ Sucesso!",
-        "opt_new": "✍️ Novo...",
-        "lbl_new": "Digite o nome:",
-        "card_val": "Valor:",
-        "card_kg": "Qtd:",
-        "no_data": "Sem dados recentes"
+        "tabs": ["📊 Dashboard", "➕ Vender", "🛠️ Gerir/Apagar", "📜 Histórico"],
+        "metrics": ["Valor Total", "Quantidade (Kg)", "Comissão (2%)"],
+        "charts": ["Mix de Produtos", "Vendas por Empresa"],
+        "forms": ["Cliente / Empresa", "Produto", "Quantidade (Kg)", "Valor (R$)", "Salvar Venda"],
+        "actions": ["Atualizar", "APAGAR DADOS", "Buscar cliente...", "Novo..."],
+        "msgs": ["Sucesso!", "Tem certeza?", "Sem dados", "Histórico de Atividades"],
+        "new_labels": ["Digite o nome:", "Digite o produto:"]
     },
     "Español": {
-        "tab_dash": "📊 Panel",
-        "tab_add": "➕ Vender",
-        "tab_admin": "🛠️ Editar",
-        "search_ph": "🔍 Buscar cliente...",
-        "total_val": "Total",
-        "total_kg": "Kg",
-        "sales_count": "Ventas",
-        "form_emp": "Cliente / Empresa",
-        "form_prod": "Producto",
-        "btn_save": "💾 GUARDAR",
-        "btn_update": "🔄 ACTUALIZAR",
-        "btn_delete": "🗑️ BORRAR",
-        "msg_success": "✅ ¡Listo!",
-        "opt_new": "✍️ Nuevo...",
-        "lbl_new": "Escribe el nombre:",
-        "card_val": "Valor:",
-        "card_kg": "Cant:",
-        "no_data": "Sin datos recientes"
+        "tabs": ["📊 Dashboard", "➕ Vender", "🛠️ Gestionar/Borrar", "📜 Historial"],
+        "metrics": ["Valor Total", "Cantidad (Kg)", "Comisión (2%)"],
+        "charts": ["Mix de Productos", "Ventas por Empresa"],
+        "forms": ["Cliente / Empresa", "Producto", "Cantidad (Kg)", "Valor (R$)", "Guardar Venta"],
+        "actions": ["Actualizar", "BORRAR DATOS", "Buscar cliente...", "Nuevo..."],
+        "msgs": ["¡Éxito!", "¿Seguro?", "Sin datos", "Historial de Actividades"],
+        "new_labels": ["Escribe el nombre:", "Escribe el producto:"]
     },
     "English": {
-        "tab_dash": "📊 Dash",
-        "tab_add": "➕ Sale",
-        "tab_admin": "🛠️ Edit",
-        "search_ph": "🔍 Search client...",
-        "total_val": "Total",
-        "total_kg": "Kg",
-        "sales_count": "Sales",
-        "form_emp": "Client / Company",
-        "form_prod": "Product",
-        "btn_save": "💾 SAVE",
-        "btn_update": "🔄 UPDATE",
-        "btn_delete": "🗑️ DELETE",
-        "msg_success": "✅ Done!",
-        "opt_new": "✍️ New...",
-        "lbl_new": "Type name:",
-        "card_val": "Value:",
-        "card_kg": "Qty:",
-        "no_data": "No recent data"
+        "tabs": ["📊 Dashboard", "➕ New Sale", "🛠️ Manage/Delete", "📜 History"],
+        "metrics": ["Total Value", "Quantity (Kg)", "Commission (2%)"],
+        "charts": ["Product Mix", "Sales by Company"],
+        "forms": ["Client / Company", "Product", "Quantity (Kg)", "Value (R$)", "Save Sale"],
+        "actions": ["Update", "DELETE DATA", "Search client...", "New..."],
+        "msgs": ["Success!", "Are you sure?", "No data", "Activity Log"],
+        "new_labels": ["Type name:", "Type product:"]
     }
 }
 
 RATES = {
-    "Português": {"symbol": "R$", "rate": 1.0},
-    "Español":   {"symbol": "$", "rate": 165.0},
-    "English":   {"symbol": "USD", "rate": 0.18}
+    "Português": {"s": "R$", "r": 1.0},
+    "Español":   {"s": "$", "r": 165.0},
+    "English":   {"s": "USD", "r": 0.18}
 }
 
 # --- 2. CONEXIÓN ---
-def get_google_services():
+def get_data():
     scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-    creds_dict = st.secrets["google_credentials"]
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["google_credentials"], scope)
     client = gspread.authorize(creds)
     book = client.open("Inventario_Xingu_DB")
     return book
 
-def registrar_historial(book, accion, detalles):
+def log_action(book, action, detail):
     try:
-        sheet_log = book.worksheet("Historial")
-        hora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        sheet_log.append_row([hora, accion, detalles])
-    except:
-        pass
+        book.worksheet("Historial").append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), action, detail])
+    except: pass
 
 # --- 3. APP PRINCIPAL ---
 def main():
-    # Idioma discreto en el sidebar (para no estorbar)
+    # Sidebar minimalista
     with st.sidebar:
-        st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=80)
-        lang = st.selectbox("Idioma", ["Español", "Português", "English"])
-        st.info("Xingu Cloud v4.0 Mobile")
-    
-    t = TR[lang]
-    rate = RATES[lang]["rate"]
-    symbol = RATES[lang]["symbol"]
+        st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=60)
+        lang = st.selectbox("Language", ["Español", "Português", "English"])
+        st.write("---")
+        st.caption("v5.0 Ultimate")
 
-    # Conexión
+    t = TR[lang]
+    s = RATES[lang]["s"]
+    r = RATES[lang]["r"]
+
+    # Cargar datos
     try:
-        book = get_google_services()
+        book = get_data()
         sheet = book.sheet1
-        raw_data = sheet.get_all_records()
-        df = pd.DataFrame(raw_data)
+        df = pd.DataFrame(sheet.get_all_records())
     except:
-        st.error("Error de conexión / Conexão")
+        st.error("Conectando...")
         st.stop()
 
-    # Listas inteligentes
+    # Preparar listas
     if not df.empty:
-        lista_empresas_db = sorted(list(set(df['Empresa'].astype(str).tolist())))
-        lista_productos_db = sorted(list(set(df['Producto'].astype(str).tolist())))
+        # Asegurar tipos numéricos
+        for col in ['Valor_BRL', 'Kg', 'Comissao_BRL']:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+            else:
+                df[col] = 0.0 # Crear columna si no existe
+
+        empresas = sorted(list(set(df['Empresa'].astype(str))))
+        prods_db = sorted(list(set(df['Producto'].astype(str))))
     else:
-        lista_empresas_db, lista_productos_db = [], []
+        empresas, prods_db = [], []
 
-    prods_final = sorted(list(set(["AÇAI MÉDIO", "AÇAI POP", "CUPUAÇU"] + lista_productos_db)))
+    productos = sorted(list(set(["AÇAI MÉDIO", "AÇAI POP", "CUPUAÇU"] + prods_db)))
 
-    # --- NAVEGACIÓN TIPO APP (TABS) ---
-    # Usamos Tabs arriba para cambiar rápido con el dedo
-    tab_add, tab_dash, tab_admin = st.tabs([t['tab_add'], t['tab_dash'], t['tab_admin']])
+    # --- PESTAÑAS PRINCIPALES ---
+    tab_dash, tab_add, tab_admin, tab_log = st.tabs(t['tabs'])
 
-    # ==========================================
-    # 📱 PESTAÑA 1: VENDER (Prioridad #1)
-    # ==========================================
-    with tab_add:
-        st.markdown("### 🍇 Nueva Venta")
-        with st.container(border=True): # Tarjeta contenedora
-            
-            # Cliente
-            opc_emp = [t['opt_new']] + lista_empresas_db
-            sel_emp = st.selectbox(t['form_emp'], opc_emp, key="sel_emp_add")
-            final_emp = st.text_input(t['lbl_new'], key="new_emp_add") if sel_emp == t['opt_new'] else sel_emp
-
-            # Producto
-            opc_prod = [t['opt_new']] + prods_final
-            sel_prod = st.selectbox(t['form_prod'], opc_prod, key="sel_prod_add")
-            final_prod = st.text_input(t['lbl_new'], key="new_prod_add") if sel_prod == t['opt_new'] else sel_prod
-
-            # Datos numéricos (usamos columnas para ahorrar espacio vertical)
-            c1, c2 = st.columns(2)
-            kg = c1.number_input("Kg", min_value=0.0, step=10.0, key="kg_add")
-            val_brl = c2.number_input("R$ (Reais)", min_value=0.0, step=50.0, key="val_add")
-
-            # Botón Gigante
-            st.markdown("<br>", unsafe_allow_html=True) # Espacio
-            if st.button(t['btn_save'], type="primary"):
-                if final_emp and final_prod:
-                    row = [final_emp, final_prod, kg, val_brl, val_brl * 0.02, datetime.now().strftime("%Y-%m-%d %H:%M:%S")]
-                    sheet.append_row(row)
-                    registrar_historial(book, "NEW", f"{final_emp} - {kg}kg")
-                    st.success(t['msg_success'])
-                    st.balloons()
-                    st.rerun() # Recarga rápida
-                else:
-                    st.warning("⚠️ Faltan datos / Dados faltando")
-
-    # ==========================================
-    # 📊 PESTAÑA 2: DASHBOARD
-    # ==========================================
+    # 1️⃣ DASHBOARD (Estilo Visual)
     with tab_dash:
         if not df.empty:
-            # Procesar datos
-            df['Valor_BRL'] = pd.to_numeric(df['Valor_BRL'], errors='coerce').fillna(0)
-            df['Kg'] = pd.to_numeric(df['Kg'], errors='coerce').fillna(0)
-            df['Valor_View'] = df['Valor_BRL'] * rate
-
-            # Tarjetas de Totales (Estilo Métricas Grandes)
-            c1, c2, c3 = st.columns(3)
-            c1.metric(t['total_val'], f"{symbol} {df['Valor_View'].sum():,.0f}")
-            c2.metric(t['total_kg'], f"{df['Kg'].sum():,.0f}")
-            c3.metric(t['sales_count'], len(df))
-
+            # Cálculos
+            val_total = df['Valor_BRL'].sum() * r
+            kg_total = df['Kg'].sum()
+            com_total = (df['Valor_BRL'].sum() * 0.02) * r # Comisión 2%
+            
+            # 3 KPIs GRANDES
+            k1, k2, k3 = st.columns(3)
+            k1.metric(t['metrics'][0], f"{s} {val_total:,.0f}")
+            k2.metric(t['metrics'][1], f"{kg_total:,.0f}")
+            k3.metric(t['metrics'][2], f"{s} {com_total:,.0f}")
+            
             st.divider()
-
-            # Gráfico limpio para móvil
-            fig = px.bar(df, x='Empresa', y='Valor_View', color='Producto', title="")
-            fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=0, b=0)) # Maximizar espacio
-            st.plotly_chart(fig, use_container_width=True)
+            
+            # GRÁFICOS (Pie + Barras)
+            g1, g2 = st.columns([1, 2])
+            
+            with g1:
+                st.subheader(t['charts'][0]) # Mix Productos
+                fig_pie = px.pie(df, names='Producto', values='Kg', hole=0.4, color_discrete_sequence=px.colors.sequential.RdBu)
+                fig_pie.update_layout(showlegend=False, margin=dict(t=0, b=0, l=0, r=0))
+                st.plotly_chart(fig_pie, use_container_width=True)
+                
+            with g2:
+                st.subheader(t['charts'][1]) # Ventas Empresa
+                # Agrupar datos para gráfico limpio
+                df_chart = df.copy()
+                df_chart['Valor_View'] = df_chart['Valor_BRL'] * r
+                fig_bar = px.bar(df_chart, x='Empresa', y='Valor_View', color='Producto')
+                fig_bar.update_layout(xaxis_title="", yaxis_title=s)
+                st.plotly_chart(fig_bar, use_container_width=True)
 
         else:
-            st.info(t['no_data'])
+            st.info(t['msgs'][2])
 
-    # ==========================================
-    # 🛠️ PESTAÑA 3: ADMINISTRAR (Estilo Tarjetas)
-    # ==========================================
+    # 2️⃣ VENDER (Rápido)
+    with tab_add:
+        with st.container(border=True):
+            c1, c2 = st.columns(2)
+            
+            # Selectores con opción "Nuevo"
+            sel_emp = c1.selectbox(t['forms'][0], [t['actions'][3]] + empresas)
+            emp = c1.text_input(t['new_labels'][0]) if sel_emp == t['actions'][3] else sel_emp
+            
+            sel_prod = c2.selectbox(t['forms'][1], [t['actions'][3]] + productos)
+            prod = c2.text_input(t['new_labels'][1]) if sel_prod == t['actions'][3] else sel_prod
+            
+            kg = c1.number_input(t['forms'][2], step=10.0)
+            val = c2.number_input(t['forms'][3], step=100.0)
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button(t['forms'][4], type="primary", use_container_width=True):
+                if emp and prod:
+                    # Guardar con comisión calculada
+                    row = [emp, prod, kg, val, val*0.02, datetime.now().strftime("%Y-%m-%d %H:%M:%S")]
+                    sheet.append_row(row)
+                    log_action(book, "VENTA", f"{emp} | {kg}kg | {s}{val*r}")
+                    st.success(t['msgs'][0])
+                    st.rerun()
+
+    # 3️⃣ GESTIONAR Y BORRAR
     with tab_admin:
-        st.markdown("### 🔎 Buscar & Editar")
-        filtro = st.text_input("", placeholder=t['search_ph'])
-        
+        filtro = st.text_input("🔍", placeholder=t['actions'][2])
         if not df.empty:
-            # Filtrar
-            if filtro:
-                df_show = df[df['Empresa'].str.contains(filtro, case=False, na=False)]
-            else:
-                df_show = df.tail(10).iloc[::-1] # Mostrar solo las últimas 10 si no hay búsqueda
-
-            # BUCLE PARA GENERAR TARJETAS (NO TABLA)
-            # Esto se ve hermoso en celular
+            df_show = df[df['Empresa'].str.contains(filtro, case=False)] if filtro else df.tail(10).iloc[::-1]
+            
             for i, row in df_show.iterrows():
-                with st.expander(f"📍 {row['Empresa']} | {row['Producto']}"):
-                    # Formulario de edición dentro de la tarjeta
-                    with st.form(key=f"edit_{i}"):
-                        new_emp = st.text_input("Cliente", value=row['Empresa'])
-                        c_k, c_v = st.columns(2)
-                        new_kg = c_k.number_input("Kg", value=float(row['Kg']))
-                        new_val = c_v.number_input("R$", value=float(row['Valor_BRL']))
-                        
-                        col_up, col_del = st.columns(2)
-                        if col_up.form_submit_button(t['btn_update']):
-                            # Fila real en excel es indice + 2
-                            # Nota: Esto funciona mejor si buscamos por ID, pero por ahora usaremos lógica simple
-                            # Para producción real, mejor buscar la fila exacta. Aquí asumimos orden.
-                            # BUSCAR FILA REAL EN EL EXCEL ORIGINAL (IMPORTANTE)
-                            fila_real = df[df['Fecha_Registro'] == row['Fecha_Registro']].index[0] + 2
+                with st.expander(f"{row['Empresa']} - {row['Producto']} ({row['Fecha_Registro']})"):
+                    c_a, c_b = st.columns(2)
+                    new_kg = c_a.number_input("Kg", value=float(row['Kg']), key=f"k_{i}")
+                    new_val = c_b.number_input("R$", value=float(row['Valor_BRL']), key=f"v_{i}")
+                    
+                    b1, b2 = st.columns(2)
+                    if b1.button(t['actions'][0], key=f"up_{i}"): # Actualizar
+                        # Buscar fila real (truco simple: coincidencia de fecha)
+                        cell = sheet.find(row['Fecha_Registro'])
+                        if cell:
+                            r_idx = cell.row
+                            sheet.update_cell(r_idx, 3, new_kg)
+                            sheet.update_cell(r_idx, 4, new_val)
+                            sheet.update_cell(r_idx, 5, new_val * 0.02)
+                            log_action(book, "EDITAR", f"Fila {r_idx}")
+                            st.rerun()
                             
-                            sheet.update_cell(fila_real, 1, new_emp)
-                            sheet.update_cell(fila_real, 3, new_kg)
-                            sheet.update_cell(fila_real, 4, new_val)
-                            sheet.update_cell(fila_real, 5, new_val * 0.02)
-                            registrar_historial(book, "UPDATE", f"{new_emp}")
-                            st.success(t['msg_success'])
+                    if b2.button(t['actions'][1], key=f"del_{i}", type="primary"): # BORRAR
+                        cell = sheet.find(row['Fecha_Registro'])
+                        if cell:
+                            sheet.delete_rows(cell.row)
+                            log_action(book, "BORRAR", f"{row['Empresa']} - {row['Producto']}")
+                            st.warning(t['msgs'][0])
                             st.rerun()
 
-                        if col_del.form_submit_button(t['btn_delete'], type="primary"):
-                             fila_real = df[df['Fecha_Registro'] == row['Fecha_Registro']].index[0] + 2
-                             sheet.delete_rows(fila_real)
-                             registrar_historial(book, "DELETE", f"{row['Empresa']}")
-                             st.rerun()
-        else:
-            st.info(t['no_data'])
+    # 4️⃣ HISTORIAL
+    with tab_log:
+        st.subheader(t['msgs'][3])
+        try:
+            h_data = book.worksheet("Historial").get_all_records()
+            st.dataframe(pd.DataFrame(h_data).iloc[::-1], use_container_width=True)
+        except:
+            st.warning("Crea la hoja 'Historial' en Google Sheets (Cols: Fecha, Accion, Detalle)")
 
 if __name__ == "__main__":
     main()
