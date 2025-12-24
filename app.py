@@ -50,13 +50,14 @@ TR = {
         "headers": ["Gestão de Vendas", "Nova Venda", "Administração", "Histórico de Atividades"],
         "metrics": ["Valor Total", "Quantidade (Kg)", "Comissão (2%)"],
         "charts": ["Mix de Produtos", "Vendas por Empresa"],
+        "table_title": "Detalhe das Vendas",
         "forms": ["Cliente / Empresa", "Produto", "Quantidade (Kg)", "Valor (R$)", "Salvar Venda"],
         "actions": ["Atualizar", "APAGAR", "Buscar...", "Novo...", "Apagar Selecionados"],
         "bulk_label": "🗑️ Apagar Vários (Seleção Múltipla)",
         "msgs": ["Sucesso!", "Dados apagados!", "Sem dados", "Selecione itens para apagar"],
         "new_labels": ["Nome do Cliente:", "Nome do Produto:"],
-        # TRADUCCIÓN DE LA TABLA
         "col_map": {"Fecha_Hora": "📅 Data/Hora", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"},
+        "dash_cols": {"emp": "Empresa", "prod": "Produto", "kg": "Quantidade (Kg)", "val": "Valor", "com": "Comissão"},
         "val_map": {
             "NEW": "🆕 Novo Registro", 
             "VENTA": "💰 Venda", 
@@ -71,12 +72,14 @@ TR = {
         "headers": ["Gestión de Ventas", "Nueva Venta", "Administración", "Historial de Actividades"],
         "metrics": ["Valor Total", "Cantidad (Kg)", "Comisión (2%)"],
         "charts": ["Mix de Productos", "Ventas por Empresa"],
+        "table_title": "Detalle de Ventas",
         "forms": ["Cliente / Empresa", "Producto", "Cantidad (Kg)", "Valor (R$)", "Guardar Venta"],
         "actions": ["Actualizar", "BORRAR", "Buscar...", "Nuevo...", "Borrar Seleccionados"],
         "bulk_label": "🗑️ Borrado Masivo (Selección Múltiple)",
         "msgs": ["¡Éxito!", "¡Datos borrados!", "Sin datos", "Selecciona ítems para borrar"],
         "new_labels": ["Nombre Cliente:", "Nombre Producto:"],
         "col_map": {"Fecha_Hora": "📅 Fecha/Hora", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"},
+        "dash_cols": {"emp": "Empresa", "prod": "Producto", "kg": "Cantidad (Kg)", "val": "Valor", "com": "Comisión"},
         "val_map": {
             "NEW": "🆕 Nuevo", 
             "VENTA": "💰 Venta", 
@@ -91,12 +94,14 @@ TR = {
         "headers": ["Sales Management", "New Sale", "Administration", "Activity History"],
         "metrics": ["Total Value", "Quantity (Kg)", "Commission (2%)"],
         "charts": ["Product Mix", "Sales by Company"],
+        "table_title": "Sales Detail",
         "forms": ["Client / Company", "Product", "Quantity (Kg)", "Value (R$)", "Save Sale"],
         "actions": ["Update", "DELETE", "Search...", "New...", "Delete Selected"],
         "bulk_label": "🗑️ Bulk Delete (Multi-Select)",
         "msgs": ["Success!", "Data deleted!", "No data", "Select items to delete"],
         "new_labels": ["Client Name:", "Product Name:"],
         "col_map": {"Fecha_Hora": "📅 Date/Time", "Accion": "⚡ Action", "Detalles": "📝 Details"},
+        "dash_cols": {"emp": "Company", "prod": "Product", "kg": "Quantity (Kg)", "val": "Value", "com": "Commission"},
         "val_map": {
             "NEW": "🆕 New Record", 
             "VENTA": "💰 Sale", 
@@ -124,8 +129,6 @@ def get_data():
 
 def log_action(book, action, detail):
     try:
-        # Guardamos en la base de datos SIEMPRE en un código estándar (NEW, BORRAR, etc.)
-        # Luego lo traducimos solo al mostrarlo.
         book.worksheet("Historial").append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), action, detail])
     except: pass
 
@@ -134,7 +137,7 @@ def main():
     with st.sidebar:
         st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=60)
         lang = st.selectbox("Language / Idioma", ["Español", "Português", "English"])
-        st.caption("v7.0 Translation")
+        st.caption("v8.0 Full Dash")
 
     t = TR[lang]
     s = RATES[lang]["s"]
@@ -164,10 +167,11 @@ def main():
     # --- PESTAÑAS ---
     tab_dash, tab_add, tab_admin, tab_log = st.tabs(t['tabs'])
 
-    # 1️⃣ DASHBOARD
+    # 1️⃣ DASHBOARD (KPIs + Gráficos + Tabla Nueva)
     with tab_dash:
         st.title(t['headers'][0])
         if not df.empty:
+            # 1. KPIs
             val_total = df['Valor_BRL'].sum() * r
             kg_total = df['Kg'].sum()
             com_total = (df['Valor_BRL'].sum() * 0.02) * r
@@ -176,8 +180,10 @@ def main():
             k1.metric(t['metrics'][0], f"{s} {val_total:,.0f}")
             k2.metric(t['metrics'][1], f"{kg_total:,.0f}")
             k3.metric(t['metrics'][2], f"{s} {com_total:,.0f}")
+            
             st.divider()
             
+            # 2. Gráficos
             g1, g2 = st.columns([1, 2])
             with g1:
                 st.subheader(t['charts'][0])
@@ -191,6 +197,33 @@ def main():
                 fig_bar = px.bar(df_chart, x='Empresa', y='Valor_View', color='Producto')
                 fig_bar.update_layout(xaxis_title="", yaxis_title=s)
                 st.plotly_chart(fig_bar, use_container_width=True)
+            
+            # 3. NUEVA TABLA DETALLADA (Estilo Image)
+            st.write("---")
+            st.subheader(t['table_title'])
+            
+            # Preparamos los datos para la tabla (formateados)
+            df_table = df.copy()
+            # Calculamos valores en la moneda seleccionada
+            df_table['Val_Show'] = df_table['Valor_BRL'] * r
+            df_table['Com_Show'] = (df_table['Valor_BRL'] * 0.02) * r
+            
+            # Seleccionamos y renombramos columnas para que se vean bonitas
+            cols_to_show = ['Empresa', 'Producto', 'Kg', 'Val_Show', 'Com_Show']
+            df_table = df_table[cols_to_show] # Filtramos solo estas
+            
+            # Renombramos usando el diccionario de traducción
+            df_table = df_table.rename(columns={
+                'Empresa': t['dash_cols']['emp'],
+                'Producto': t['dash_cols']['prod'],
+                'Kg': t['dash_cols']['kg'],
+                'Val_Show': f"{t['dash_cols']['val']} ({s})",
+                'Com_Show': f"{t['dash_cols']['com']} ({s})"
+            })
+            
+            # Mostramos la tabla (usando iloc[::-1] para ver lo más nuevo arriba)
+            st.dataframe(df_table.iloc[::-1], use_container_width=True)
+
         else:
             st.info(t['msgs'][2])
 
@@ -235,12 +268,10 @@ def main():
                             if str(record['Fecha_Registro']) in fechas_a_borrar:
                                 filas_a_borrar.append(i + 2)
                         filas_a_borrar.sort(reverse=True)
-                        
                         prog = st.progress(0)
                         for idx, fila in enumerate(filas_a_borrar):
                             sheet.delete_rows(fila)
                             prog.progress((idx + 1) / len(filas_a_borrar))
-                        
                         log_action(book, "BORRADO_MASIVO", f"{len(filas_a_borrar)} items")
                         st.success(t['msgs'][1])
                         time.sleep(1)
@@ -249,7 +280,7 @@ def main():
                 st.info(t['msgs'][2])
 
         st.divider()
-        st.subheader(t['actions'][2]) # "Buscar..."
+        st.subheader(t['actions'][2]) 
         filtro = st.text_input("🔍", placeholder=t['actions'][2], label_visibility="collapsed")
         if not df.empty:
             df_show = df[df['Empresa'].str.contains(filtro, case=False)] if filtro else df.tail(10).iloc[::-1]
@@ -268,25 +299,16 @@ def main():
                             log_action(book, "EDITAR", f"{row['Empresa']}")
                             st.rerun()
 
-    # 4️⃣ HISTORIAL (TRADUCIDO)
+    # 4️⃣ HISTORIAL
     with tab_log:
         st.title(t['headers'][3])
         try:
             h_data = book.worksheet("Historial").get_all_records()
             df_log = pd.DataFrame(h_data)
-            
             if not df_log.empty:
-                # 1. Renombrar Columnas (Fecha_Hora -> Data/Hora)
                 df_log = df_log.rename(columns=t['col_map'])
-                
-                # 2. Traducir los valores de la columna "Accion" / "Ação"
-                # Usamos el nombre traducido de la columna para acceder a ella
-                col_accion_traducida = t['col_map']["Accion"]
-                
-                # Reemplazamos los códigos (NEW, BORRAR) por texto bonito (Novo, Apagado)
-                df_log[col_accion_traducida] = df_log[col_accion_traducida].replace(t['val_map'])
-                
-                # Mostrar tabla ordenada
+                col_accion = t['col_map']["Accion"]
+                df_log[col_accion] = df_log[col_accion].replace(t['val_map'])
                 st.dataframe(df_log.iloc[::-1], use_container_width=True)
             else:
                 st.info("Log vacío")
