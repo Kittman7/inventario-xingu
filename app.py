@@ -76,6 +76,13 @@ def check_password():
                 st.error("⚠️ Error: Configura [passwords] en Secrets.")
     return False
 
+# --- MAPA DE MESES (GLOBAL) ---
+MESES_PT = {
+    1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+    5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+    9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
+}
+
 # --- IDIOMAS ---
 TR = {
     "Português": {
@@ -96,7 +103,7 @@ TR = {
         "msgs": ["Venda Registrada!", "Apagado com sucesso!", "Sem dados", "Meta Atualizada!"],
         "new_labels": ["Nome Cliente:", "Nome Produto:"],
         "col_map": {"Fecha_Hora": "📅 Data", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"},
-        "dash_cols": {"emp": "Empresa", "prod": "Produto", "kg": "Quantidade (Kg)", "val": "Valor", "com": "Comissão", "mes": "Mês"},
+        "dash_cols": {"emp": "Empresa", "prod": "Produto", "kg": "Quantidade (Kg)", "val": "💰 Valor Pago", "com": "Comissão", "mes": "🗓️ Mês"},
         "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "EDITAR": "✏️ Edição", "BORRAR": "🗑️ Apagado", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"}
     },
     "Español": {
@@ -117,7 +124,7 @@ TR = {
         "msgs": ["¡Venta Registrada!", "¡Borrado con éxito!", "Sin datos", "¡Meta Actualizada!"],
         "new_labels": ["Nombre Cliente:", "Nombre Producto:"],
         "col_map": {"Fecha_Hora": "📅 Fecha", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"},
-        "dash_cols": {"emp": "Empresa", "prod": "Producto", "kg": "Cantidad (Kg)", "val": "Valor", "com": "Comisión", "mes": "Mes"},
+        "dash_cols": {"emp": "Empresa", "prod": "Producto", "kg": "Cantidad (Kg)", "val": "💰 Valor Pagado", "com": "Comisión", "mes": "🗓️ Mes"},
         "val_map": {"NEW": "🆕 Nuevo", "VENTA": "💰 Venta", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Masa", "CREAR": "✨ Crear", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"}
     },
     "English": {
@@ -138,7 +145,7 @@ TR = {
         "msgs": ["Sale Registered!", "Deleted successfully!", "No data", "Goal Updated!"],
         "new_labels": ["Client Name:", "Product Name:"],
         "col_map": {"Fecha_Hora": "📅 Date", "Accion": "⚡ Action", "Detalles": "📝 Details"},
-        "dash_cols": {"emp": "Company", "prod": "Product", "kg": "Quantity (Kg)", "val": "Value", "com": "Commission", "mes": "Month"},
+        "dash_cols": {"emp": "Company", "prod": "Product", "kg": "Quantity (Kg)", "val": "💰 Value Paid", "com": "Commission", "mes": "🗓️ Month"},
         "val_map": {"NEW": "🆕 New", "VENTA": "💰 Sale", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Deleted", "BORRADO_MASIVO": "🔥 Bulk", "CREAR": "✨ Create", "HIST_DEL": "🧹 Clean", "META_UPDATE": "🎯 Goal"}
     }
 }
@@ -147,13 +154,6 @@ RATES = {
     "Português": {"s": "R$", "r": 1.0},
     "Español":   {"s": "$", "r": 165.0},
     "English":   {"s": "USD", "r": 0.18}
-}
-
-# --- NOMBRES DE MESES (GLOBAL) ---
-MESES_PT = {
-    1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
-    5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
-    9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
 }
 
 # --- CONEXIÓN ---
@@ -190,7 +190,7 @@ def main():
         st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=70)
         lang = st.selectbox("Language / Idioma", ["Español", "Português", "English"])
         st.markdown("---")
-        st.caption("v22.0 Auto-Month")
+        st.caption("v23.0 Final Perfect View")
     
     t = TR[lang]
     s = RATES[lang]["s"]
@@ -241,7 +241,6 @@ def main():
         
         st.divider()
 
-        # Excel
         if not df.empty:
             buffer = io.BytesIO()
             df_export = df.copy()
@@ -334,7 +333,7 @@ def main():
                 fig_pie.update_layout(showlegend=False, margin=dict(t=0,b=0,l=0,r=0), height=350)
                 st.plotly_chart(fig_pie, use_container_width=True)
 
-            # --- TABLA DETALLADA CON MES ---
+            # --- TABLA DETALLADA CON MES (FIX PARA ANTIGUOS) ---
             st.divider()
             st.subheader(t['table_title'])
             
@@ -342,24 +341,36 @@ def main():
             df_table['Val_Show'] = df_table['Valor_BRL'] * r
             df_table['Com_Show'] = (df_table['Valor_BRL'] * 0.02) * r
             
-            # Verificamos si la columna 'Mes' existe en la DB (para las ventas viejas)
-            if 'Mes' not in df_table.columns:
-                df_table['Mes'] = "-" # Si es venta vieja, ponemos guión
-
-            cols_to_show = ['Empresa', 'Producto', 'Kg', 'Val_Show', 'Com_Show', 'Mes']
-            # Solo mostramos Mes si existe, para no romper nada
-            cols_final = [c for c in cols_to_show if c in df_table.columns]
-
-            df_table = df_table[cols_final].rename(columns={
+            # --- AUTO-CÁLCULO DE MES PARA LA TABLA VISUAL ---
+            # Aunque no esté en la DB, lo calculamos aquí para que se vea siempre
+            df_table['Fecha_DT_Calc'] = pd.to_datetime(df_table['Fecha_Registro'], errors='coerce')
+            df_table['Mes_Auto'] = df_table['Fecha_DT_Calc'].dt.month.map(MESES_PT)
+            
+            # Seleccionamos y Renombramos
+            # Ahora usamos 'Mes_Auto' en lugar de 'Mes' de la DB, para asegurar que siempre haya dato
+            cols_renombrar = {
+                'Mes_Auto': t['dash_cols']['mes'], # "Mês"
                 'Empresa': t['dash_cols']['emp'],
                 'Producto': t['dash_cols']['prod'],
                 'Kg': t['dash_cols']['kg'],
-                'Val_Show': f"{t['dash_cols']['val']} ({s})",
-                'Com_Show': f"{t['dash_cols']['com']} ({s})",
-                'Mes': t['dash_cols']['mes']
-            })
+                'Val_Show': f"{t['dash_cols']['val']} ({s})", # "💰 Valor Pago"
+                'Com_Show': f"{t['dash_cols']['com']} ({s})"
+            }
             
-            st.dataframe(df_table.iloc[::-1], use_container_width=True)
+            # Ordenamos bonito: Fecha, Mes, Empresa, Producto, Kg, Valor, Comision
+            df_table = df_table.rename(columns=cols_renombrar)
+            
+            # Columnas finales a mostrar
+            cols_final = [
+                t['dash_cols']['mes'], 
+                t['dash_cols']['emp'], 
+                t['dash_cols']['prod'], 
+                t['dash_cols']['kg'], 
+                f"{t['dash_cols']['val']} ({s})", # Valor
+                f"{t['dash_cols']['com']} ({s})"  # Comision
+            ]
+            
+            st.dataframe(df_table[cols_final].iloc[::-1], use_container_width=True)
 
         else:
             st.info(t['msgs'][2])
@@ -378,19 +389,9 @@ def main():
             st.markdown("<br>", unsafe_allow_html=True)
             if st.button(t['forms'][4], type="primary"):
                 if emp and prod:
-                    # --- AQUÍ OCURRE LA MAGIA DEL MES AUTOMÁTICO ---
                     ahora = datetime.now()
-                    mes_actual = MESES_PT[ahora.month] # Ej: "Dezembro"
-                    
-                    row = [
-                        emp, 
-                        prod, 
-                        kg, 
-                        val, 
-                        val*0.02, 
-                        ahora.strftime("%Y-%m-%d %H:%M:%S"),
-                        mes_actual # <--- NUEVA COLUMNA AUTOMÁTICA
-                    ]
+                    mes_actual = MESES_PT[ahora.month]
+                    row = [emp, prod, kg, val, val*0.02, ahora.strftime("%Y-%m-%d %H:%M:%S"), mes_actual]
                     sheet.append_row(row)
                     log_action(book, "NEW", f"{emp} | {kg}kg")
                     st.success(t['msgs'][0])
