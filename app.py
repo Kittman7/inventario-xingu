@@ -16,8 +16,6 @@ st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    
-    /* Tarjetas de Métricas */
     div[data-testid="stMetric"] {
         background-color: #1E1E1E;
         border-radius: 10px;
@@ -25,8 +23,6 @@ st.markdown("""
         border: 1px solid #333;
         box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
     }
-    
-    /* Pestañas */
     .stTabs [data-baseweb="tab-list"] { gap: 8px; }
     .stTabs [data-baseweb="tab"] {
         height: 50px;
@@ -40,8 +36,6 @@ st.markdown("""
         border-bottom: 3px solid #FF4B4B;
         color: #FF4B4B;
     }
-    
-    /* Botones */
     .stButton>button {
         width: 100%;
         border-radius: 8px;
@@ -94,12 +88,13 @@ TR = {
         "download_label": "📥 Relatório Executivo (.xlsx)",
         "logout_label": "🔒 Sair do Sistema",
         "goal_label": "🎯 Meta Mensal (R$)",
+        "goal_save": "💾 Salvar Meta",
         "goal_text": "Progresso da Meta",
-        "msgs": ["Venda Registrada!", "Apagado com sucesso!", "Sem dados", "Selecione algo"],
+        "msgs": ["Venda Registrada!", "Apagado com sucesso!", "Sem dados", "Meta Atualizada!"],
         "new_labels": ["Nome Cliente:", "Nome Produto:"],
         "col_map": {"Fecha_Hora": "📅 Data", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"},
         "dash_cols": {"emp": "Empresa", "prod": "Produto", "kg": "Kg", "val": "Valor", "com": "Comissão"},
-        "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp"}
+        "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"}
     },
     "Español": {
         "tabs": ["📊 CEO Dashboard", "➕ Nueva Venta", "🛠️ Admin", "📜 Log"],
@@ -114,12 +109,13 @@ TR = {
         "download_label": "📥 Reporte Ejecutivo (.xlsx)",
         "logout_label": "🔒 Cerrar Sesión",
         "goal_label": "🎯 Meta Mensual (R$)",
+        "goal_save": "💾 Salvar Meta",
         "goal_text": "Progreso de Meta",
-        "msgs": ["¡Venta Registrada!", "¡Borrado con éxito!", "Sin datos", "Selecciona algo"],
+        "msgs": ["¡Venta Registrada!", "¡Borrado con éxito!", "Sin datos", "¡Meta Actualizada!"],
         "new_labels": ["Nombre Cliente:", "Nombre Producto:"],
         "col_map": {"Fecha_Hora": "📅 Fecha", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"},
         "dash_cols": {"emp": "Empresa", "prod": "Producto", "kg": "Kg", "val": "Valor", "com": "Comisión"},
-        "val_map": {"NEW": "🆕 Nuevo", "VENTA": "💰 Venta", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Masa", "CREAR": "✨ Crear", "HIST_DEL": "🧹 Limp"}
+        "val_map": {"NEW": "🆕 Nuevo", "VENTA": "💰 Venta", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Masa", "CREAR": "✨ Crear", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"}
     },
     "English": {
         "tabs": ["📊 CEO Dashboard", "➕ New Sale", "🛠️ Admin", "📜 Log"],
@@ -134,12 +130,13 @@ TR = {
         "download_label": "📥 Executive Report (.xlsx)",
         "logout_label": "🔒 Log Out",
         "goal_label": "🎯 Monthly Goal (R$)",
+        "goal_save": "💾 Save Goal",
         "goal_text": "Goal Progress",
-        "msgs": ["Sale Registered!", "Deleted successfully!", "No data", "Select items"],
+        "msgs": ["Sale Registered!", "Deleted successfully!", "No data", "Goal Updated!"],
         "new_labels": ["Client Name:", "Product Name:"],
         "col_map": {"Fecha_Hora": "📅 Date", "Accion": "⚡ Action", "Detalles": "📝 Details"},
         "dash_cols": {"emp": "Company", "prod": "Product", "kg": "Kg", "val": "Value", "com": "Commission"},
-        "val_map": {"NEW": "🆕 New", "VENTA": "💰 Sale", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Bulk", "CREAR": "✨ Create", "HIST_DEL": "🧹 Clean"}
+        "val_map": {"NEW": "🆕 New", "VENTA": "💰 Sale", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Deleted", "BORRADO_MASIVO": "🔥 Bulk", "CREAR": "✨ Create", "HIST_DEL": "🧹 Clean", "META_UPDATE": "🎯 Goal"}
     }
 }
 
@@ -162,6 +159,26 @@ def log_action(book, action, detail):
         book.worksheet("Historial").append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), action, detail])
     except: pass
 
+# --- NUEVO: FUNCIÓN PARA LEER LA META DESDE EL HISTORIAL ---
+def get_goal_from_db(book):
+    try:
+        # Buscamos en el historial la última vez que se guardó una meta
+        sheet_log = book.worksheet("Historial")
+        # Traemos todos los registros
+        logs = sheet_log.get_all_records()
+        df_log = pd.DataFrame(logs)
+        
+        if not df_log.empty:
+            # Filtramos solo las acciones de "META_UPDATE"
+            meta_logs = df_log[df_log['Accion'] == 'META_UPDATE']
+            if not meta_logs.empty:
+                # Tomamos el último valor guardado (Detalles)
+                ultimo_valor = meta_logs.iloc[-1]['Detalles']
+                return float(ultimo_valor)
+    except:
+        pass
+    return 50000.0 # Valor por defecto si no encuentra nada
+
 # --- APP PRINCIPAL ---
 def main():
     if not check_password():
@@ -172,7 +189,7 @@ def main():
         st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=70)
         lang = st.selectbox("Language / Idioma", ["Español", "Português", "English"])
         st.markdown("---")
-        st.caption("v19.0 CEO Edition")
+        st.caption("v20.0 Persistent Goal")
     
     t = TR[lang]
     s = RATES[lang]["s"]
@@ -182,8 +199,8 @@ def main():
         book = get_data()
         sheet = book.sheet1
         df = pd.DataFrame(sheet.get_all_records())
-    except:
-        st.error("Conectando DB...")
+    except Exception as e:
+        st.error(f"Error DB: {e}")
         st.stop()
 
     if not df.empty:
@@ -199,27 +216,38 @@ def main():
     
     productos = sorted(list(set(["AÇAI MÉDIO", "AÇAI POP", "CUPUAÇU"] + prods_db)))
 
-    # --- BARRA LATERAL: META Y DESCARGA ---
+    # --- BARRA LATERAL: META PERSISTENTE ---
     with st.sidebar:
-        # 1. META MENSUAL (OBJETIVO)
         st.subheader(t['goal_text'])
+        
+        # 1. Cargar Meta desde la Base de Datos
+        db_goal = get_goal_from_db(book)
+        
+        # 2. Input para cambiarla (inicia con el valor de la DB)
+        meta_input = st.number_input(t['goal_label'], value=db_goal, step=1000.0)
+        
+        # 3. Botón para GUARDAR en la DB
+        if st.button(t['goal_save'], type="primary"):
+            log_action(book, "META_UPDATE", str(meta_input))
+            st.success(t['msgs'][3])
+            time.sleep(1)
+            st.rerun()
+
+        # 4. Cálculo de Progreso
         val_total_brl = df['Valor_BRL'].sum() if not df.empty else 0
         val_total_curr = val_total_brl * r
         
-        # Meta por defecto 50,000 (puedes cambiarlo)
-        meta = st.number_input(t['goal_label'], value=50000.0, step=1000.0) 
-        
-        if meta > 0:
-            progreso = min(val_total_curr / meta, 1.0)
+        if meta_input > 0:
+            progreso = min(val_total_curr / meta_input, 1.0)
             st.progress(progreso)
-            porcentaje = (val_total_curr / meta) * 100
-            st.caption(f"{porcentaje:.1f}% ({s} {val_total_curr:,.0f} / {s} {meta:,.0f})")
+            porcentaje = (val_total_curr / meta_input) * 100
+            st.caption(f"{porcentaje:.1f}% ({s} {val_total_curr:,.0f} / {s} {meta_input:,.0f})")
             if progreso >= 1.0:
                 st.balloons()
         
         st.divider()
 
-        # 2. DESCARGA EXCEL PRO
+        # 5. EXPORTACIÓN EXCEL
         if not df.empty:
             buffer = io.BytesIO()
             df_export = df.copy()
@@ -269,61 +297,47 @@ def main():
     with tab_dash:
         st.title(t['headers'][0])
         if not df.empty:
-            # Cálculos Avanzados
             val_total = df['Valor_BRL'].sum() * r
             kg_total = df['Kg'].sum()
             com_total = (df['Valor_BRL'].sum() * 0.02) * r
             ticket_medio = val_total / len(df) if len(df) > 0 else 0
             
-            # Mejor Cliente
             top_client_name = "---"
             if not df.empty:
                 top_client = df.groupby('Empresa')['Valor_BRL'].sum().idxmax()
                 top_client_val = df.groupby('Empresa')['Valor_BRL'].sum().max() * r
                 top_client_name = f"{top_client} ({s} {top_client_val:,.0f})"
 
-            # Fila 1: KPIs Básicos
             k1, k2, k3 = st.columns(3)
             k1.metric(t['metrics'][0], f"{s} {val_total:,.0f}", delta="Total")
             k2.metric(t['metrics'][1], f"{kg_total:,.0f} kg")
             k3.metric(t['metrics'][2], f"{s} {com_total:,.0f}")
             
             st.markdown("<br>", unsafe_allow_html=True)
-            
-            # Fila 2: KPIs Avanzados
             k4, k5 = st.columns(2)
             k4.metric(t['metrics'][3], f"{s} {ticket_medio:,.0f}", help="Valor promedio de cada venta")
             k5.metric(t['metrics'][4], top_client_name, delta="VIP 👑")
 
             st.divider()
 
-            # Gráficos
             c_izq, c_der = st.columns([2, 1])
-            
             with c_izq:
-                # Evolución
                 df['Fecha_DT'] = pd.to_datetime(df['Fecha_Registro'], errors='coerce')
                 df['Fecha_Dia'] = df['Fecha_DT'].dt.date
                 df['Valor_View'] = df['Valor_BRL'] * r
                 df_trend = df.groupby('Fecha_Dia')['Valor_View'].sum().reset_index()
                 
                 st.subheader(t['charts'][0])
-                fig_line = px.area(df_trend, x='Fecha_Dia', y='Valor_View', markers=True) # Area es más bonito
+                fig_line = px.area(df_trend, x='Fecha_Dia', y='Valor_View', markers=True)
                 fig_line.update_layout(xaxis_title="", yaxis_title=s, height=350)
                 fig_line.update_traces(line_color='#FF4B4B', fillcolor='rgba(255, 75, 75, 0.2)')
                 st.plotly_chart(fig_line, use_container_width=True)
 
             with c_der:
-                # Ranking Clientes (Top 5)
                 st.subheader(t['charts'][2])
                 df_ranking = df.groupby('Empresa')['Valor_View'].sum().sort_values(ascending=False).head(5).reset_index()
-                st.dataframe(
-                    df_ranking.rename(columns={"Valor_View": t['dash_cols']['val']}), 
-                    hide_index=True, 
-                    use_container_width=True
-                )
+                st.dataframe(df_ranking.rename(columns={"Valor_View": t['dash_cols']['val']}), hide_index=True, use_container_width=True)
                 
-                # Ranking Productos (Pequeño)
                 st.write("")
                 st.caption(t['charts'][1])
                 fig_pie = px.pie(df, names='Producto', values='Kg', hole=0.6)
@@ -351,19 +365,17 @@ def main():
                     sheet.append_row(row)
                     log_action(book, "NEW", f"{emp} | {kg}kg")
                     st.success(t['msgs'][0])
-                    st.balloons() # ¡Celebración al vender!
+                    st.balloons()
                     time.sleep(1.5)
                     st.rerun()
 
     # 3️⃣ ADMIN
     with tab_admin:
         st.header(t['headers'][2])
-        # Buscador mejorado
         filtro = st.text_input("🔍 " + t['actions'][2], placeholder="Ej: Julio, Açai...")
         
         if not df.empty:
             df_show = df[df.astype(str).apply(lambda x: x.str.contains(filtro, case=False)).any(axis=1)] if filtro else df.tail(10).iloc[::-1]
-            
             for i, r in df_show.iterrows():
                 with st.expander(f"📌 {r['Empresa']} | {r['Producto']} ({r['Fecha_Registro']})"):
                     c1, c2 = st.columns(2)
@@ -379,10 +391,8 @@ def main():
                             st.success("OK!")
                             time.sleep(1)
                             st.rerun()
-            
             st.divider()
             with st.expander(t['bulk_label']):
-                # Borrado masivo
                 df_rev = df.iloc[::-1].reset_index()
                 opc = [f"{r['Empresa']} | {r['Producto']} | {r['Fecha_Registro']}" for i, r in df_rev.iterrows()]
                 sels = st.multiselect(t['msgs'][3], opc)
@@ -410,7 +420,6 @@ def main():
                 show_log = h_dt.copy().rename(columns=t['col_map'])
                 show_log[t['col_map']["Accion"]] = show_log[t['col_map']["Accion"]].replace(t['val_map'])
                 st.dataframe(show_log.iloc[::-1], use_container_width=True)
-                
                 st.divider()
                 with st.expander(t['clean_hist_label']):
                     rev_h = h_dt.iloc[::-1].reset_index()
