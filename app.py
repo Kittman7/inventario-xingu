@@ -6,6 +6,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import time
 import io
+import xlsxwriter # Importante para los estilos
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Xingu Enterprise", page_icon="🍇", layout="wide")
@@ -76,7 +77,7 @@ TR = {
         "actions": ["Atualizar", "APAGAR", "Buscar...", "Novo...", "Apagar Selecionados"],
         "bulk_label": "🗑️ Apagar Vários (Seleção Múltipla)",
         "clean_hist_label": "🗑️ Limpar Histórico",
-        "download_label": "📥 Baixar Excel (Mobile Friendly)",
+        "download_label": "📥 Baixar Relatório Executivo (Excel)",
         "logout_label": "🔒 Sair / Cerrar Sesión",
         "msgs": ["Sucesso!", "Dados apagados!", "Sem dados", "Selecione itens"],
         "new_labels": ["Nome do Cliente:", "Nome do Produto:"],
@@ -94,7 +95,7 @@ TR = {
         "actions": ["Actualizar", "BORRAR", "Buscar...", "Nuevo...", "Borrar Seleccionados"],
         "bulk_label": "🗑️ Borrado Masivo (Selección Múltiple)",
         "clean_hist_label": "🗑️ Limpiar Historial",
-        "download_label": "📥 Descargar Excel (Mobile Friendly)",
+        "download_label": "📥 Descargar Reporte Ejecutivo (Excel)",
         "logout_label": "🔒 Cerrar Sesión / Sair",
         "msgs": ["¡Éxito!", "¡Datos borrados!", "Sin datos", "Selecciona ítems"],
         "new_labels": ["Nombre Cliente:", "Nombre Producto:"],
@@ -112,7 +113,7 @@ TR = {
         "actions": ["Update", "DELETE", "Search...", "New...", "Delete Selected"],
         "bulk_label": "🗑️ Bulk Delete (Multi-Select)",
         "clean_hist_label": "🗑️ Clear History",
-        "download_label": "📥 Download Excel (Mobile Friendly)",
+        "download_label": "📥 Download Executive Report (Excel)",
         "logout_label": "🔒 Log Out",
         "msgs": ["Success!", "Data deleted!", "No data", "Select items"],
         "new_labels": ["Client Name:", "Product Name:"],
@@ -149,7 +150,7 @@ def main():
     with st.sidebar:
         st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=60)
         lang = st.selectbox("Language / Idioma", ["Español", "Português", "English"])
-        st.caption("v17.0 Mobile Excel")
+        st.caption("v18.0 Executive Report")
     
     t = TR[lang]
     s = RATES[lang]["s"]
@@ -176,7 +177,7 @@ def main():
     
     productos = sorted(list(set(["AÇAI MÉDIO", "AÇAI POP", "CUPUAÇU"] + prods_db)))
 
-    # --- SIDEBAR: EXCEL PRO ---
+    # --- SIDEBAR: EXCEL EJECUTIVO ---
     with st.sidebar:
         st.divider()
         if not df.empty:
@@ -186,7 +187,22 @@ def main():
             
             meses_pt = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto", 9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"}
             
+            # --- MOTOR DE EXCEL AVANZADO (ESTILOS) ---
             with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+                workbook = writer.book
+                
+                # Definimos los estilos "Profesionales"
+                fmt_header = workbook.add_format({
+                    'bold': True, 'text_wrap': True, 'valign': 'top', 'fg_color': '#2C3E50', 
+                    'font_color': 'white', 'border': 1, 'align': 'center'
+                })
+                fmt_currency = workbook.add_format({'num_format': 'R$ #,##0.00', 'border': 1})
+                fmt_number = workbook.add_format({'num_format': '#,##0.00', 'border': 1})
+                fmt_center = workbook.add_format({'align': 'center', 'border': 1})
+                fmt_base = workbook.add_format({'border': 1})
+                fmt_total = workbook.add_format({'bold': True, 'bg_color': '#D3D3D3', 'num_format': 'R$ #,##0.00', 'border': 1})
+                fmt_total_label = workbook.add_format({'bold': True, 'bg_color': '#D3D3D3', 'align': 'right', 'border': 1})
+
                 df_export['Periodo'] = df_export['Fecha_Temp'].dt.to_period('M')
                 periodos = sorted(df_export['Periodo'].unique(), reverse=True)
                 
@@ -196,24 +212,44 @@ def main():
                     data_mes['Fecha'] = data_mes['Fecha_Temp'].dt.strftime('%d/%m/%Y')
                     data_mes['Hora'] = data_mes['Fecha_Temp'].dt.strftime('%H:%M')
                     
+                    # Columnas a exportar
                     cols = ['Fecha', 'Hora', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']
                     data_final = data_mes[[c for c in cols if c in data_mes.columns]]
                     
+                    # Escribir Datos (Sin Header, lo pondremos manual bonito)
                     nombre_pestana = f"{meses_pt[periodo.month]} {periodo.year}"
-                    data_final.to_excel(writer, sheet_name=nombre_pestana, index=False)
+                    data_final.to_excel(writer, sheet_name=nombre_pestana, startrow=1, header=False, index=False)
                     
-                    # --- AUTO-AJUSTE DE COLUMNAS ---
                     worksheet = writer.sheets[nombre_pestana]
-                    # Ajustamos ancho: A(Fecha)=12, B(Hora)=8, C(Empresa)=20, D(Prod)=20, etc.
-                    worksheet.set_column('A:A', 12)
-                    worksheet.set_column('B:B', 8)
-                    worksheet.set_column('C:D', 20)
-                    worksheet.set_column('E:G', 12)
-            
+                    
+                    # 1. Escribir Encabezados con Estilo
+                    for col_num, value in enumerate(data_final.columns):
+                        worksheet.write(0, col_num, value, fmt_header)
+                    
+                    # 2. Ajustar Ancho y Formato de Columnas
+                    # A(Fecha), B(Hora) -> Centrados
+                    worksheet.set_column('A:B', 12, fmt_center)
+                    # C(Empresa), D(Prod) -> Anchos, Texto Normal
+                    worksheet.set_column('C:D', 25, fmt_base)
+                    # E(Kg) -> Número
+                    worksheet.set_column('E:E', 12, fmt_number)
+                    # F(Valor), G(Comision) -> Moneda
+                    worksheet.set_column('F:G', 15, fmt_currency)
+                    
+                    # 3. FILA DE TOTALES (Al final)
+                    fila_total = len(data_final) + 1
+                    worksheet.write(fila_total, 4, "TOTALES:", fmt_total_label) # Etiqueta
+                    # Sumar Valor
+                    sum_valor = data_final['Valor_BRL'].sum()
+                    worksheet.write(fila_total, 5, sum_valor, fmt_total)
+                    # Sumar Comision
+                    sum_com = data_final['Comissao_BRL'].sum()
+                    worksheet.write(fila_total, 6, sum_com, fmt_total)
+
             st.download_button(
                 label=t['download_label'],
                 data=buffer,
-                file_name=f'Relatorio_Xingu_{datetime.now().strftime("%Y-%m")}.xlsx',
+                file_name=f'Relatorio_Executivo_{datetime.now().strftime("%Y-%m")}.xlsx',
                 mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             )
         
