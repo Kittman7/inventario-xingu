@@ -16,6 +16,7 @@ st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+    
     div[data-testid="stMetric"] {
         background-color: #1E1E1E;
         border-radius: 10px;
@@ -23,6 +24,7 @@ st.markdown("""
         border: 1px solid #333;
         box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
     }
+    
     .stTabs [data-baseweb="tab-list"] { gap: 8px; }
     .stTabs [data-baseweb="tab"] {
         height: 50px;
@@ -36,6 +38,7 @@ st.markdown("""
         border-bottom: 3px solid #FF4B4B;
         color: #FF4B4B;
     }
+    
     .stButton>button {
         width: 100%;
         border-radius: 8px;
@@ -79,8 +82,8 @@ TR = {
         "tabs": ["📊 CEO Dashboard", "➕ Nova Venda", "🛠️ Admin", "📜 Log"],
         "headers": ["Inteligência de Negócios", "Registrar Venda", "Gestão", "Auditoria"],
         "metrics": ["Faturamento Total", "Volume (Kg)", "Comissão (2%)", "Ticket Médio", "Melhor Cliente"],
-        "charts": ["Tendência (Diária)", "Ranking de Produtos", "Top Clientes"],
-        "table_title": "Detalhamento",
+        "charts": ["Tendência (Diária)", "Mix de Produtos", "Vendas por Empresa"],
+        "table_title": "Detalhamento de Vendas",
         "forms": ["Cliente", "Produto", "Kg", "Valor (R$)", "✅ Confirmar Venda"],
         "actions": ["Salvar Edição", "DELETAR", "Buscar...", "Outro...", "🗑️ Apagar Seleção"],
         "bulk_label": "Gestão em Massa (Apagar Vários)",
@@ -93,15 +96,15 @@ TR = {
         "msgs": ["Venda Registrada!", "Apagado com sucesso!", "Sem dados", "Meta Atualizada!"],
         "new_labels": ["Nome Cliente:", "Nome Produto:"],
         "col_map": {"Fecha_Hora": "📅 Data", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"},
-        "dash_cols": {"emp": "Empresa", "prod": "Produto", "kg": "Kg", "val": "Valor", "com": "Comissão"},
+        "dash_cols": {"emp": "Empresa", "prod": "Produto", "kg": "Quantidade (Kg)", "val": "Valor", "com": "Comissão"},
         "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"}
     },
     "Español": {
         "tabs": ["📊 CEO Dashboard", "➕ Nueva Venta", "🛠️ Admin", "📜 Log"],
         "headers": ["Inteligencia de Negocios", "Registrar Venta", "Gestión", "Auditoría"],
         "metrics": ["Facturación Total", "Volumen (Kg)", "Comisión (2%)", "Ticket Medio", "Mejor Cliente"],
-        "charts": ["Tendencia (Diaria)", "Ranking de Productos", "Top Clientes"],
-        "table_title": "Detalle",
+        "charts": ["Tendencia (Diaria)", "Mix de Productos", "Ventas por Empresa"],
+        "table_title": "Detalle de Ventas",
         "forms": ["Cliente", "Producto", "Kg", "Valor (R$)", "✅ Confirmar Venta"],
         "actions": ["Guardar Edición", "BORRAR", "Buscar...", "Otro...", "🗑️ Borrar Selección"],
         "bulk_label": "Gestión Masiva (Borrar Varios)",
@@ -114,15 +117,15 @@ TR = {
         "msgs": ["¡Venta Registrada!", "¡Borrado con éxito!", "Sin datos", "¡Meta Actualizada!"],
         "new_labels": ["Nombre Cliente:", "Nombre Producto:"],
         "col_map": {"Fecha_Hora": "📅 Fecha", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"},
-        "dash_cols": {"emp": "Empresa", "prod": "Producto", "kg": "Kg", "val": "Valor", "com": "Comisión"},
+        "dash_cols": {"emp": "Empresa", "prod": "Producto", "kg": "Cantidad (Kg)", "val": "Valor", "com": "Comisión"},
         "val_map": {"NEW": "🆕 Nuevo", "VENTA": "💰 Venta", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Masa", "CREAR": "✨ Crear", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"}
     },
     "English": {
         "tabs": ["📊 CEO Dashboard", "➕ New Sale", "🛠️ Admin", "📜 Log"],
         "headers": ["Business Intelligence", "Register Sale", "Management", "Audit Log"],
         "metrics": ["Total Revenue", "Volume (Kg)", "Commission (2%)", "Avg. Ticket", "Top Client"],
-        "charts": ["Trend (Daily)", "Product Ranking", "Top Clients"],
-        "table_title": "Details",
+        "charts": ["Trend (Daily)", "Product Mix", "Sales by Company"],
+        "table_title": "Sales Details",
         "forms": ["Client", "Product", "Kg", "Value (R$)", "✅ Confirm Sale"],
         "actions": ["Save Edit", "DELETE", "Search...", "Other...", "🗑️ Delete Selection"],
         "bulk_label": "Bulk Management",
@@ -135,7 +138,7 @@ TR = {
         "msgs": ["Sale Registered!", "Deleted successfully!", "No data", "Goal Updated!"],
         "new_labels": ["Client Name:", "Product Name:"],
         "col_map": {"Fecha_Hora": "📅 Date", "Accion": "⚡ Action", "Detalles": "📝 Details"},
-        "dash_cols": {"emp": "Company", "prod": "Product", "kg": "Kg", "val": "Value", "com": "Commission"},
+        "dash_cols": {"emp": "Company", "prod": "Product", "kg": "Quantity (Kg)", "val": "Value", "com": "Commission"},
         "val_map": {"NEW": "🆕 New", "VENTA": "💰 Sale", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Deleted", "BORRADO_MASIVO": "🔥 Bulk", "CREAR": "✨ Create", "HIST_DEL": "🧹 Clean", "META_UPDATE": "🎯 Goal"}
     }
 }
@@ -159,37 +162,28 @@ def log_action(book, action, detail):
         book.worksheet("Historial").append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), action, detail])
     except: pass
 
-# --- NUEVO: FUNCIÓN PARA LEER LA META DESDE EL HISTORIAL ---
 def get_goal_from_db(book):
     try:
-        # Buscamos en el historial la última vez que se guardó una meta
         sheet_log = book.worksheet("Historial")
-        # Traemos todos los registros
         logs = sheet_log.get_all_records()
         df_log = pd.DataFrame(logs)
-        
         if not df_log.empty:
-            # Filtramos solo las acciones de "META_UPDATE"
             meta_logs = df_log[df_log['Accion'] == 'META_UPDATE']
             if not meta_logs.empty:
-                # Tomamos el último valor guardado (Detalles)
-                ultimo_valor = meta_logs.iloc[-1]['Detalles']
-                return float(ultimo_valor)
-    except:
-        pass
-    return 50000.0 # Valor por defecto si no encuentra nada
+                return float(meta_logs.iloc[-1]['Detalles'])
+    except: pass
+    return 50000.0
 
 # --- APP PRINCIPAL ---
 def main():
     if not check_password():
         return
 
-    # --- SIDEBAR MEJORADO ---
     with st.sidebar:
         st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=70)
         lang = st.selectbox("Language / Idioma", ["Español", "Português", "English"])
         st.markdown("---")
-        st.caption("v20.0 Persistent Goal")
+        st.caption("v21.0 Full Details")
     
     t = TR[lang]
     s = RATES[lang]["s"]
@@ -216,24 +210,18 @@ def main():
     
     productos = sorted(list(set(["AÇAI MÉDIO", "AÇAI POP", "CUPUAÇU"] + prods_db)))
 
-    # --- BARRA LATERAL: META PERSISTENTE ---
+    # --- SIDEBAR: META & EXCEL ---
     with st.sidebar:
         st.subheader(t['goal_text'])
-        
-        # 1. Cargar Meta desde la Base de Datos
         db_goal = get_goal_from_db(book)
-        
-        # 2. Input para cambiarla (inicia con el valor de la DB)
         meta_input = st.number_input(t['goal_label'], value=db_goal, step=1000.0)
         
-        # 3. Botón para GUARDAR en la DB
         if st.button(t['goal_save'], type="primary"):
             log_action(book, "META_UPDATE", str(meta_input))
             st.success(t['msgs'][3])
             time.sleep(1)
             st.rerun()
 
-        # 4. Cálculo de Progreso
         val_total_brl = df['Valor_BRL'].sum() if not df.empty else 0
         val_total_curr = val_total_brl * r
         
@@ -242,12 +230,10 @@ def main():
             st.progress(progreso)
             porcentaje = (val_total_curr / meta_input) * 100
             st.caption(f"{porcentaje:.1f}% ({s} {val_total_curr:,.0f} / {s} {meta_input:,.0f})")
-            if progreso >= 1.0:
-                st.balloons()
+            if progreso >= 1.0: st.balloons()
         
         st.divider()
 
-        # 5. EXPORTACIÓN EXCEL
         if not df.empty:
             buffer = io.BytesIO()
             df_export = df.copy()
@@ -308,6 +294,7 @@ def main():
                 top_client_val = df.groupby('Empresa')['Valor_BRL'].sum().max() * r
                 top_client_name = f"{top_client} ({s} {top_client_val:,.0f})"
 
+            # KPIs
             k1, k2, k3 = st.columns(3)
             k1.metric(t['metrics'][0], f"{s} {val_total:,.0f}", delta="Total")
             k2.metric(t['metrics'][1], f"{kg_total:,.0f} kg")
@@ -315,11 +302,12 @@ def main():
             
             st.markdown("<br>", unsafe_allow_html=True)
             k4, k5 = st.columns(2)
-            k4.metric(t['metrics'][3], f"{s} {ticket_medio:,.0f}", help="Valor promedio de cada venta")
+            k4.metric(t['metrics'][3], f"{s} {ticket_medio:,.0f}", help="Valor promedio")
             k5.metric(t['metrics'][4], top_client_name, delta="VIP 👑")
 
             st.divider()
 
+            # GRÁFICOS (Tendencia Izq | Torta Der)
             c_izq, c_der = st.columns([2, 1])
             with c_izq:
                 df['Fecha_DT'] = pd.to_datetime(df['Fecha_Registro'], errors='coerce')
@@ -334,15 +322,31 @@ def main():
                 st.plotly_chart(fig_line, use_container_width=True)
 
             with c_der:
-                st.subheader(t['charts'][2])
-                df_ranking = df.groupby('Empresa')['Valor_View'].sum().sort_values(ascending=False).head(5).reset_index()
-                st.dataframe(df_ranking.rename(columns={"Valor_View": t['dash_cols']['val']}), hide_index=True, use_container_width=True)
-                
-                st.write("")
-                st.caption(t['charts'][1])
+                st.subheader(t['charts'][1]) # Mix de Productos (Torta)
                 fig_pie = px.pie(df, names='Producto', values='Kg', hole=0.6)
-                fig_pie.update_layout(showlegend=False, margin=dict(t=0,b=0,l=0,r=0), height=200)
+                fig_pie.update_layout(showlegend=False, margin=dict(t=0,b=0,l=0,r=0), height=350)
                 st.plotly_chart(fig_pie, use_container_width=True)
+
+            # --- NUEVA SECCIÓN: TABLA DETALLADA COMPLETA (ABAJO) ---
+            st.divider()
+            st.subheader(t['table_title'])
+            
+            # Preparar Tabla Detallada
+            df_table = df.copy()
+            df_table['Val_Show'] = df_table['Valor_BRL'] * r
+            df_table['Com_Show'] = (df_table['Valor_BRL'] * 0.02) * r
+            
+            cols_to_show = ['Empresa', 'Producto', 'Kg', 'Val_Show', 'Com_Show']
+            df_table = df_table[cols_to_show].rename(columns={
+                'Empresa': t['dash_cols']['emp'],
+                'Producto': t['dash_cols']['prod'],
+                'Kg': t['dash_cols']['kg'],
+                'Val_Show': f"{t['dash_cols']['val']} ({s})",
+                'Com_Show': f"{t['dash_cols']['com']} ({s})"
+            })
+            
+            # Mostrar Tabla Ancha
+            st.dataframe(df_table.iloc[::-1], use_container_width=True)
 
         else:
             st.info(t['msgs'][2])
