@@ -3,4 +3,4 @@ pandas
 plotly
 gspread
 oauth2client
-
+XlsxWriter  <-- ¡Asegúrate de que esta línea esté ahí!
