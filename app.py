@@ -7,6 +7,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 import time
 import io
 import xlsxwriter
+import urllib.parse # Para crear los links de WhatsApp/Gmail
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Xingu CEO", page_icon="🍇", layout="wide")
@@ -106,6 +107,7 @@ TR = {
         "goal_label": "🎯 Meta de", 
         "goal_save": "💾 Salvar Meta do Mês",
         "goal_text": "Progresso Mensal",
+        "share_text": "Compartilhar Resumo",
         "msgs": ["Venda Registrada!", "Apagado com sucesso!", "Sem dados", "Meta Atualizada!"],
         "new_labels": ["Nome Cliente:", "Nome Produto:"],
         "col_map": {"Fecha_Hora": "📅 Data", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"},
@@ -128,6 +130,7 @@ TR = {
         "goal_label": "🎯 Meta de",
         "goal_save": "💾 Salvar Meta del Mes",
         "goal_text": "Progreso Mensual",
+        "share_text": "Compartir Resumen",
         "msgs": ["¡Venta Registrada!", "¡Borrado con éxito!", "Sin datos", "¡Meta Actualizada!"],
         "new_labels": ["Nombre Cliente:", "Nombre Producto:"],
         "col_map": {"Fecha_Hora": "📅 Fecha", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"},
@@ -150,6 +153,7 @@ TR = {
         "goal_label": "🎯 Goal for",
         "goal_save": "💾 Save Month Goal",
         "goal_text": "Monthly Progress",
+        "share_text": "Share Summary",
         "msgs": ["Sale Registered!", "Deleted successfully!", "No data", "Goal Updated!"],
         "new_labels": ["Client Name:", "Product Name:"],
         "col_map": {"Fecha_Hora": "📅 Date", "Accion": "⚡ Action", "Detalles": "📝 Details"},
@@ -203,7 +207,7 @@ def main():
         st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=70)
         lang = st.selectbox("Language / Idioma", ["Português", "Español", "English"])
         st.markdown("---")
-        st.caption("v29.0 Custom Layout")
+        st.caption("v30.0 Share Features")
     
     t = TR[lang]
     s = RATES[lang]["s"]
@@ -236,7 +240,7 @@ def main():
     mes_actual_nombre = mes_ui_dict[ahora.month]
     periodo_clave = ahora.strftime("%Y-%m")
 
-    # --- SIDEBAR ---
+    # --- SIDEBAR: META ---
     with st.sidebar:
         st.subheader(f"{t['goal_text']} ({mes_actual_nombre})")
         db_goal = get_monthly_goal_from_db(book, periodo_clave)
@@ -255,8 +259,10 @@ def main():
             df_mes_actual = df[df['Fecha_DT'].dt.to_period('M') == periodo_clave]
             val_mes_brl = df_mes_actual['Valor_BRL'].sum()
             val_mes_curr = val_mes_brl * r
+            kg_mes = df_mes_actual['Kg'].sum()
         else:
             val_mes_curr = 0
+            kg_mes = 0
 
         if meta_input > 0:
             progreso = min(val_mes_curr / meta_input, 1.0)
@@ -269,7 +275,7 @@ def main():
         
         st.divider()
 
-        # EXCEL
+        # --- EXCEL ---
         if not df.empty:
             buffer = io.BytesIO()
             df_export = df.copy()
@@ -320,6 +326,25 @@ def main():
                 type="primary"
             )
         
+        # --- COMPARTIR WHATSAPP & MAIL ---
+        st.divider()
+        st.subheader(t['share_text'])
+        
+        # Generar texto del mensaje
+        msg_text = f"""📊 *Xingu Cloud Relatório*
+📅 *{mes_actual_nombre}*
+💰 Total: {s} {val_mes_curr:,.2f}
+📦 Volume: {kg_mes:,.0f} kg
+🎯 Meta: {porcentaje:.1f}%"""
+        
+        # Link WhatsApp
+        msg_encoded = urllib.parse.quote(msg_text)
+        st.link_button("📱 WhatsApp", f"https://wa.me/?text={msg_encoded}")
+        
+        # Link Email
+        subject_encoded = urllib.parse.quote(f"Relatório Xingu - {mes_actual_nombre}")
+        st.link_button("📧 Email", f"mailto:?subject={subject_encoded}&body={msg_encoded}")
+
         st.write("")
         if st.button(t['logout_label'], type="secondary"):
             st.session_state.password_correct = False
@@ -355,7 +380,7 @@ def main():
 
             st.divider()
 
-            # --- PARTE 1: TABLA DETALLADA (AHORA ARRIBA) ---
+            # --- PARTE 1: TABLA DETALLADA ---
             st.subheader(t['table_title'])
             
             df_table = df.copy()
@@ -389,7 +414,7 @@ def main():
 
             st.divider()
 
-            # --- PARTE 2: GRÁFICOS (AHORA ABAJO) ---
+            # --- PARTE 2: GRÁFICOS ---
             c_izq, c_der = st.columns([2, 1])
             with c_izq:
                 df['Fecha_DT'] = pd.to_datetime(df['Fecha_Registro'], errors='coerce')
