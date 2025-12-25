@@ -14,6 +14,9 @@ import urllib.parse
 # ==========================================
 NOMBRE_EMPRESA = "Xingu CEO"
 ICONO_APP = "🍇"
+
+# 🔑 TU CONTRASEÑA (Cámbiala aquí si quieres)
+SENHA_ADMIN = "Julio777" 
 # ==========================================
 
 # --- CONFIGURACIÓN DE PÁGINA ---
@@ -61,7 +64,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- SEGURIDAD (CORREGIDA CON .strip()) ---
+# --- SEGURIDAD SIMPLIFICADA (SIN SECRETS) ---
 def check_password():
     if "password_correct" not in st.session_state:
         st.session_state.password_correct = False
@@ -74,17 +77,13 @@ def check_password():
         st.write("")
         password = st.text_input("Senha / Contraseña", type="password")
         if st.button("Entrar", type="primary"):
-            try:
-                # AQUÍ ESTÁ EL ARREGLO: .strip() elimina espacios fantasma
-                pass_limpia = password.strip()
-                
-                if pass_limpia == st.secrets["passwords"]["admin_password"]:
-                    st.session_state.password_correct = True
-                    st.rerun()
-                else:
-                    st.error("🚫 Incorrecto / Incorreto")
-            except:
-                st.error("⚠️ Error: Configura [passwords] en Secrets.")
+            # Comparamos directamente con la variable SENHA_ADMIN
+            # .strip() evita el error de espacios del celular
+            if password.strip() == SENHA_ADMIN:
+                st.session_state.password_correct = True
+                st.rerun()
+            else:
+                st.error("🚫 Incorrecto / Incorreto")
     return False
 
 # --- MAPA DE MESES ---
@@ -223,7 +222,7 @@ def main():
             st.info(TR[lang]["install_guide"])
 
         st.markdown("---")
-        st.caption("v37.0 Mobile Fix")
+        st.caption("v38.0 Direct Access")
     
     t = TR[lang]
     s = RATES[lang]["s"]
