@@ -7,7 +7,6 @@ from oauth2client.service_account import ServiceAccountCredentials
 import time
 import io
 import xlsxwriter
-import urllib.parse # Para crear los links de WhatsApp/Gmail
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Xingu CEO", page_icon="🍇", layout="wide")
@@ -107,11 +106,10 @@ TR = {
         "goal_label": "🎯 Meta de", 
         "goal_save": "💾 Salvar Meta do Mês",
         "goal_text": "Progresso Mensal",
-        "share_text": "Compartilhar Resumo",
         "msgs": ["Venda Registrada!", "Apagado com sucesso!", "Sem dados", "Meta Atualizada!"],
         "new_labels": ["Nome Cliente:", "Nome Produto:"],
         "col_map": {"Fecha_Hora": "📅 Data", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"},
-        "dash_cols": {"emp": "Empresa", "prod": "Produto", "kg": "Quantidade (Kg)", "val": "💰 Valor Pago", "com": "Comissão", "mes": "🗓️ Mês"},
+        "dash_cols": {"emp": "Empresa", "prod": "Produto", "kg": "Quantidade", "val": "Valor Pago", "com": "Comissão", "mes": "Mês"},
         "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "EDITAR": "✏️ Edição", "BORRAR": "🗑️ Apagado", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"},
         "excel": {"cols": ["Data", "Hora", "Empresa", "Produto", "Kg", "Valor (R$)", "Comissão (R$)"], "total": "TOTAL:", "filename": "Relatorio_Xingu"}
     },
@@ -130,11 +128,10 @@ TR = {
         "goal_label": "🎯 Meta de",
         "goal_save": "💾 Salvar Meta del Mes",
         "goal_text": "Progreso Mensual",
-        "share_text": "Compartir Resumen",
         "msgs": ["¡Venta Registrada!", "¡Borrado con éxito!", "Sin datos", "¡Meta Actualizada!"],
         "new_labels": ["Nombre Cliente:", "Nombre Producto:"],
         "col_map": {"Fecha_Hora": "📅 Fecha", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"},
-        "dash_cols": {"emp": "Empresa", "prod": "Producto", "kg": "Cantidad (Kg)", "val": "💰 Valor Pagado", "com": "Comisión", "mes": "🗓️ Mes"},
+        "dash_cols": {"emp": "Empresa", "prod": "Producto", "kg": "Cantidad", "val": "Valor Pagado", "com": "Comisión", "mes": "Mes"},
         "val_map": {"NEW": "🆕 Nuevo", "VENTA": "💰 Venta", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Masa", "CREAR": "✨ Crear", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"},
         "excel": {"cols": ["Fecha", "Hora", "Empresa", "Producto", "Kg", "Valor (R$)", "Comisión (R$)"], "total": "TOTAL:", "filename": "Reporte_Xingu"}
     },
@@ -153,11 +150,10 @@ TR = {
         "goal_label": "🎯 Goal for",
         "goal_save": "💾 Save Month Goal",
         "goal_text": "Monthly Progress",
-        "share_text": "Share Summary",
         "msgs": ["Sale Registered!", "Deleted successfully!", "No data", "Goal Updated!"],
         "new_labels": ["Client Name:", "Product Name:"],
         "col_map": {"Fecha_Hora": "📅 Date", "Accion": "⚡ Action", "Detalles": "📝 Details"},
-        "dash_cols": {"emp": "Company", "prod": "Product", "kg": "Quantity (Kg)", "val": "💰 Value Paid", "com": "Commission", "mes": "🗓️ Month"},
+        "dash_cols": {"emp": "Company", "prod": "Product", "kg": "Quantity", "val": "Value Paid", "com": "Commission", "mes": "Month"},
         "val_map": {"NEW": "🆕 New", "VENTA": "💰 Sale", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Deleted", "BORRADO_MASIVO": "🔥 Bulk", "CREAR": "✨ Create", "HIST_DEL": "🧹 Clean", "META_UPDATE": "🎯 Goal"},
         "excel": {"cols": ["Date", "Time", "Company", "Product", "Kg", "Value (R$)", "Commission (R$)"], "total": "TOTAL:", "filename": "Report_Xingu"}
     }
@@ -207,7 +203,7 @@ def main():
         st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=70)
         lang = st.selectbox("Language / Idioma", ["Português", "Español", "English"])
         st.markdown("---")
-        st.caption("v30.0 Share Features")
+        st.caption("v33.0 Clean & Focused")
     
     t = TR[lang]
     s = RATES[lang]["s"]
@@ -240,7 +236,7 @@ def main():
     mes_actual_nombre = mes_ui_dict[ahora.month]
     periodo_clave = ahora.strftime("%Y-%m")
 
-    # --- SIDEBAR: META ---
+    # --- SIDEBAR ---
     with st.sidebar:
         st.subheader(f"{t['goal_text']} ({mes_actual_nombre})")
         db_goal = get_monthly_goal_from_db(book, periodo_clave)
@@ -275,7 +271,7 @@ def main():
         
         st.divider()
 
-        # --- EXCEL ---
+        # EXCEL
         if not df.empty:
             buffer = io.BytesIO()
             df_export = df.copy()
@@ -326,24 +322,7 @@ def main():
                 type="primary"
             )
         
-        # --- COMPARTIR WHATSAPP & MAIL ---
-        st.divider()
-        st.subheader(t['share_text'])
-        
-        # Generar texto del mensaje
-        msg_text = f"""📊 *Xingu Cloud Relatório*
-📅 *{mes_actual_nombre}*
-💰 Total: {s} {val_mes_curr:,.2f}
-📦 Volume: {kg_mes:,.0f} kg
-🎯 Meta: {porcentaje:.1f}%"""
-        
-        # Link WhatsApp
-        msg_encoded = urllib.parse.quote(msg_text)
-        st.link_button("📱 WhatsApp", f"https://wa.me/?text={msg_encoded}")
-        
-        # Link Email
-        subject_encoded = urllib.parse.quote(f"Relatório Xingu - {mes_actual_nombre}")
-        st.link_button("📧 Email", f"mailto:?subject={subject_encoded}&body={msg_encoded}")
+        # --- AQUÍ HE ELIMINADO LOS BOTONES DE SHARE ---
 
         st.write("")
         if st.button(t['logout_label'], type="secondary"):
@@ -367,7 +346,6 @@ def main():
                 top_client_val = df.groupby('Empresa')['Valor_BRL'].sum().max() * r
                 top_client_name = f"{top_client} ({s} {top_client_val:,.0f})"
 
-            # KPIs
             k1, k2, k3 = st.columns(3)
             k1.metric(t['metrics'][0], f"{s} {val_total:,.0f}", delta="Total")
             k2.metric(t['metrics'][1], f"{kg_total:,.0f} kg")
@@ -380,13 +358,12 @@ def main():
 
             st.divider()
 
-            # --- PARTE 1: TABLA DETALLADA ---
+            # --- TABLA PROFESIONAL 2.0 ---
             st.subheader(t['table_title'])
             
             df_table = df.copy()
             df_table['Val_Show'] = df_table['Valor_BRL'] * r
             df_table['Com_Show'] = (df_table['Valor_BRL'] * 0.02) * r
-            
             df_table['Fecha_DT_Calc'] = pd.to_datetime(df_table['Fecha_Registro'], errors='coerce')
             df_table['Mes_Auto'] = df_table['Fecha_DT_Calc'].dt.month.map(mes_ui_dict)
             
@@ -395,8 +372,8 @@ def main():
                 'Empresa': t['dash_cols']['emp'],
                 'Producto': t['dash_cols']['prod'],
                 'Kg': t['dash_cols']['kg'],
-                'Val_Show': f"{t['dash_cols']['val']} ({s})",
-                'Com_Show': f"{t['dash_cols']['com']} ({s})"
+                'Val_Show': t['dash_cols']['val'],
+                'Com_Show': t['dash_cols']['com']
             }
             
             df_table = df_table.rename(columns=cols_renombrar)
@@ -406,15 +383,33 @@ def main():
                 t['dash_cols']['emp'], 
                 t['dash_cols']['prod'], 
                 t['dash_cols']['kg'], 
-                f"{t['dash_cols']['val']} ({s})", 
-                f"{t['dash_cols']['com']} ({s})"
+                t['dash_cols']['val'], 
+                t['dash_cols']['com']
             ]
             
-            st.dataframe(df_table[cols_final].iloc[::-1], use_container_width=True)
+            st.dataframe(
+                df_table[cols_final].iloc[::-1],
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    t['dash_cols']['val']: st.column_config.NumberColumn(
+                        label=t['dash_cols']['val'],
+                        format="%s %.2f" % s
+                    ),
+                    t['dash_cols']['com']: st.column_config.NumberColumn(
+                        label=t['dash_cols']['com'],
+                        format="%s %.2f" % s
+                    ),
+                    t['dash_cols']['kg']: st.column_config.NumberColumn(
+                        label=t['dash_cols']['kg'],
+                        format="%.1f kg"
+                    )
+                }
+            )
 
             st.divider()
 
-            # --- PARTE 2: GRÁFICOS ---
+            # --- GRÁFICOS ---
             c_izq, c_der = st.columns([2, 1])
             with c_izq:
                 df['Fecha_DT'] = pd.to_datetime(df['Fecha_Registro'], errors='coerce')
