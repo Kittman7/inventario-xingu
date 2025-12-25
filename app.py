@@ -61,7 +61,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- SEGURIDAD MEJORADA (LOGIN CON ENTER) ---
+# --- SEGURIDAD MEJORADA (LOGIN FLUIDO) ---
 def check_password():
     if "password_correct" not in st.session_state:
         st.session_state.password_correct = False
@@ -73,14 +73,15 @@ def check_password():
         st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA} Cloud</h1>", unsafe_allow_html=True)
         st.write("")
         
-        # EL FORMULARIO EVITA EL DOBLE CLICK
-        with st.form("login"):
+        # --- SOLUCIÓN AL "DOBLE CLICK": USAR UN FORMULARIO ---
+        with st.form("login_form"):
             password = st.text_input("Senha / Contraseña", type="password")
-            submit = st.form_submit_button("Entrar", type="primary")
+            # El botón ahora está dentro del formulario
+            submit_button = st.form_submit_button("Entrar", type="primary")
             
-            if submit:
+            if submit_button:
                 try:
-                    # Intenta leer la clave de la nube
+                    # Intenta leer la clave de los secretos
                     clave_real = st.secrets["passwords"]["admin_password"]
                     if password == clave_real:
                         st.session_state.password_correct = True
@@ -88,9 +89,9 @@ def check_password():
                     else:
                         st.error("🚫 Incorrecto / Incorreto")
                 except:
-                    # Si no hay secretos configurados, muestra aviso amarillo (no rompe la app)
-                    st.warning("⚠️ Configuración pendiente en Streamlit Cloud.")
-                    st.info("Ve a 'Manage App' > 'Settings' > 'Secrets' y añade tu contraseña.")
+                    # Si falla al leer los secretos
+                    st.warning("⚠️ La App no puede leer la contraseña.")
+                    st.info("Prueba REINICIAR la App (Manage App -> Reboot) para que cargue los cambios.")
     return False
 
 # --- MAPA DE MESES ---
@@ -106,7 +107,7 @@ MONTHS_UI = {
     "English": {1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June", 7: "July", 8: "August", 9: "September", 10: "October", 11: "November", 12: "December"}
 }
 
-# --- IDIOMAS (AQUÍ ESTABA EL ERROR KEYERROR - YA CORREGIDO) ---
+# --- IDIOMAS (AQUÍ FALTABA EL install_guide ANTES) ---
 TR = {
     "Português": {
         "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nova Venda", "🛠️ Admin", "📜 Log"],
@@ -225,12 +226,12 @@ def main():
         
         lang = st.selectbox("Language / Idioma", ["Português", "Español", "English"])
         
-        # AQUI YA NO DARÁ ERROR
+        # GUÍA INSTALACIÓN (ARREGLADO EL ERROR KEYERROR)
         with st.expander("📲 Instalar App"):
             st.info(TR[lang]["install_guide"])
 
         st.markdown("---")
-        st.caption("v38.0 Master Fix")
+        st.caption("v39.0 Master Fixed")
     
     t = TR[lang]
     s = RATES[lang]["s"]
@@ -383,7 +384,7 @@ def main():
 
             st.divider()
 
-            # --- TABLA PROFESIONAL (CORREGIDA TYPE_ERROR) ---
+            # --- TABLA PROFESIONAL (SIN ERROR DE FORMATO) ---
             st.subheader(t['table_title'])
             
             df_table = df.copy()
@@ -412,7 +413,6 @@ def main():
                 t['dash_cols']['com']
             ]
             
-            # --- AQUÍ ESTABA EL OTRO ERROR: AHORA ESTÁ ARREGLADO CON F-STRINGS ---
             st.dataframe(
                 df_table[cols_final].iloc[::-1],
                 use_container_width=True,
@@ -420,7 +420,7 @@ def main():
                 column_config={
                     t['dash_cols']['val']: st.column_config.NumberColumn(
                         label=t['dash_cols']['val'],
-                        format=f"{s} %.2f" 
+                        format=f"{s} %.2f"  # Uso correcto de f-string
                     ),
                     t['dash_cols']['com']: st.column_config.NumberColumn(
                         label=t['dash_cols']['com'],
