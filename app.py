@@ -10,7 +10,7 @@ import xlsxwriter
 import urllib.parse
 
 # ==========================================
-# 🎨 CONFIGURACIÓN DE TU MARCA
+# 🎨 ZONA DE PERSONALIZACIÓN
 # ==========================================
 NOMBRE_EMPRESA = "Xingu CEO"
 ICONO_APP = "🍇"
@@ -61,7 +61,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- SEGURIDAD ---
+# --- SEGURIDAD MEJORADA (FORMULARIO) ---
 def check_password():
     if "password_correct" not in st.session_state:
         st.session_state.password_correct = False
@@ -72,16 +72,24 @@ def check_password():
     with c2:
         st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA} Cloud</h1>", unsafe_allow_html=True)
         st.write("")
-        password = st.text_input("Senha / Contraseña", type="password")
-        if st.button("Entrar", type="primary"):
-            try:
-                if password == st.secrets["passwords"]["admin_password"]:
-                    st.session_state.password_correct = True
-                    st.rerun()
-                else:
-                    st.error("🚫 Incorrecto / Incorreto")
-            except:
-                st.error("⚠️ Error: Configura [passwords] en Secrets.")
+        
+        # --- CAMBIO: USAMOS UN FORMULARIO PARA QUE EL ENTER FUNCIONE ---
+        with st.form("login_form"):
+            password = st.text_input("Senha / Contraseña", type="password")
+            submitted = st.form_submit_button("Entrar", type="primary")
+            
+            if submitted:
+                try:
+                    # Verifica si la clave existe en los secretos
+                    secreto = st.secrets["passwords"]["admin_password"]
+                    if password == secreto:
+                        st.session_state.password_correct = True
+                        st.rerun()
+                    else:
+                        st.error("🚫 Clave Incorrecta")
+                except:
+                    st.error("⚠️ Error Crítico: No has configurado la clave en Streamlit Cloud (Secrets).")
+                    st.info("Ve a: Manage App -> Settings -> Secrets y pega la configuración.")
     return False
 
 # --- MAPA DE MESES (GLOBAL) ---
@@ -211,8 +219,12 @@ def main():
         st.markdown(f"<h1 style='text-align: center; font-size: 50px;'>{ICONO_APP}</h1>", unsafe_allow_html=True)
         st.markdown(f"<h3 style='text-align: center;'>{NOMBRE_EMPRESA}</h3>", unsafe_allow_html=True)
         lang = st.selectbox("Language / Idioma", ["Português", "Español", "English"])
+        
+        with st.expander("📲 Instalar App"):
+            st.info(TR[lang]["install_guide"])
+
         st.markdown("---")
-        st.caption("v35.0 Stable Pro")
+        st.caption("v37.0 Login Fluido")
     
     t = TR[lang]
     s = RATES[lang]["s"]
@@ -365,7 +377,7 @@ def main():
 
             st.divider()
 
-            # --- TABLA PROFESIONAL (CORREGIDA) ---
+            # --- TABLA PROFESIONAL ---
             st.subheader(t['table_title'])
             
             df_table = df.copy()
@@ -394,7 +406,6 @@ def main():
                 t['dash_cols']['com']
             ]
             
-            # --- AQUÍ ESTABA EL ERROR: CORREGIDO CON F-STRINGS ---
             st.dataframe(
                 df_table[cols_final].iloc[::-1],
                 use_container_width=True,
@@ -402,11 +413,11 @@ def main():
                 column_config={
                     t['dash_cols']['val']: st.column_config.NumberColumn(
                         label=t['dash_cols']['val'],
-                        format=f"{s} %.2f" # EJ: "R$ %.2f" (CORREGIDO)
+                        format=f"{s} %.2f"
                     ),
                     t['dash_cols']['com']: st.column_config.NumberColumn(
                         label=t['dash_cols']['com'],
-                        format=f"{s} %.2f" # EJ: "R$ %.2f" (CORREGIDO)
+                        format=f"{s} %.2f"
                     ),
                     t['dash_cols']['kg']: st.column_config.NumberColumn(
                         label=t['dash_cols']['kg'],
