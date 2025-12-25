@@ -127,7 +127,8 @@ TR = {
         "col_map": {"Fecha_Hora": "📅 Data", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"},
         "dash_cols": {"emp": "Empresa", "prod": "Produto", "kg": "Quantidade", "val": "Valor Pago", "com": "Comissão", "mes": "Mês"},
         "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "EDITAR": "✏️ Edição", "BORRAR": "🗑️ Apagado", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"},
-        "excel": {"cols": ["Data", "Hora", "Empresa", "Produto", "Kg", "Valor (R$)", "Comissão (R$)"], "total": "TOTAL:", "filename": "Relatorio"}
+        "excel": {"cols": ["Data", "Hora", "Empresa", "Produto", "Kg", "Valor (R$)", "Comissão (R$)"], "total": "TOTAL:", "filename": "Relatorio"},
+        "install_guide": "📲 **Como instalar no celular:**\n\n1. No Chrome/Safari, toque em **Compartilhar** o **Menu** (três pontos).\n2. Selecione **'Adicionar à Tela de Início'**.\n3. Pronto! Agora é um App nativo."
     },
     "Español": {
         "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nueva Venta", "🛠️ Admin", "📜 Log"],
@@ -149,7 +150,8 @@ TR = {
         "col_map": {"Fecha_Hora": "📅 Fecha", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"},
         "dash_cols": {"emp": "Empresa", "prod": "Producto", "kg": "Cantidad", "val": "Valor Pagado", "com": "Comisión", "mes": "Mes"},
         "val_map": {"NEW": "🆕 Nuevo", "VENTA": "💰 Venta", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Masa", "CREAR": "✨ Crear", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"},
-        "excel": {"cols": ["Fecha", "Hora", "Empresa", "Producto", "Kg", "Valor (R$)", "Comisión (R$)"], "total": "TOTAL:", "filename": "Reporte"}
+        "excel": {"cols": ["Fecha", "Hora", "Empresa", "Producto", "Kg", "Valor (R$)", "Comisión (R$)"], "total": "TOTAL:", "filename": "Reporte"},
+        "install_guide": "📲 **Cómo instalar en el celular:**\n\n1. En Chrome/Safari, toca **Compartir** o el **Menú** (tres puntos).\n2. Selecciona **'Agregar a Pantalla de Inicio'**.\n3. ¡Listo! Ahora es una App nativa."
     },
     "English": {
         "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ New Sale", "🛠️ Admin", "📜 Log"],
@@ -171,7 +173,8 @@ TR = {
         "col_map": {"Fecha_Hora": "📅 Date", "Accion": "⚡ Action", "Detalles": "📝 Details"},
         "dash_cols": {"emp": "Company", "prod": "Product", "kg": "Quantity", "val": "Value Paid", "com": "Commission", "mes": "Month"},
         "val_map": {"NEW": "🆕 New", "VENTA": "💰 Sale", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Deleted", "BORRADO_MASIVO": "🔥 Bulk", "CREAR": "✨ Create", "HIST_DEL": "🧹 Clean", "META_UPDATE": "🎯 Goal"},
-        "excel": {"cols": ["Date", "Time", "Company", "Product", "Kg", "Value (R$)", "Commission (R$)"], "total": "TOTAL:", "filename": "Report"}
+        "excel": {"cols": ["Date", "Time", "Company", "Product", "Kg", "Value (R$)", "Commission (R$)"], "total": "TOTAL:", "filename": "Report"},
+        "install_guide": "📲 **How to install on mobile:**\n\n1. In Chrome/Safari, tap **Share** or **Menu** (three dots).\n2. Select **'Add to Home Screen'**.\n3. Done! It's now a native App."
     }
 }
 
