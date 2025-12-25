@@ -10,10 +10,10 @@ import xlsxwriter
 import urllib.parse
 
 # ==========================================
-# 🎨 CONFIGURACIÓN DE TU MARCA (EDITAR AQUÍ)
+# 🎨 CONFIGURACIÓN DE TU MARCA
 # ==========================================
-NOMBRE_EMPRESA = "Xingu CEO"  # <--- Pon aquí el nombre de tu empresa
-ICONO_APP = "🍇"              # <--- Pon aquí un Emoji (🏢, 🚀) o el nombre de archivo "logo.png"
+NOMBRE_EMPRESA = "Xingu CEO"
+ICONO_APP = "🍇"
 # ==========================================
 
 # --- CONFIGURACIÓN DE PÁGINA ---
@@ -70,7 +70,6 @@ def check_password():
     
     c1, c2, c3 = st.columns([1,2,1])
     with c2:
-        # Usa el nombre de la empresa en el login
         st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA} Cloud</h1>", unsafe_allow_html=True)
         st.write("")
         password = st.text_input("Senha / Contraseña", type="password")
@@ -101,7 +100,7 @@ MONTHS_UI = {
 # --- IDIOMAS ---
 TR = {
     "Português": {
-        "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nova Venda", "🛠️ Admin", "📜 Log"], # Usamos nombre empresa
+        "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nova Venda", "🛠️ Admin", "📜 Log"],
         "headers": ["Inteligência de Negócios", "Registrar Venda", "Gestão", "Auditoria"],
         "metrics": ["Faturamento Total", "Volume (Kg)", "Comissão (2%)", "Ticket Médio", "Melhor Cliente"],
         "charts": ["Tendência (Diária)", "Mix de Produtos", "Vendas por Empresa"],
@@ -209,13 +208,11 @@ def main():
         return
 
     with st.sidebar:
-        # AQUÍ APARECE EL ICONO DE MARCA (Grande en Sidebar)
         st.markdown(f"<h1 style='text-align: center; font-size: 50px;'>{ICONO_APP}</h1>", unsafe_allow_html=True)
         st.markdown(f"<h3 style='text-align: center;'>{NOMBRE_EMPRESA}</h3>", unsafe_allow_html=True)
-        
         lang = st.selectbox("Language / Idioma", ["Português", "Español", "English"])
         st.markdown("---")
-        st.caption("v34.0 White Label")
+        st.caption("v35.0 Stable Pro")
     
     t = TR[lang]
     s = RATES[lang]["s"]
@@ -329,7 +326,7 @@ def main():
             st.download_button(
                 label=t['download_label'],
                 data=buffer, 
-                file_name=f'{filename_prefix}_{NOMBRE_EMPRESA}_{datetime.now().strftime("%Y-%m")}.xlsx', # Nombre archivo con nombre empresa
+                file_name=f'{filename_prefix}_{NOMBRE_EMPRESA}_{datetime.now().strftime("%Y-%m")}.xlsx', 
                 mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 type="primary"
             )
@@ -368,7 +365,7 @@ def main():
 
             st.divider()
 
-            # --- TABLA PROFESIONAL 2.0 ---
+            # --- TABLA PROFESIONAL (CORREGIDA) ---
             st.subheader(t['table_title'])
             
             df_table = df.copy()
@@ -397,6 +394,7 @@ def main():
                 t['dash_cols']['com']
             ]
             
+            # --- AQUÍ ESTABA EL ERROR: CORREGIDO CON F-STRINGS ---
             st.dataframe(
                 df_table[cols_final].iloc[::-1],
                 use_container_width=True,
@@ -404,11 +402,11 @@ def main():
                 column_config={
                     t['dash_cols']['val']: st.column_config.NumberColumn(
                         label=t['dash_cols']['val'],
-                        format="%s %.2f" % s
+                        format=f"{s} %.2f" # EJ: "R$ %.2f" (CORREGIDO)
                     ),
                     t['dash_cols']['com']: st.column_config.NumberColumn(
                         label=t['dash_cols']['com'],
-                        format="%s %.2f" % s
+                        format=f"{s} %.2f" # EJ: "R$ %.2f" (CORREGIDO)
                     ),
                     t['dash_cols']['kg']: st.column_config.NumberColumn(
                         label=t['dash_cols']['kg'],
