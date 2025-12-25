@@ -97,9 +97,9 @@ TR = {
         "clean_hist_label": "Limpeza de Histórico",
         "download_label": "📥 Relatório Executivo (.xlsx)",
         "logout_label": "🔒 Sair do Sistema",
-        "goal_label": "🎯 Meta Mensal (R$)",
-        "goal_save": "💾 Salvar Meta",
-        "goal_text": "Progresso da Meta",
+        "goal_label": "🎯 Meta de", # Se añade el mes dinámicamente
+        "goal_save": "💾 Salvar Meta do Mês",
+        "goal_text": "Progresso Mensal",
         "msgs": ["Venda Registrada!", "Apagado com sucesso!", "Sem dados", "Meta Atualizada!"],
         "new_labels": ["Nome Cliente:", "Nome Produto:"],
         "col_map": {"Fecha_Hora": "📅 Data", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"},
@@ -118,9 +118,9 @@ TR = {
         "clean_hist_label": "Limpieza de Historial",
         "download_label": "📥 Reporte Ejecutivo (.xlsx)",
         "logout_label": "🔒 Cerrar Sesión",
-        "goal_label": "🎯 Meta Mensual (R$)",
-        "goal_save": "💾 Salvar Meta",
-        "goal_text": "Progreso de Meta",
+        "goal_label": "🎯 Meta de",
+        "goal_save": "💾 Salvar Meta del Mes",
+        "goal_text": "Progreso Mensual",
         "msgs": ["¡Venta Registrada!", "¡Borrado con éxito!", "Sin datos", "¡Meta Actualizada!"],
         "new_labels": ["Nombre Cliente:", "Nombre Producto:"],
         "col_map": {"Fecha_Hora": "📅 Fecha", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"},
@@ -139,9 +139,9 @@ TR = {
         "clean_hist_label": "Clear History",
         "download_label": "📥 Executive Report (.xlsx)",
         "logout_label": "🔒 Log Out",
-        "goal_label": "🎯 Monthly Goal (R$)",
-        "goal_save": "💾 Save Goal",
-        "goal_text": "Goal Progress",
+        "goal_label": "🎯 Goal for",
+        "goal_save": "💾 Save Month Goal",
+        "goal_text": "Monthly Progress",
         "msgs": ["Sale Registered!", "Deleted successfully!", "No data", "Goal Updated!"],
         "new_labels": ["Client Name:", "Product Name:"],
         "col_map": {"Fecha_Hora": "📅 Date", "Accion": "⚡ Action", "Detalles": "📝 Details"},
@@ -169,17 +169,36 @@ def log_action(book, action, detail):
         book.worksheet("Historial").append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), action, detail])
     except: pass
 
-def get_goal_from_db(book):
+# --- FUNCIÓN INTELIGENTE DE META MENSUAL ---
+def get_monthly_goal_from_db(book, current_period_key):
+    """
+    Busca la meta guardada específicamente para este mes (ej: '2025-12').
+    Si no encuentra una meta para este mes específico, devuelve 0.
+    """
     try:
         sheet_log = book.worksheet("Historial")
         logs = sheet_log.get_all_records()
         df_log = pd.DataFrame(logs)
+        
         if not df_log.empty:
+            # Filtramos solo actualizaciones de meta
             meta_logs = df_log[df_log['Accion'] == 'META_UPDATE']
-            if not meta_logs.empty:
-                return float(meta_logs.iloc[-1]['Detalles'])
+            
+            # Buscamos de abajo hacia arriba (lo más reciente primero)
+            for i, row in meta_logs.iloc[::-1].iterrows():
+                detalle = str(row['Detalles'])
+                # Formato nuevo: "YYYY-MM|VALOR" (Ej: "2025-12|50000.0")
+                if "|" in detalle:
+                    periodo, valor = detalle.split("|")
+                    if periodo == current_period_key:
+                        return float(valor)
+                
+                # Si es un formato viejo (solo número), lo ignoramos para la meta mensual estricta
+                # o podríamos usarlo como fallback, pero el usuario pidió reinicio mensual.
+                # Así que devolvemos 0 si no hay una explicita de este mes.
+                
     except: pass
-    return 50000.0
+    return 0.0 # Por defecto 0 si empieza mes nuevo
 
 # --- APP PRINCIPAL ---
 def main():
@@ -188,9 +207,10 @@ def main():
 
     with st.sidebar:
         st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=70)
-        lang = st.selectbox("Language / Idioma", ["Español", "Português", "English"])
+        # CAMBIO 1: PORTUGUÉS PRIMERO EN LA LISTA
+        lang = st.selectbox("Language / Idioma", ["Português", "Español", "English"])
         st.markdown("---")
-        st.caption("v24.0 Money Log")
+        st.caption("v25.0 Auto-Monthly")
     
     t = TR[lang]
     s = RATES[lang]["s"]
@@ -217,30 +237,55 @@ def main():
     
     productos = sorted(list(set(["AÇAI MÉDIO", "AÇAI POP", "CUPUAÇU"] + prods_db)))
 
-    # --- SIDEBAR ---
+    # --- LÓGICA DE TIEMPO ACTUAL ---
+    ahora = datetime.now()
+    mes_actual_nombre = MESES_PT[ahora.month]
+    periodo_clave = ahora.strftime("%Y-%m") # Ej: "2025-12"
+
+    # --- SIDEBAR: META MENSUAL ---
     with st.sidebar:
-        st.subheader(t['goal_text'])
-        db_goal = get_goal_from_db(book)
-        meta_input = st.number_input(t['goal_label'], value=db_goal, step=1000.0)
+        st.subheader(f"{t['goal_text']} ({mes_actual_nombre})")
         
+        # 1. Obtener meta específica para ESTE mes
+        db_goal = get_monthly_goal_from_db(book, periodo_clave)
+        
+        # 2. Input para definir meta (si db_goal es 0, empieza vacio)
+        label_dinamico = f"{t['goal_label']} {mes_actual_nombre} ({s})"
+        meta_input = st.number_input(label_dinamico, value=db_goal, step=1000.0)
+        
+        # 3. Guardar Meta vinculada al MES
         if st.button(t['goal_save'], type="primary"):
-            log_action(book, "META_UPDATE", str(meta_input))
+            # Guardamos: "2025-12|50000.0"
+            valor_a_guardar = f"{periodo_clave}|{meta_input}"
+            log_action(book, "META_UPDATE", valor_a_guardar)
             st.success(t['msgs'][3])
             time.sleep(1)
             st.rerun()
 
-        val_total_brl = df['Valor_BRL'].sum() if not df.empty else 0
-        val_total_curr = val_total_brl * r
-        
+        # 4. Calcular Ventas SOLO de este mes
+        if not df.empty:
+            df['Fecha_DT'] = pd.to_datetime(df['Fecha_Registro'], errors='coerce')
+            # Filtramos DF para sumar solo lo del mes actual
+            df_mes_actual = df[df['Fecha_DT'].dt.to_period('M') == periodo_clave]
+            
+            val_mes_brl = df_mes_actual['Valor_BRL'].sum()
+            val_mes_curr = val_mes_brl * r
+        else:
+            val_mes_curr = 0
+
+        # 5. Barra de Progreso
         if meta_input > 0:
-            progreso = min(val_total_curr / meta_input, 1.0)
+            progreso = min(val_mes_curr / meta_input, 1.0)
             st.progress(progreso)
-            porcentaje = (val_total_curr / meta_input) * 100
-            st.caption(f"{porcentaje:.1f}% ({s} {val_total_curr:,.0f} / {s} {meta_input:,.0f})")
+            porcentaje = (val_mes_curr / meta_input) * 100
+            st.caption(f"{porcentaje:.1f}% ({s} {val_mes_curr:,.0f} / {s} {meta_input:,.0f})")
             if progreso >= 1.0: st.balloons()
+        else:
+            st.warning("Defina a meta deste mês.")
         
         st.divider()
 
+        # Excel
         if not df.empty:
             buffer = io.BytesIO()
             df_export = df.copy()
@@ -308,7 +353,7 @@ def main():
             
             st.markdown("<br>", unsafe_allow_html=True)
             k4, k5 = st.columns(2)
-            k4.metric(t['metrics'][3], f"{s} {ticket_medio:,.0f}", help="Valor promedio")
+            k4.metric(t['metrics'][3], f"{s} {ticket_medio:,.0f}", help="Valor Médio")
             k5.metric(t['metrics'][4], top_client_name, delta="VIP 👑")
 
             st.divider()
@@ -333,7 +378,7 @@ def main():
                 fig_pie.update_layout(showlegend=False, margin=dict(t=0,b=0,l=0,r=0), height=350)
                 st.plotly_chart(fig_pie, use_container_width=True)
 
-            # --- TABLA DETALLADA CON MES (FIX PARA ANTIGUOS) ---
+            # --- TABLA DETALLADA ---
             st.divider()
             st.subheader(t['table_title'])
             
@@ -341,7 +386,6 @@ def main():
             df_table['Val_Show'] = df_table['Valor_BRL'] * r
             df_table['Com_Show'] = (df_table['Valor_BRL'] * 0.02) * r
             
-            # --- AUTO-CÁLCULO DE MES PARA LA TABLA VISUAL ---
             df_table['Fecha_DT_Calc'] = pd.to_datetime(df_table['Fecha_Registro'], errors='coerce')
             df_table['Mes_Auto'] = df_table['Fecha_DT_Calc'].dt.month.map(MESES_PT)
             
@@ -389,8 +433,7 @@ def main():
                     row = [emp, prod, kg, val, val*0.02, ahora.strftime("%Y-%m-%d %H:%M:%S"), mes_actual]
                     sheet.append_row(row)
                     
-                    # --- AQUÍ ESTÁ EL CAMBIO PARA EL LOG ---
-                    # Ahora guarda: Cliente | Kilos | Valor
+                    # LOG PRO
                     log_action(book, "NEW", f"{emp} | {kg}kg | {s} {val:,.2f}")
                     
                     st.success(t['msgs'][0])
