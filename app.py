@@ -7,9 +7,17 @@ from oauth2client.service_account import ServiceAccountCredentials
 import time
 import io
 import xlsxwriter
+import urllib.parse
+
+# ==========================================
+# 🎨 CONFIGURACIÓN DE TU MARCA (EDITAR AQUÍ)
+# ==========================================
+NOMBRE_EMPRESA = "Xingu CEO"  # <--- Pon aquí el nombre de tu empresa
+ICONO_APP = "🍇"              # <--- Pon aquí un Emoji (🏢, 🚀) o el nombre de archivo "logo.png"
+# ==========================================
 
 # --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(page_title="Xingu CEO", page_icon="🍇", layout="wide")
+st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon=ICONO_APP, layout="wide")
 
 # --- ESTILO CSS PRO ---
 st.markdown("""
@@ -62,7 +70,8 @@ def check_password():
     
     c1, c2, c3 = st.columns([1,2,1])
     with c2:
-        st.markdown("<h1 style='text-align: center;'>🔒 Xingu Cloud</h1>", unsafe_allow_html=True)
+        # Usa el nombre de la empresa en el login
+        st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA} Cloud</h1>", unsafe_allow_html=True)
         st.write("")
         password = st.text_input("Senha / Contraseña", type="password")
         if st.button("Entrar", type="primary"):
@@ -92,7 +101,7 @@ MONTHS_UI = {
 # --- IDIOMAS ---
 TR = {
     "Português": {
-        "tabs": ["📊 CEO Dashboard", "➕ Nova Venda", "🛠️ Admin", "📜 Log"],
+        "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nova Venda", "🛠️ Admin", "📜 Log"], # Usamos nombre empresa
         "headers": ["Inteligência de Negócios", "Registrar Venda", "Gestão", "Auditoria"],
         "metrics": ["Faturamento Total", "Volume (Kg)", "Comissão (2%)", "Ticket Médio", "Melhor Cliente"],
         "charts": ["Tendência (Diária)", "Mix de Produtos", "Vendas por Empresa"],
@@ -109,12 +118,12 @@ TR = {
         "msgs": ["Venda Registrada!", "Apagado com sucesso!", "Sem dados", "Meta Atualizada!"],
         "new_labels": ["Nome Cliente:", "Nome Produto:"],
         "col_map": {"Fecha_Hora": "📅 Data", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"},
-        "dash_cols": {"emp": "Empresa", "prod": "Produto", "kg": "Quantidade (Kg)", "val": "💰 Valor Pago", "com": "Comissão", "mes": "🗓️ Mês"},
+        "dash_cols": {"emp": "Empresa", "prod": "Produto", "kg": "Quantidade", "val": "Valor Pago", "com": "Comissão", "mes": "Mês"},
         "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "EDITAR": "✏️ Edição", "BORRAR": "🗑️ Apagado", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"},
-        "excel": {"cols": ["Data", "Hora", "Empresa", "Produto", "Kg", "Valor (R$)", "Comissão (R$)"], "total": "TOTAL:", "filename": "Relatorio_Xingu"}
+        "excel": {"cols": ["Data", "Hora", "Empresa", "Produto", "Kg", "Valor (R$)", "Comissão (R$)"], "total": "TOTAL:", "filename": "Relatorio"}
     },
     "Español": {
-        "tabs": ["📊 CEO Dashboard", "➕ Nueva Venta", "🛠️ Admin", "📜 Log"],
+        "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nueva Venta", "🛠️ Admin", "📜 Log"],
         "headers": ["Inteligencia de Negocios", "Registrar Venta", "Gestión", "Auditoría"],
         "metrics": ["Facturación Total", "Volumen (Kg)", "Comisión (2%)", "Ticket Medio", "Mejor Cliente"],
         "charts": ["Tendencia (Diaria)", "Mix de Productos", "Ventas por Empresa"],
@@ -131,12 +140,12 @@ TR = {
         "msgs": ["¡Venta Registrada!", "¡Borrado con éxito!", "Sin datos", "¡Meta Actualizada!"],
         "new_labels": ["Nombre Cliente:", "Nombre Producto:"],
         "col_map": {"Fecha_Hora": "📅 Fecha", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"},
-        "dash_cols": {"emp": "Empresa", "prod": "Producto", "kg": "Cantidad (Kg)", "val": "💰 Valor Pagado", "com": "Comisión", "mes": "🗓️ Mes"},
+        "dash_cols": {"emp": "Empresa", "prod": "Producto", "kg": "Cantidad", "val": "Valor Pagado", "com": "Comisión", "mes": "Mes"},
         "val_map": {"NEW": "🆕 Nuevo", "VENTA": "💰 Venta", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Masa", "CREAR": "✨ Crear", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"},
-        "excel": {"cols": ["Fecha", "Hora", "Empresa", "Producto", "Kg", "Valor (R$)", "Comisión (R$)"], "total": "TOTAL:", "filename": "Reporte_Xingu"}
+        "excel": {"cols": ["Fecha", "Hora", "Empresa", "Producto", "Kg", "Valor (R$)", "Comisión (R$)"], "total": "TOTAL:", "filename": "Reporte"}
     },
     "English": {
-        "tabs": ["📊 CEO Dashboard", "➕ New Sale", "🛠️ Admin", "📜 Log"],
+        "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ New Sale", "🛠️ Admin", "📜 Log"],
         "headers": ["Business Intelligence", "Register Sale", "Management", "Audit Log"],
         "metrics": ["Total Revenue", "Volume (Kg)", "Commission (2%)", "Avg. Ticket", "Top Client"],
         "charts": ["Trend (Daily)", "Product Mix", "Sales by Company"],
@@ -153,9 +162,9 @@ TR = {
         "msgs": ["Sale Registered!", "Deleted successfully!", "No data", "Goal Updated!"],
         "new_labels": ["Client Name:", "Product Name:"],
         "col_map": {"Fecha_Hora": "📅 Date", "Accion": "⚡ Action", "Detalles": "📝 Details"},
-        "dash_cols": {"emp": "Company", "prod": "Product", "kg": "Quantity (Kg)", "val": "💰 Value Paid", "com": "Commission", "mes": "🗓️ Month"},
+        "dash_cols": {"emp": "Company", "prod": "Product", "kg": "Quantity", "val": "Value Paid", "com": "Commission", "mes": "Month"},
         "val_map": {"NEW": "🆕 New", "VENTA": "💰 Sale", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Deleted", "BORRADO_MASIVO": "🔥 Bulk", "CREAR": "✨ Create", "HIST_DEL": "🧹 Clean", "META_UPDATE": "🎯 Goal"},
-        "excel": {"cols": ["Date", "Time", "Company", "Product", "Kg", "Value (R$)", "Commission (R$)"], "total": "TOTAL:", "filename": "Report_Xingu"}
+        "excel": {"cols": ["Date", "Time", "Company", "Product", "Kg", "Value (R$)", "Commission (R$)"], "total": "TOTAL:", "filename": "Report"}
     }
 }
 
@@ -200,10 +209,13 @@ def main():
         return
 
     with st.sidebar:
-        st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=70)
+        # AQUÍ APARECE EL ICONO DE MARCA (Grande en Sidebar)
+        st.markdown(f"<h1 style='text-align: center; font-size: 50px;'>{ICONO_APP}</h1>", unsafe_allow_html=True)
+        st.markdown(f"<h3 style='text-align: center;'>{NOMBRE_EMPRESA}</h3>", unsafe_allow_html=True)
+        
         lang = st.selectbox("Language / Idioma", ["Português", "Español", "English"])
         st.markdown("---")
-        st.caption("v29.0 Custom Layout")
+        st.caption("v34.0 White Label")
     
     t = TR[lang]
     s = RATES[lang]["s"]
@@ -255,8 +267,10 @@ def main():
             df_mes_actual = df[df['Fecha_DT'].dt.to_period('M') == periodo_clave]
             val_mes_brl = df_mes_actual['Valor_BRL'].sum()
             val_mes_curr = val_mes_brl * r
+            kg_mes = df_mes_actual['Kg'].sum()
         else:
             val_mes_curr = 0
+            kg_mes = 0
 
         if meta_input > 0:
             progreso = min(val_mes_curr / meta_input, 1.0)
@@ -315,7 +329,7 @@ def main():
             st.download_button(
                 label=t['download_label'],
                 data=buffer, 
-                file_name=f'{filename_prefix}_{datetime.now().strftime("%Y-%m")}.xlsx', 
+                file_name=f'{filename_prefix}_{NOMBRE_EMPRESA}_{datetime.now().strftime("%Y-%m")}.xlsx', # Nombre archivo con nombre empresa
                 mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 type="primary"
             )
@@ -342,7 +356,6 @@ def main():
                 top_client_val = df.groupby('Empresa')['Valor_BRL'].sum().max() * r
                 top_client_name = f"{top_client} ({s} {top_client_val:,.0f})"
 
-            # KPIs
             k1, k2, k3 = st.columns(3)
             k1.metric(t['metrics'][0], f"{s} {val_total:,.0f}", delta="Total")
             k2.metric(t['metrics'][1], f"{kg_total:,.0f} kg")
@@ -355,13 +368,12 @@ def main():
 
             st.divider()
 
-            # --- PARTE 1: TABLA DETALLADA (AHORA ARRIBA) ---
+            # --- TABLA PROFESIONAL 2.0 ---
             st.subheader(t['table_title'])
             
             df_table = df.copy()
             df_table['Val_Show'] = df_table['Valor_BRL'] * r
             df_table['Com_Show'] = (df_table['Valor_BRL'] * 0.02) * r
-            
             df_table['Fecha_DT_Calc'] = pd.to_datetime(df_table['Fecha_Registro'], errors='coerce')
             df_table['Mes_Auto'] = df_table['Fecha_DT_Calc'].dt.month.map(mes_ui_dict)
             
@@ -370,8 +382,8 @@ def main():
                 'Empresa': t['dash_cols']['emp'],
                 'Producto': t['dash_cols']['prod'],
                 'Kg': t['dash_cols']['kg'],
-                'Val_Show': f"{t['dash_cols']['val']} ({s})",
-                'Com_Show': f"{t['dash_cols']['com']} ({s})"
+                'Val_Show': t['dash_cols']['val'],
+                'Com_Show': t['dash_cols']['com']
             }
             
             df_table = df_table.rename(columns=cols_renombrar)
@@ -381,15 +393,33 @@ def main():
                 t['dash_cols']['emp'], 
                 t['dash_cols']['prod'], 
                 t['dash_cols']['kg'], 
-                f"{t['dash_cols']['val']} ({s})", 
-                f"{t['dash_cols']['com']} ({s})"
+                t['dash_cols']['val'], 
+                t['dash_cols']['com']
             ]
             
-            st.dataframe(df_table[cols_final].iloc[::-1], use_container_width=True)
+            st.dataframe(
+                df_table[cols_final].iloc[::-1],
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    t['dash_cols']['val']: st.column_config.NumberColumn(
+                        label=t['dash_cols']['val'],
+                        format="%s %.2f" % s
+                    ),
+                    t['dash_cols']['com']: st.column_config.NumberColumn(
+                        label=t['dash_cols']['com'],
+                        format="%s %.2f" % s
+                    ),
+                    t['dash_cols']['kg']: st.column_config.NumberColumn(
+                        label=t['dash_cols']['kg'],
+                        format="%.1f kg"
+                    )
+                }
+            )
 
             st.divider()
 
-            # --- PARTE 2: GRÁFICOS (AHORA ABAJO) ---
+            # --- GRÁFICOS ---
             c_izq, c_der = st.columns([2, 1])
             with c_izq:
                 df['Fecha_DT'] = pd.to_datetime(df['Fecha_Registro'], errors='coerce')
