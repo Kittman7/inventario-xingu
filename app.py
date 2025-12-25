@@ -61,7 +61,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- SEGURIDAD DIRECTA (SIN DOBLE CLICK) ---
+# --- SEGURIDAD (CORREGIDA CON .strip()) ---
 def check_password():
     if "password_correct" not in st.session_state:
         st.session_state.password_correct = False
@@ -72,26 +72,19 @@ def check_password():
     with c2:
         st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA} Cloud</h1>", unsafe_allow_html=True)
         st.write("")
-        
-        # FORMULARIO DE LOGIN
-        with st.form("login_form"):
-            password = st.text_input("Senha / Contraseña", type="password")
-            submit = st.form_submit_button("Entrar", type="primary")
-            
-            if submit:
-                # 1. VERIFICAMOS SI EXISTE LA CONFIGURACIÓN
-                if "passwords" not in st.secrets:
-                    st.error("⚠️ Falta configurar [passwords] en Secrets.")
-                    st.stop()
+        password = st.text_input("Senha / Contraseña", type="password")
+        if st.button("Entrar", type="primary"):
+            try:
+                # AQUÍ ESTÁ EL ARREGLO: .strip() elimina espacios fantasma
+                pass_limpia = password.strip()
                 
-                # 2. VERIFICAMOS LA CLAVE DIRECTAMENTE
-                clave_real = st.secrets["passwords"]["admin_password"]
-                
-                if password == clave_real:
+                if pass_limpia == st.secrets["passwords"]["admin_password"]:
                     st.session_state.password_correct = True
                     st.rerun()
                 else:
                     st.error("🚫 Incorrecto / Incorreto")
+            except:
+                st.error("⚠️ Error: Configura [passwords] en Secrets.")
     return False
 
 # --- MAPA DE MESES ---
@@ -107,7 +100,7 @@ MONTHS_UI = {
     "English": {1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June", 7: "July", 8: "August", 9: "September", 10: "October", 11: "November", 12: "December"}
 }
 
-# --- IDIOMAS (CORREGIDO) ---
+# --- IDIOMAS ---
 TR = {
     "Português": {
         "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nova Venda", "🛠️ Admin", "📜 Log"],
@@ -130,7 +123,7 @@ TR = {
         "dash_cols": {"emp": "Empresa", "prod": "Produto", "kg": "Quantidade", "val": "Valor Pago", "com": "Comissão", "mes": "Mês"},
         "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "EDITAR": "✏️ Edição", "BORRAR": "🗑️ Apagado", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"},
         "excel": {"cols": ["Data", "Hora", "Empresa", "Produto", "Kg", "Valor (R$)", "Comissão (R$)"], "total": "TOTAL:", "filename": "Relatorio"},
-        "install_guide": "📲 **No celular:**\n1. Toque em **Menu/Compartilhar**.\n2. Escolha **'Adicionar à Tela de Início'**."
+        "install_guide": "📲 **Como instalar no celular:**\n\n1. No Chrome/Safari, toque em **Compartilhar** o **Menu** (três pontos).\n2. Selecione **'Adicionar à Tela de Início'**.\n3. Pronto! Agora é um App nativo."
     },
     "Español": {
         "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nueva Venta", "🛠️ Admin", "📜 Log"],
@@ -153,7 +146,7 @@ TR = {
         "dash_cols": {"emp": "Empresa", "prod": "Producto", "kg": "Cantidad", "val": "Valor Pagado", "com": "Comisión", "mes": "Mes"},
         "val_map": {"NEW": "🆕 Nuevo", "VENTA": "💰 Venta", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Masa", "CREAR": "✨ Crear", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"},
         "excel": {"cols": ["Fecha", "Hora", "Empresa", "Producto", "Kg", "Valor (R$)", "Comisión (R$)"], "total": "TOTAL:", "filename": "Reporte"},
-        "install_guide": "📲 **En celular:**\n1. Toca **Menú/Compartir**.\n2. Elige **'Agregar a Pantalla de Inicio'**."
+        "install_guide": "📲 **Cómo instalar en el celular:**\n\n1. En Chrome/Safari, toca **Compartir** o el **Menú** (tres puntos).\n2. Selecciona **'Agregar a Pantalla de Inicio'**.\n3. ¡Listo! Ahora es una App nativa."
     },
     "English": {
         "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ New Sale", "🛠️ Admin", "📜 Log"],
@@ -176,7 +169,7 @@ TR = {
         "dash_cols": {"emp": "Company", "prod": "Product", "kg": "Quantity", "val": "Value Paid", "com": "Commission", "mes": "Month"},
         "val_map": {"NEW": "🆕 New", "VENTA": "💰 Sale", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Deleted", "BORRADO_MASIVO": "🔥 Bulk", "CREAR": "✨ Create", "HIST_DEL": "🧹 Clean", "META_UPDATE": "🎯 Goal"},
         "excel": {"cols": ["Date", "Time", "Company", "Product", "Kg", "Value (R$)", "Commission (R$)"], "total": "TOTAL:", "filename": "Report"},
-        "install_guide": "📲 **On mobile:**\n1. Tap **Menu/Share**.\n2. Select **'Add to Home Screen'**."
+        "install_guide": "📲 **How to install on mobile:**\n\n1. In Chrome/Safari, tap **Share** or **Menu** (three dots).\n2. Select **'Add to Home Screen'**.\n3. Done! It's now a native App."
     }
 }
 
@@ -221,7 +214,7 @@ def main():
         return
 
     with st.sidebar:
-        st.markdown(f"<h1 style='text-align: center; font-size: 50px; margin-bottom: 0;'>{ICONO_APP}</h1>", unsafe_allow_html=True)
+        st.markdown(f"<h1 style='text-align: center; font-size: 60px; margin-bottom: 0;'>{ICONO_APP}</h1>", unsafe_allow_html=True)
         st.markdown(f"<h3 style='text-align: center; margin-top: 0;'>{NOMBRE_EMPRESA}</h3>", unsafe_allow_html=True)
         
         lang = st.selectbox("Language / Idioma", ["Português", "Español", "English"])
@@ -230,7 +223,7 @@ def main():
             st.info(TR[lang]["install_guide"])
 
         st.markdown("---")
-        st.caption("v39.0 Master Fixed")
+        st.caption("v37.0 Mobile Fix")
     
     t = TR[lang]
     s = RATES[lang]["s"]
@@ -383,7 +376,7 @@ def main():
 
             st.divider()
 
-            # --- TABLA PROFESIONAL (FORMATEO CORREGIDO) ---
+            # --- TABLA PROFESIONAL ---
             st.subheader(t['table_title'])
             
             df_table = df.copy()
@@ -412,7 +405,6 @@ def main():
                 t['dash_cols']['com']
             ]
             
-            # FORMATO F-STRING CORREGIDO (SOLUCIONA EL TYPE ERROR)
             st.dataframe(
                 df_table[cols_final].iloc[::-1],
                 use_container_width=True,
