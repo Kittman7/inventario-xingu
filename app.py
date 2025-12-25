@@ -98,7 +98,6 @@ TR = {
         "charts": ["Tendência (Diária)", "Mix de Produtos", "Vendas por Empresa"],
         "table_title": "Detalhamento de Vendas",
         "forms": ["Cliente", "Produto", "Kg", "Valor (R$)", "✅ Confirmar Venda"],
-        # CAMBIO AQUÍ: "Outro..." -> "✨ Novo..."
         "actions": ["Salvar Edição", "DELETAR", "Buscar...", "✨ Novo...", "🗑️ Apagar Seleção"],
         "bulk_label": "Gestão em Massa (Apagar Vários)",
         "clean_hist_label": "Limpeza de Histórico",
@@ -121,7 +120,6 @@ TR = {
         "charts": ["Tendencia (Diaria)", "Mix de Productos", "Ventas por Empresa"],
         "table_title": "Detalle de Ventas",
         "forms": ["Cliente", "Producto", "Kg", "Valor (R$)", "✅ Confirmar Venta"],
-        # CAMBIO AQUÍ: "Otro..." -> "✨ Nuevo..."
         "actions": ["Guardar Edición", "BORRAR", "Buscar...", "✨ Nuevo...", "🗑️ Borrar Selección"],
         "bulk_label": "Gestión Masiva (Borrar Varios)",
         "clean_hist_label": "Limpieza de Historial",
@@ -205,7 +203,7 @@ def main():
         st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=70)
         lang = st.selectbox("Language / Idioma", ["Português", "Español", "English"])
         st.markdown("---")
-        st.caption("v28.0 Clear Labels")
+        st.caption("v29.0 Custom Layout")
     
     t = TR[lang]
     s = RATES[lang]["s"]
@@ -329,7 +327,7 @@ def main():
 
     tab_dash, tab_add, tab_admin, tab_log = st.tabs(t['tabs'])
 
-    # 1️⃣ DASHBOARD
+    # 1️⃣ DASHBOARD CEO
     with tab_dash:
         st.title(t['headers'][0])
         if not df.empty:
@@ -344,6 +342,7 @@ def main():
                 top_client_val = df.groupby('Empresa')['Valor_BRL'].sum().max() * r
                 top_client_name = f"{top_client} ({s} {top_client_val:,.0f})"
 
+            # KPIs
             k1, k2, k3 = st.columns(3)
             k1.metric(t['metrics'][0], f"{s} {val_total:,.0f}", delta="Total")
             k2.metric(t['metrics'][1], f"{kg_total:,.0f} kg")
@@ -356,26 +355,7 @@ def main():
 
             st.divider()
 
-            c_izq, c_der = st.columns([2, 1])
-            with c_izq:
-                df['Fecha_DT'] = pd.to_datetime(df['Fecha_Registro'], errors='coerce')
-                df['Fecha_Dia'] = df['Fecha_DT'].dt.date
-                df['Valor_View'] = df['Valor_BRL'] * r
-                df_trend = df.groupby('Fecha_Dia')['Valor_View'].sum().reset_index()
-                
-                st.subheader(t['charts'][0])
-                fig_line = px.area(df_trend, x='Fecha_Dia', y='Valor_View', markers=True)
-                fig_line.update_layout(xaxis_title="", yaxis_title=s, height=350)
-                fig_line.update_traces(line_color='#FF4B4B', fillcolor='rgba(255, 75, 75, 0.2)')
-                st.plotly_chart(fig_line, use_container_width=True)
-
-            with c_der:
-                st.subheader(t['charts'][1]) 
-                fig_pie = px.pie(df, names='Producto', values='Kg', hole=0.6)
-                fig_pie.update_layout(showlegend=False, margin=dict(t=0,b=0,l=0,r=0), height=350)
-                st.plotly_chart(fig_pie, use_container_width=True)
-
-            st.divider()
+            # --- PARTE 1: TABLA DETALLADA (AHORA ARRIBA) ---
             st.subheader(t['table_title'])
             
             df_table = df.copy()
@@ -407,6 +387,28 @@ def main():
             
             st.dataframe(df_table[cols_final].iloc[::-1], use_container_width=True)
 
+            st.divider()
+
+            # --- PARTE 2: GRÁFICOS (AHORA ABAJO) ---
+            c_izq, c_der = st.columns([2, 1])
+            with c_izq:
+                df['Fecha_DT'] = pd.to_datetime(df['Fecha_Registro'], errors='coerce')
+                df['Fecha_Dia'] = df['Fecha_DT'].dt.date
+                df['Valor_View'] = df['Valor_BRL'] * r
+                df_trend = df.groupby('Fecha_Dia')['Valor_View'].sum().reset_index()
+                
+                st.subheader(t['charts'][0])
+                fig_line = px.area(df_trend, x='Fecha_Dia', y='Valor_View', markers=True)
+                fig_line.update_layout(xaxis_title="", yaxis_title=s, height=350)
+                fig_line.update_traces(line_color='#FF4B4B', fillcolor='rgba(255, 75, 75, 0.2)')
+                st.plotly_chart(fig_line, use_container_width=True)
+
+            with c_der:
+                st.subheader(t['charts'][1]) 
+                fig_pie = px.pie(df, names='Producto', values='Kg', hole=0.6)
+                fig_pie.update_layout(showlegend=False, margin=dict(t=0,b=0,l=0,r=0), height=350)
+                st.plotly_chart(fig_pie, use_container_width=True)
+
         else:
             st.info(t['msgs'][2])
 
@@ -415,7 +417,6 @@ def main():
         st.header(t['headers'][1])
         with st.container(border=True):
             c1, c2 = st.columns(2)
-            # AQUÍ SE USA EL NUEVO TEXTO "✨ Novo..."
             sel_emp = c1.selectbox(t['forms'][0], [t['actions'][3]] + empresas)
             emp = c1.text_input(t['new_labels'][0]) if sel_emp == t['actions'][3] else sel_emp
             
