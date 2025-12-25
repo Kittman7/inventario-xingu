@@ -1,35 +1,51 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 from datetime import datetime
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import time
 import io
 import xlsxwriter
+import urllib.parse
 
 # ==========================================
-# 🔧 ZONA DE DIAGNÓSTICO
+# 🔐 CONFIGURACIÓN DE ACCESO
 # ==========================================
 NOMBRE_EMPRESA = "Xingu CEO"
 ICONO_APP = "🍇"
-SENHA_ADMIN = "Julio777" 
+SENHA_ADMIN = "julio777"  # <--- CORREGIDO: Todo en minúsculas
 # ==========================================
 
-# --- CONFIGURACIÓN ---
+# --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon=ICONO_APP, layout="wide")
 
-# --- ESTILO ---
+# --- ESTILO CSS ---
 st.markdown("""
     <style>
-    .stButton>button {width: 100%; font-weight: bold; height: 3em;}
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    div[data-testid="stMetric"] {
+        background-color: #1E1E1E;
+        border-radius: 10px;
+        padding: 15px;
+        border: 1px solid #333;
+    }
+    .stButton>button {
+        width: 100%;
+        border-radius: 8px;
+        height: 3em;
+        font-weight: bold;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-# --- VERIFICADOR DE CONEXIÓN (EL CEREBRO) ---
-def verificar_conexion():
-    # 1. Verificar si existen los secretos
+# --- VERIFICAR CONEXIÓN (DIAGNÓSTICO) ---
+def get_data():
+    # 1. Verificar si existen las llaves
     if "google_credentials" not in st.secrets:
-        st.error("🚨 ERROR CRÍTICO: Faltan los 'Secrets' de Google.")
-        st.info("💡 Solución: Ve a Streamlit Cloud -> Settings -> Secrets y pega de nuevo las credenciales de Google (el texto largo con type: service_account).")
+        st.error("🚨 ERROR CRÍTICO: Faltan las llaves de Google.")
+        st.info("Ve a 'Settings' -> 'Secrets' en Streamlit y pega las credenciales de nuevo.")
         st.stop()
     
     # 2. Intentar conectar
@@ -40,98 +56,205 @@ def verificar_conexion():
         book = client.open("Inventario_Xingu_DB")
         return book
     except Exception as e:
-        st.error(f"🚨 Error conectando con Google Sheets: {e}")
-        st.warning("Verifica que el nombre de la hoja en Drive sea exactamente: Inventario_Xingu_DB")
+        st.error(f"🚨 Error conectando con la Hoja de Cálculo: {e}")
         st.stop()
 
-# --- SEGURIDAD ---
-def login():
-    if "acceso" not in st.session_state:
-        st.session_state.acceso = False
-
-    if st.session_state.acceso:
+# --- LOGIN ---
+def check_password():
+    if "password_correct" not in st.session_state:
+        st.session_state.password_correct = False
+    if st.session_state.password_correct:
         return True
-
+    
     c1, c2, c3 = st.columns([1,2,1])
     with c2:
-        st.title(f"🔒 Acceso {NOMBRE_EMPRESA}")
+        st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA}</h1>", unsafe_allow_html=True)
         
-        # INDICADOR DE ESTADO
-        st.success("✅ Base de Datos Conectada")
+        # Estado de la conexión
+        st.success("✅ Sistema Online")
         
-        pass_input = st.text_input("Contraseña", type="password")
-        
+        password = st.text_input("Contraseña", type="password")
         if st.button("Entrar", type="primary"):
-            # Limpiamos espacios y comparamos
-            if pass_input.strip() == SENHA_ADMIN:
-                st.session_state.acceso = True
+            # Convertimos lo que escribe el usuario a minúsculas y quitamos espacios
+            # Así si escribe "Julio777 " o "JULIO777", funcionará igual.
+            pass_limpia = password.strip().lower()
+            
+            if pass_limpia == SENHA_ADMIN:
+                st.session_state.password_correct = True
                 st.rerun()
             else:
-                st.error(f"⛔ Contraseña incorrecta. Escribiste: '{pass_input}'")
+                st.error(f"🚫 Incorrecto. (Se esperaba: '{SENHA_ADMIN}')")
     return False
+
+# --- MAPA DE MESES ---
+MESES_PT = {
+    1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+    5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+    9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
+}
+
+MONTHS_UI = {
+    "Português": MESES_PT,
+    "Español": {1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril", 5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto", 9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"},
+    "English": {1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June", 7: "July", 8: "August", 9: "September", 10: "October", 11: "November", 12: "December"}
+}
+
+# --- IDIOMAS ---
+TR = {
+    "Português": {
+        "tabs": ["📊 Dashboard", "➕ Vender", "🛠️ Admin", "📜 Log"],
+        "metrics": ["Faturamento", "Volume (Kg)", "Comissão", "Ticket Médio", "Melhor Cliente"],
+        "headers": ["Visão Geral", "Nova Venda"],
+        "cols": {"emp": "Empresa", "prod": "Produto", "kg": "Kg", "val": "Valor (R$)", "com": "Comissão"},
+        "btn": "Confirmar Venda",
+        "excel": "Baixar Excel"
+    },
+    "Español": {
+        "tabs": ["📊 Dashboard", "➕ Vender", "🛠️ Admin", "📜 Log"],
+        "metrics": ["Facturación", "Volumen (Kg)", "Comisión", "Ticket Medio", "Mejor Cliente"],
+        "headers": ["Visión General", "Nueva Venta"],
+        "cols": {"emp": "Empresa", "prod": "Producto", "kg": "Kg", "val": "Valor ($)", "com": "Comisión"},
+        "btn": "Confirmar Venta",
+        "excel": "Descargar Excel"
+    },
+    "English": {
+        "tabs": ["📊 Dashboard", "➕ Sell", "🛠️ Admin", "📜 Log"],
+        "metrics": ["Revenue", "Volume (Kg)", "Commission", "Avg Ticket", "Top Client"],
+        "headers": ["Overview", "New Sale"],
+        "cols": {"emp": "Company", "prod": "Product", "kg": "Kg", "val": "Value ($)", "com": "Commission"},
+        "btn": "Confirm Sale",
+        "excel": "Download Excel"
+    }
+}
+
+def log_action(book, action, detail):
+    try:
+        book.worksheet("Historial").append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), action, detail])
+    except: pass
 
 # --- APP PRINCIPAL ---
 def main():
-    # 1. Primero verificamos que Google funcione
-    book = verificar_conexion()
-    
-    # 2. Luego pedimos contraseña
-    if not login():
+    if not check_password():
         return
 
-    # SI LLEGA AQUÍ, TODO FUNCIONA
+    # Si pasa el login, cargamos la App
+    book = get_data() # Conectamos con Google
+    
     with st.sidebar:
-        st.header(f"{ICONO_APP} Menú")
+        st.title(f"{ICONO_APP} Menú")
+        lang = st.selectbox("Idioma", ["Português", "Español", "English"])
+        
         if st.button("Cerrar Sesión"):
-            st.session_state.acceso = False
+            st.session_state.password_correct = False
             st.rerun()
     
-    # Lógica simplificada de pestañas
-    t1, t2 = st.tabs(["📊 Dashboard", "➕ Vender"])
-    
+    t = TR[lang]
     sheet = book.sheet1
-    try:
-        df = pd.DataFrame(sheet.get_all_records())
-    except:
-        df = pd.DataFrame()
+    df = pd.DataFrame(sheet.get_all_records())
 
-    with t1:
-        st.title("Panel de Control")
+    # Limpieza de datos (Evita errores de tabla)
+    if not df.empty:
+        for c in ['Valor_BRL', 'Kg', 'Comissao_BRL']:
+            if c in df.columns:
+                df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0)
+        empresas = sorted(list(set(df['Empresa'].astype(str))))
+        productos = sorted(list(set(["AÇAI MÉDIO", "AÇAI POP", "CUPUAÇU"] + list(df['Producto'].astype(str)))))
+    else:
+        empresas, productos = [], ["AÇAI POP"]
+
+    # PESTAÑAS
+    tab1, tab2, tab3, tab4 = st.tabs(t['tabs'])
+
+    # 1. DASHBOARD
+    with tab1:
+        st.header(t['headers'][0])
         if not df.empty:
-            # Corrección de tipos para evitar errores de suma
-            # Convertimos todo a números forzosamente, los errores se vuelven 0
-            df['Valor_BRL'] = pd.to_numeric(df['Valor_BRL'], errors='coerce').fillna(0)
-            df['Kg'] = pd.to_numeric(df['Kg'], errors='coerce').fillna(0)
-            
             total = df['Valor_BRL'].sum()
-            kilos = df['Kg'].sum()
+            kg = df['Kg'].sum()
+            com = df['Comissao_BRL'].sum()
             
-            c1, c2 = st.columns(2)
-            c1.metric("Total Vendido", f"R$ {total:,.2f}")
-            c2.metric("Total Kilos", f"{kilos:,.0f} kg")
+            c1, c2, c3 = st.columns(3)
+            c1.metric(t['metrics'][0], f"R$ {total:,.2f}")
+            c2.metric(t['metrics'][1], f"{kg:,.0f} kg")
+            c3.metric(t['metrics'][2], f"R$ {com:,.2f}")
             
-            st.dataframe(df, use_container_width=True)
-        else:
-            st.info("No hay ventas registradas aún.")
+            st.divider()
+            
+            # TABLA SIMPLE (Estable)
+            df_show = df.copy()
+            # Formato fecha simple
+            df_show['Fecha'] = pd.to_datetime(df_show['Fecha_Registro'], errors='coerce').dt.strftime('%d/%m/%Y')
+            
+            st.dataframe(
+                df_show[['Fecha', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']].iloc[::-1],
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Valor_BRL": st.column_config.NumberColumn(t['cols']['val'], format="R$ %.2f"),
+                    "Comissao_BRL": st.column_config.NumberColumn(t['cols']['com'], format="R$ %.2f"),
+                    "Kg": st.column_config.NumberColumn(t['cols']['kg'], format="%.1f kg")
+                }
+            )
+            
+            # Excel Download
+            buffer = io.BytesIO()
+            with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+                df_show.to_excel(writer, index=False)
+            st.download_button(t['excel'], data=buffer, file_name="Reporte_Xingu.xlsx", mime="application/vnd.ms-excel", type="primary")
 
-    with t2:
-        st.header("Nueva Venta")
+    # 2. VENDER
+    with tab2:
+        st.header(t['headers'][1])
         c1, c2 = st.columns(2)
-        cli = c1.text_input("Cliente")
-        prod = c2.text_input("Producto")
-        k = c1.number_input("Kilos", step=1.0)
-        v = c2.number_input("Valor R$", step=10.0)
         
-        if st.button("Guardar Venta", type="primary"):
-            if cli and prod:
-                ahora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                # Guardamos como texto simple para evitar problemas
-                sheet.append_row([cli, prod, k, v, v*0.02, ahora])
-                st.success("¡Guardado!")
+        # Selectores inteligentes
+        emp = c1.selectbox(t['cols']['emp'], ["✨ Nueva..."] + empresas)
+        if emp == "✨ Nueva...": emp = c1.text_input("Escribe Nombre Empresa")
+        
+        prod = c2.selectbox(t['cols']['prod'], ["✨ Nuevo..."] + productos)
+        if prod == "✨ Nuevo...": prod = c2.text_input("Escribe Nombre Producto")
+        
+        kg = c1.number_input(t['cols']['kg'], step=1.0)
+        val = c2.number_input(t['cols']['val'], step=100.0)
+        
+        if st.button(t['btn'], type="primary"):
+            if emp and prod:
+                ahora = datetime.now()
+                mes = MESES_PT[ahora.month]
+                # Guardar en DB
+                sheet.append_row([emp, prod, kg, val, val*0.02, ahora.strftime("%Y-%m-%d %H:%M:%S"), mes])
+                log_action(book, "NEW", f"{emp} | {val}")
+                st.success("✅ Guardado Exitosamente")
                 time.sleep(1)
                 st.rerun()
             else:
-                st.warning("Faltan datos")
+                st.warning("⚠️ Faltan datos (Empresa o Producto)")
+
+    # 3. ADMIN
+    with tab3:
+        st.write("🔧 Gestión rápida")
+        if not df.empty:
+            for i, r in df.tail(5).iloc[::-1].iterrows():
+                # Mostrar últimas 5 para borrar si hay error
+                with st.expander(f"🗑️ Borrar: {r['Empresa']} ({r['Kg']}kg)"):
+                    if st.button("Confirmar Borrado", key=f"d{i}"):
+                        rows = sheet.get_all_values()
+                        for idx, row in enumerate(rows):
+                            # Buscamos por la fecha exacta para no equivocarnos
+                            if str(r['Fecha_Registro']) in row:
+                                sheet.delete_rows(idx + 1)
+                                log_action(book, "BORRAR", f"{r['Empresa']}")
+                                st.success("Eliminado")
+                                time.sleep(1)
+                                st.rerun()
+
+    # 4. LOG
+    with tab4:
+        try:
+            logs = pd.DataFrame(book.worksheet("Historial").get_all_records())
+            if not logs.empty:
+                st.dataframe(logs.iloc[::-1], use_container_width=True)
+        except: st.info("No hay historial todavía.")
 
 if __name__ == "__main__":
     main()
