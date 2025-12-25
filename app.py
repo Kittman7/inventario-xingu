@@ -190,7 +190,7 @@ def main():
         st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=70)
         lang = st.selectbox("Language / Idioma", ["Español", "Português", "English"])
         st.markdown("---")
-        st.caption("v23.0 Final Perfect View")
+        st.caption("v24.0 Money Log")
     
     t = TR[lang]
     s = RATES[lang]["s"]
@@ -342,32 +342,27 @@ def main():
             df_table['Com_Show'] = (df_table['Valor_BRL'] * 0.02) * r
             
             # --- AUTO-CÁLCULO DE MES PARA LA TABLA VISUAL ---
-            # Aunque no esté en la DB, lo calculamos aquí para que se vea siempre
             df_table['Fecha_DT_Calc'] = pd.to_datetime(df_table['Fecha_Registro'], errors='coerce')
             df_table['Mes_Auto'] = df_table['Fecha_DT_Calc'].dt.month.map(MESES_PT)
             
-            # Seleccionamos y Renombramos
-            # Ahora usamos 'Mes_Auto' en lugar de 'Mes' de la DB, para asegurar que siempre haya dato
             cols_renombrar = {
-                'Mes_Auto': t['dash_cols']['mes'], # "Mês"
+                'Mes_Auto': t['dash_cols']['mes'], 
                 'Empresa': t['dash_cols']['emp'],
                 'Producto': t['dash_cols']['prod'],
                 'Kg': t['dash_cols']['kg'],
-                'Val_Show': f"{t['dash_cols']['val']} ({s})", # "💰 Valor Pago"
+                'Val_Show': f"{t['dash_cols']['val']} ({s})",
                 'Com_Show': f"{t['dash_cols']['com']} ({s})"
             }
             
-            # Ordenamos bonito: Fecha, Mes, Empresa, Producto, Kg, Valor, Comision
             df_table = df_table.rename(columns=cols_renombrar)
             
-            # Columnas finales a mostrar
             cols_final = [
                 t['dash_cols']['mes'], 
                 t['dash_cols']['emp'], 
                 t['dash_cols']['prod'], 
                 t['dash_cols']['kg'], 
-                f"{t['dash_cols']['val']} ({s})", # Valor
-                f"{t['dash_cols']['com']} ({s})"  # Comision
+                f"{t['dash_cols']['val']} ({s})", 
+                f"{t['dash_cols']['com']} ({s})"
             ]
             
             st.dataframe(df_table[cols_final].iloc[::-1], use_container_width=True)
@@ -393,7 +388,11 @@ def main():
                     mes_actual = MESES_PT[ahora.month]
                     row = [emp, prod, kg, val, val*0.02, ahora.strftime("%Y-%m-%d %H:%M:%S"), mes_actual]
                     sheet.append_row(row)
-                    log_action(book, "NEW", f"{emp} | {kg}kg")
+                    
+                    # --- AQUÍ ESTÁ EL CAMBIO PARA EL LOG ---
+                    # Ahora guarda: Cliente | Kilos | Valor
+                    log_action(book, "NEW", f"{emp} | {kg}kg | {s} {val:,.2f}")
+                    
                     st.success(t['msgs'][0])
                     st.balloons()
                     time.sleep(1.5)
