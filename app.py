@@ -83,6 +83,12 @@ MESES_PT = {
     9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
 }
 
+MONTHS_UI = {
+    "Português": MESES_PT,
+    "Español": {1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril", 5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto", 9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"},
+    "English": {1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June", 7: "July", 8: "August", 9: "September", 10: "October", 11: "November", 12: "December"}
+}
+
 # --- IDIOMAS ---
 TR = {
     "Português": {
@@ -92,19 +98,20 @@ TR = {
         "charts": ["Tendência (Diária)", "Mix de Produtos", "Vendas por Empresa"],
         "table_title": "Detalhamento de Vendas",
         "forms": ["Cliente", "Produto", "Kg", "Valor (R$)", "✅ Confirmar Venda"],
-        "actions": ["Salvar Edição", "DELETAR", "Buscar...", "Outro...", "🗑️ Apagar Seleção"],
+        "actions": ["Salvar Edição", "DELETAR", "Buscar...", "✨ Novo...", "🗑️ Apagar Seleção"],
         "bulk_label": "Gestão em Massa (Apagar Vários)",
         "clean_hist_label": "Limpeza de Histórico",
-        "download_label": "📥 Relatório Executivo (.xlsx)",
+        "download_label": "📗 Exportar para Excel (.xlsx)",
         "logout_label": "🔒 Sair do Sistema",
-        "goal_label": "🎯 Meta de", # Se añade el mes dinámicamente
+        "goal_label": "🎯 Meta de", 
         "goal_save": "💾 Salvar Meta do Mês",
         "goal_text": "Progresso Mensal",
         "msgs": ["Venda Registrada!", "Apagado com sucesso!", "Sem dados", "Meta Atualizada!"],
         "new_labels": ["Nome Cliente:", "Nome Produto:"],
         "col_map": {"Fecha_Hora": "📅 Data", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"},
         "dash_cols": {"emp": "Empresa", "prod": "Produto", "kg": "Quantidade (Kg)", "val": "💰 Valor Pago", "com": "Comissão", "mes": "🗓️ Mês"},
-        "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "EDITAR": "✏️ Edição", "BORRAR": "🗑️ Apagado", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"}
+        "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "EDITAR": "✏️ Edição", "BORRAR": "🗑️ Apagado", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"},
+        "excel": {"cols": ["Data", "Hora", "Empresa", "Produto", "Kg", "Valor (R$)", "Comissão (R$)"], "total": "TOTAL:", "filename": "Relatorio_Xingu"}
     },
     "Español": {
         "tabs": ["📊 CEO Dashboard", "➕ Nueva Venta", "🛠️ Admin", "📜 Log"],
@@ -113,10 +120,10 @@ TR = {
         "charts": ["Tendencia (Diaria)", "Mix de Productos", "Ventas por Empresa"],
         "table_title": "Detalle de Ventas",
         "forms": ["Cliente", "Producto", "Kg", "Valor (R$)", "✅ Confirmar Venta"],
-        "actions": ["Guardar Edición", "BORRAR", "Buscar...", "Otro...", "🗑️ Borrar Selección"],
+        "actions": ["Guardar Edición", "BORRAR", "Buscar...", "✨ Nuevo...", "🗑️ Borrar Selección"],
         "bulk_label": "Gestión Masiva (Borrar Varios)",
         "clean_hist_label": "Limpieza de Historial",
-        "download_label": "📥 Reporte Ejecutivo (.xlsx)",
+        "download_label": "📗 Exportar a Excel (.xlsx)",
         "logout_label": "🔒 Cerrar Sesión",
         "goal_label": "🎯 Meta de",
         "goal_save": "💾 Salvar Meta del Mes",
@@ -125,7 +132,8 @@ TR = {
         "new_labels": ["Nombre Cliente:", "Nombre Producto:"],
         "col_map": {"Fecha_Hora": "📅 Fecha", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"},
         "dash_cols": {"emp": "Empresa", "prod": "Producto", "kg": "Cantidad (Kg)", "val": "💰 Valor Pagado", "com": "Comisión", "mes": "🗓️ Mes"},
-        "val_map": {"NEW": "🆕 Nuevo", "VENTA": "💰 Venta", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Masa", "CREAR": "✨ Crear", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"}
+        "val_map": {"NEW": "🆕 Nuevo", "VENTA": "💰 Venta", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Masa", "CREAR": "✨ Crear", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"},
+        "excel": {"cols": ["Fecha", "Hora", "Empresa", "Producto", "Kg", "Valor (R$)", "Comisión (R$)"], "total": "TOTAL:", "filename": "Reporte_Xingu"}
     },
     "English": {
         "tabs": ["📊 CEO Dashboard", "➕ New Sale", "🛠️ Admin", "📜 Log"],
@@ -134,10 +142,10 @@ TR = {
         "charts": ["Trend (Daily)", "Product Mix", "Sales by Company"],
         "table_title": "Sales Details",
         "forms": ["Client", "Product", "Kg", "Value (R$)", "✅ Confirm Sale"],
-        "actions": ["Save Edit", "DELETE", "Search...", "Other...", "🗑️ Delete Selection"],
+        "actions": ["Save Edit", "DELETE", "Search...", "✨ New...", "🗑️ Delete Selection"],
         "bulk_label": "Bulk Management",
         "clean_hist_label": "Clear History",
-        "download_label": "📥 Executive Report (.xlsx)",
+        "download_label": "📗 Export to Excel (.xlsx)",
         "logout_label": "🔒 Log Out",
         "goal_label": "🎯 Goal for",
         "goal_save": "💾 Save Month Goal",
@@ -146,7 +154,8 @@ TR = {
         "new_labels": ["Client Name:", "Product Name:"],
         "col_map": {"Fecha_Hora": "📅 Date", "Accion": "⚡ Action", "Detalles": "📝 Details"},
         "dash_cols": {"emp": "Company", "prod": "Product", "kg": "Quantity (Kg)", "val": "💰 Value Paid", "com": "Commission", "mes": "🗓️ Month"},
-        "val_map": {"NEW": "🆕 New", "VENTA": "💰 Sale", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Deleted", "BORRADO_MASIVO": "🔥 Bulk", "CREAR": "✨ Create", "HIST_DEL": "🧹 Clean", "META_UPDATE": "🎯 Goal"}
+        "val_map": {"NEW": "🆕 New", "VENTA": "💰 Sale", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Deleted", "BORRADO_MASIVO": "🔥 Bulk", "CREAR": "✨ Create", "HIST_DEL": "🧹 Clean", "META_UPDATE": "🎯 Goal"},
+        "excel": {"cols": ["Date", "Time", "Company", "Product", "Kg", "Value (R$)", "Commission (R$)"], "total": "TOTAL:", "filename": "Report_Xingu"}
     }
 }
 
@@ -169,36 +178,21 @@ def log_action(book, action, detail):
         book.worksheet("Historial").append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), action, detail])
     except: pass
 
-# --- FUNCIÓN INTELIGENTE DE META MENSUAL ---
 def get_monthly_goal_from_db(book, current_period_key):
-    """
-    Busca la meta guardada específicamente para este mes (ej: '2025-12').
-    Si no encuentra una meta para este mes específico, devuelve 0.
-    """
     try:
         sheet_log = book.worksheet("Historial")
         logs = sheet_log.get_all_records()
         df_log = pd.DataFrame(logs)
-        
         if not df_log.empty:
-            # Filtramos solo actualizaciones de meta
             meta_logs = df_log[df_log['Accion'] == 'META_UPDATE']
-            
-            # Buscamos de abajo hacia arriba (lo más reciente primero)
             for i, row in meta_logs.iloc[::-1].iterrows():
                 detalle = str(row['Detalles'])
-                # Formato nuevo: "YYYY-MM|VALOR" (Ej: "2025-12|50000.0")
                 if "|" in detalle:
                     periodo, valor = detalle.split("|")
                     if periodo == current_period_key:
                         return float(valor)
-                
-                # Si es un formato viejo (solo número), lo ignoramos para la meta mensual estricta
-                # o podríamos usarlo como fallback, pero el usuario pidió reinicio mensual.
-                # Así que devolvemos 0 si no hay una explicita de este mes.
-                
     except: pass
-    return 0.0 # Por defecto 0 si empieza mes nuevo
+    return 0.0
 
 # --- APP PRINCIPAL ---
 def main():
@@ -207,10 +201,9 @@ def main():
 
     with st.sidebar:
         st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=70)
-        # CAMBIO 1: PORTUGUÉS PRIMERO EN LA LISTA
         lang = st.selectbox("Language / Idioma", ["Português", "Español", "English"])
         st.markdown("---")
-        st.caption("v25.0 Auto-Monthly")
+        st.caption("v29.0 Custom Layout")
     
     t = TR[lang]
     s = RATES[lang]["s"]
@@ -237,43 +230,34 @@ def main():
     
     productos = sorted(list(set(["AÇAI MÉDIO", "AÇAI POP", "CUPUAÇU"] + prods_db)))
 
-    # --- LÓGICA DE TIEMPO ACTUAL ---
+    # --- TIEMPO ---
     ahora = datetime.now()
-    mes_actual_nombre = MESES_PT[ahora.month]
-    periodo_clave = ahora.strftime("%Y-%m") # Ej: "2025-12"
+    mes_ui_dict = MONTHS_UI[lang]
+    mes_actual_nombre = mes_ui_dict[ahora.month]
+    periodo_clave = ahora.strftime("%Y-%m")
 
-    # --- SIDEBAR: META MENSUAL ---
+    # --- SIDEBAR ---
     with st.sidebar:
         st.subheader(f"{t['goal_text']} ({mes_actual_nombre})")
-        
-        # 1. Obtener meta específica para ESTE mes
         db_goal = get_monthly_goal_from_db(book, periodo_clave)
-        
-        # 2. Input para definir meta (si db_goal es 0, empieza vacio)
         label_dinamico = f"{t['goal_label']} {mes_actual_nombre} ({s})"
         meta_input = st.number_input(label_dinamico, value=db_goal, step=1000.0)
         
-        # 3. Guardar Meta vinculada al MES
         if st.button(t['goal_save'], type="primary"):
-            # Guardamos: "2025-12|50000.0"
             valor_a_guardar = f"{periodo_clave}|{meta_input}"
             log_action(book, "META_UPDATE", valor_a_guardar)
             st.success(t['msgs'][3])
             time.sleep(1)
             st.rerun()
 
-        # 4. Calcular Ventas SOLO de este mes
         if not df.empty:
             df['Fecha_DT'] = pd.to_datetime(df['Fecha_Registro'], errors='coerce')
-            # Filtramos DF para sumar solo lo del mes actual
             df_mes_actual = df[df['Fecha_DT'].dt.to_period('M') == periodo_clave]
-            
             val_mes_brl = df_mes_actual['Valor_BRL'].sum()
             val_mes_curr = val_mes_brl * r
         else:
             val_mes_curr = 0
 
-        # 5. Barra de Progreso
         if meta_input > 0:
             progreso = min(val_mes_curr / meta_input, 1.0)
             st.progress(progreso)
@@ -281,11 +265,11 @@ def main():
             st.caption(f"{porcentaje:.1f}% ({s} {val_mes_curr:,.0f} / {s} {meta_input:,.0f})")
             if progreso >= 1.0: st.balloons()
         else:
-            st.warning("Defina a meta deste mês.")
+            st.warning("Defina a meta.")
         
         st.divider()
 
-        # Excel
+        # EXCEL
         if not df.empty:
             buffer = io.BytesIO()
             df_export = df.copy()
@@ -304,24 +288,37 @@ def main():
                     data_mes = df_export[df_export['Periodo'] == periodo].copy()
                     data_mes['Fecha'] = data_mes['Fecha_Temp'].dt.strftime('%d/%m/%Y')
                     data_mes['Hora'] = data_mes['Fecha_Temp'].dt.strftime('%H:%M')
-                    cols = ['Fecha', 'Hora', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']
-                    data_final = data_mes[[c for c in cols if c in data_mes.columns]]
                     
-                    name = f"{MESES_PT[periodo.month]} {periodo.year}"
+                    cols_db = ['Fecha', 'Hora', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']
+                    data_final = data_mes[[c for c in cols_db if c in data_mes.columns]]
+                    
+                    nombre_mes_lang = mes_ui_dict[periodo.month]
+                    name = f"{nombre_mes_lang} {periodo.year}"
+                    
                     data_final.to_excel(writer, sheet_name=name, startrow=1, header=False, index=False)
                     ws = writer.sheets[name]
-                    for i, col in enumerate(data_final.columns): ws.write(0, i, col, fmt_header)
+                    
+                    headers_lang = t['excel']['cols']
+                    for i, h in enumerate(headers_lang): ws.write(0, i, h, fmt_header)
+                    
                     ws.set_column('A:B', 10, fmt_base)
                     ws.set_column('C:D', 22, fmt_base)
                     ws.set_column('E:E', 10, fmt_number)
                     ws.set_column('F:G', 15, fmt_currency)
                     
                     rw = len(data_final)+1
-                    ws.write(rw, 4, "TOTAL:", fmt_total)
+                    ws.write(rw, 4, t['excel']['total'], fmt_total)
                     ws.write(rw, 5, data_final['Valor_BRL'].sum(), fmt_total)
                     ws.write(rw, 6, data_final['Comissao_BRL'].sum(), fmt_total)
 
-            st.download_button(t['download_label'], data=buffer, file_name=f'Xingu_Report_{datetime.now().strftime("%Y-%m")}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            filename_prefix = t['excel']['filename']
+            st.download_button(
+                label=t['download_label'],
+                data=buffer, 
+                file_name=f'{filename_prefix}_{datetime.now().strftime("%Y-%m")}.xlsx', 
+                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                type="primary"
+            )
         
         st.write("")
         if st.button(t['logout_label'], type="secondary"):
@@ -358,28 +355,7 @@ def main():
 
             st.divider()
 
-            # GRÁFICOS
-            c_izq, c_der = st.columns([2, 1])
-            with c_izq:
-                df['Fecha_DT'] = pd.to_datetime(df['Fecha_Registro'], errors='coerce')
-                df['Fecha_Dia'] = df['Fecha_DT'].dt.date
-                df['Valor_View'] = df['Valor_BRL'] * r
-                df_trend = df.groupby('Fecha_Dia')['Valor_View'].sum().reset_index()
-                
-                st.subheader(t['charts'][0])
-                fig_line = px.area(df_trend, x='Fecha_Dia', y='Valor_View', markers=True)
-                fig_line.update_layout(xaxis_title="", yaxis_title=s, height=350)
-                fig_line.update_traces(line_color='#FF4B4B', fillcolor='rgba(255, 75, 75, 0.2)')
-                st.plotly_chart(fig_line, use_container_width=True)
-
-            with c_der:
-                st.subheader(t['charts'][1]) 
-                fig_pie = px.pie(df, names='Producto', values='Kg', hole=0.6)
-                fig_pie.update_layout(showlegend=False, margin=dict(t=0,b=0,l=0,r=0), height=350)
-                st.plotly_chart(fig_pie, use_container_width=True)
-
-            # --- TABLA DETALLADA ---
-            st.divider()
+            # --- PARTE 1: TABLA DETALLADA (AHORA ARRIBA) ---
             st.subheader(t['table_title'])
             
             df_table = df.copy()
@@ -387,7 +363,7 @@ def main():
             df_table['Com_Show'] = (df_table['Valor_BRL'] * 0.02) * r
             
             df_table['Fecha_DT_Calc'] = pd.to_datetime(df_table['Fecha_Registro'], errors='coerce')
-            df_table['Mes_Auto'] = df_table['Fecha_DT_Calc'].dt.month.map(MESES_PT)
+            df_table['Mes_Auto'] = df_table['Fecha_DT_Calc'].dt.month.map(mes_ui_dict)
             
             cols_renombrar = {
                 'Mes_Auto': t['dash_cols']['mes'], 
@@ -411,6 +387,28 @@ def main():
             
             st.dataframe(df_table[cols_final].iloc[::-1], use_container_width=True)
 
+            st.divider()
+
+            # --- PARTE 2: GRÁFICOS (AHORA ABAJO) ---
+            c_izq, c_der = st.columns([2, 1])
+            with c_izq:
+                df['Fecha_DT'] = pd.to_datetime(df['Fecha_Registro'], errors='coerce')
+                df['Fecha_Dia'] = df['Fecha_DT'].dt.date
+                df['Valor_View'] = df['Valor_BRL'] * r
+                df_trend = df.groupby('Fecha_Dia')['Valor_View'].sum().reset_index()
+                
+                st.subheader(t['charts'][0])
+                fig_line = px.area(df_trend, x='Fecha_Dia', y='Valor_View', markers=True)
+                fig_line.update_layout(xaxis_title="", yaxis_title=s, height=350)
+                fig_line.update_traces(line_color='#FF4B4B', fillcolor='rgba(255, 75, 75, 0.2)')
+                st.plotly_chart(fig_line, use_container_width=True)
+
+            with c_der:
+                st.subheader(t['charts'][1]) 
+                fig_pie = px.pie(df, names='Producto', values='Kg', hole=0.6)
+                fig_pie.update_layout(showlegend=False, margin=dict(t=0,b=0,l=0,r=0), height=350)
+                st.plotly_chart(fig_pie, use_container_width=True)
+
         else:
             st.info(t['msgs'][2])
 
@@ -421,21 +419,20 @@ def main():
             c1, c2 = st.columns(2)
             sel_emp = c1.selectbox(t['forms'][0], [t['actions'][3]] + empresas)
             emp = c1.text_input(t['new_labels'][0]) if sel_emp == t['actions'][3] else sel_emp
+            
             sel_prod = c2.selectbox(t['forms'][1], [t['actions'][3]] + productos)
             prod = c2.text_input(t['new_labels'][1]) if sel_prod == t['actions'][3] else sel_prod
+            
             kg = c1.number_input(t['forms'][2], step=10.0)
             val = c2.number_input(t['forms'][3], step=100.0)
             st.markdown("<br>", unsafe_allow_html=True)
             if st.button(t['forms'][4], type="primary"):
                 if emp and prod:
                     ahora = datetime.now()
-                    mes_actual = MESES_PT[ahora.month]
-                    row = [emp, prod, kg, val, val*0.02, ahora.strftime("%Y-%m-%d %H:%M:%S"), mes_actual]
+                    mes_db = MESES_PT[ahora.month]
+                    row = [emp, prod, kg, val, val*0.02, ahora.strftime("%Y-%m-%d %H:%M:%S"), mes_db]
                     sheet.append_row(row)
-                    
-                    # LOG PRO
                     log_action(book, "NEW", f"{emp} | {kg}kg | {s} {val:,.2f}")
-                    
                     st.success(t['msgs'][0])
                     st.balloons()
                     time.sleep(1.5)
@@ -514,4 +511,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
