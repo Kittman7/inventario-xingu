@@ -16,7 +16,6 @@ st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    
     div[data-testid="stMetric"] {
         background-color: #1E1E1E;
         border-radius: 10px;
@@ -24,7 +23,6 @@ st.markdown("""
         border: 1px solid #333;
         box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
     }
-    
     .stTabs [data-baseweb="tab-list"] { gap: 8px; }
     .stTabs [data-baseweb="tab"] {
         height: 50px;
@@ -38,8 +36,6 @@ st.markdown("""
         border-bottom: 3px solid #FF4B4B;
         color: #FF4B4B;
     }
-    
-    /* ESTILO BOTONES */
     .stButton>button {
         width: 100%;
         border-radius: 8px;
@@ -77,11 +73,17 @@ def check_password():
                 st.error("⚠️ Error: Configura [passwords] en Secrets.")
     return False
 
-# --- MAPA DE MESES (GLOBAL) ---
-MESES_PT = {
+# --- DICCIONARIO DE MESES (MULTILINGÜE) ---
+MONTHS_DB = { # Para guardar en la base de datos (siempre en PT para consistencia)
     1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
     5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
     9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
+}
+
+MONTHS_UI = { # Para mostrar en Excel según idioma
+    "Português": MONTHS_DB,
+    "Español": {1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril", 5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto", 9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"},
+    "English": {1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June", 7: "July", 8: "August", 9: "September", 10: "October", 11: "November", 12: "December"}
 }
 
 # --- IDIOMAS ---
@@ -96,7 +98,7 @@ TR = {
         "actions": ["Salvar Edição", "DELETAR", "Buscar...", "Outro...", "🗑️ Apagar Seleção"],
         "bulk_label": "Gestão em Massa (Apagar Vários)",
         "clean_hist_label": "Limpeza de Histórico",
-        "download_label": "📗 Exportar para Excel (.xlsx)", # ICONO EXCEL + TEXTO PRO
+        "download_label": "📗 Exportar para Excel (.xlsx)",
         "logout_label": "🔒 Sair do Sistema",
         "goal_label": "🎯 Meta de", 
         "goal_save": "💾 Salvar Meta do Mês",
@@ -105,7 +107,13 @@ TR = {
         "new_labels": ["Nome Cliente:", "Nome Produto:"],
         "col_map": {"Fecha_Hora": "📅 Data", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"},
         "dash_cols": {"emp": "Empresa", "prod": "Produto", "kg": "Quantidade (Kg)", "val": "💰 Valor Pago", "com": "Comissão", "mes": "🗓️ Mês"},
-        "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "EDITAR": "✏️ Edição", "BORRAR": "🗑️ Apagado", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"}
+        "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "EDITAR": "✏️ Edição", "BORRAR": "🗑️ Apagado", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"},
+        # EXCEL SPECIFIC
+        "excel": {
+            "cols": ["Data", "Hora", "Empresa", "Produto", "Kg", "Valor (R$)", "Comissão (R$)"],
+            "total": "TOTAL:",
+            "filename": "Relatorio_Xingu"
+        }
     },
     "Español": {
         "tabs": ["📊 CEO Dashboard", "➕ Nueva Venta", "🛠️ Admin", "📜 Log"],
@@ -117,7 +125,7 @@ TR = {
         "actions": ["Guardar Edición", "BORRAR", "Buscar...", "Otro...", "🗑️ Borrar Selección"],
         "bulk_label": "Gestión Masiva (Borrar Varios)",
         "clean_hist_label": "Limpieza de Historial",
-        "download_label": "📗 Exportar a Excel (.xlsx)", # ICONO EXCEL
+        "download_label": "📗 Exportar a Excel (.xlsx)",
         "logout_label": "🔒 Cerrar Sesión",
         "goal_label": "🎯 Meta de",
         "goal_save": "💾 Salvar Meta del Mes",
@@ -126,7 +134,13 @@ TR = {
         "new_labels": ["Nombre Cliente:", "Nombre Producto:"],
         "col_map": {"Fecha_Hora": "📅 Fecha", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"},
         "dash_cols": {"emp": "Empresa", "prod": "Producto", "kg": "Cantidad (Kg)", "val": "💰 Valor Pagado", "com": "Comisión", "mes": "🗓️ Mes"},
-        "val_map": {"NEW": "🆕 Nuevo", "VENTA": "💰 Venta", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Masa", "CREAR": "✨ Crear", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"}
+        "val_map": {"NEW": "🆕 Nuevo", "VENTA": "💰 Venta", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Masa", "CREAR": "✨ Crear", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"},
+        # EXCEL SPECIFIC
+        "excel": {
+            "cols": ["Fecha", "Hora", "Empresa", "Producto", "Kg", "Valor (R$)", "Comisión (R$)"],
+            "total": "TOTAL:",
+            "filename": "Reporte_Xingu"
+        }
     },
     "English": {
         "tabs": ["📊 CEO Dashboard", "➕ New Sale", "🛠️ Admin", "📜 Log"],
@@ -138,7 +152,7 @@ TR = {
         "actions": ["Save Edit", "DELETE", "Search...", "Other...", "🗑️ Delete Selection"],
         "bulk_label": "Bulk Management",
         "clean_hist_label": "Clear History",
-        "download_label": "📗 Export to Excel (.xlsx)", # ICONO EXCEL
+        "download_label": "📗 Export to Excel (.xlsx)",
         "logout_label": "🔒 Log Out",
         "goal_label": "🎯 Goal for",
         "goal_save": "💾 Save Month Goal",
@@ -147,7 +161,13 @@ TR = {
         "new_labels": ["Client Name:", "Product Name:"],
         "col_map": {"Fecha_Hora": "📅 Date", "Accion": "⚡ Action", "Detalles": "📝 Details"},
         "dash_cols": {"emp": "Company", "prod": "Product", "kg": "Quantity (Kg)", "val": "💰 Value Paid", "com": "Commission", "mes": "🗓️ Month"},
-        "val_map": {"NEW": "🆕 New", "VENTA": "💰 Sale", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Deleted", "BORRADO_MASIVO": "🔥 Bulk", "CREAR": "✨ Create", "HIST_DEL": "🧹 Clean", "META_UPDATE": "🎯 Goal"}
+        "val_map": {"NEW": "🆕 New", "VENTA": "💰 Sale", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Deleted", "BORRADO_MASIVO": "🔥 Bulk", "CREAR": "✨ Create", "HIST_DEL": "🧹 Clean", "META_UPDATE": "🎯 Goal"},
+        # EXCEL SPECIFIC
+        "excel": {
+            "cols": ["Date", "Time", "Company", "Product", "Kg", "Value (R$)", "Commission (R$)"],
+            "total": "TOTAL:",
+            "filename": "Report_Xingu"
+        }
     }
 }
 
@@ -193,10 +213,9 @@ def main():
 
     with st.sidebar:
         st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=70)
-        # IDIOMA: PORTUGUÉS POR DEFECTO
         lang = st.selectbox("Language / Idioma", ["Português", "Español", "English"])
         st.markdown("---")
-        st.caption("v26.0 Pro Excel Button")
+        st.caption("v27.0 Polyglot Excel")
     
     t = TR[lang]
     s = RATES[lang]["s"]
@@ -225,7 +244,8 @@ def main():
 
     # --- TIEMPO ---
     ahora = datetime.now()
-    mes_actual_nombre = MESES_PT[ahora.month]
+    mes_ui_dict = MONTHS_UI[lang] # Meses en el idioma seleccionado
+    mes_actual_nombre = mes_ui_dict[ahora.month]
     periodo_clave = ahora.strftime("%Y-%m")
 
     # --- SIDEBAR ---
@@ -261,7 +281,7 @@ def main():
         
         st.divider()
 
-        # --- BOTÓN DE EXCEL PROFESIONAL ---
+        # --- EXCEL POLÍGLOTA ---
         if not df.empty:
             buffer = io.BytesIO()
             df_export = df.copy()
@@ -269,6 +289,7 @@ def main():
             
             with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
                 workbook = writer.book
+                # Estilos
                 fmt_header = workbook.add_format({'bold': True, 'fg_color': '#2C3E50', 'font_color': 'white', 'border': 1, 'align': 'center'})
                 fmt_currency = workbook.add_format({'num_format': 'R$ #,##0.00', 'border': 1})
                 fmt_number = workbook.add_format({'num_format': '#,##0.00', 'border': 1})
@@ -280,29 +301,43 @@ def main():
                     data_mes = df_export[df_export['Periodo'] == periodo].copy()
                     data_mes['Fecha'] = data_mes['Fecha_Temp'].dt.strftime('%d/%m/%Y')
                     data_mes['Hora'] = data_mes['Fecha_Temp'].dt.strftime('%H:%M')
-                    cols = ['Fecha', 'Hora', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']
-                    data_final = data_mes[[c for c in cols if c in data_mes.columns]]
                     
-                    name = f"{MESES_PT[periodo.month]} {periodo.year}"
+                    # Seleccionar datos crudos
+                    cols_db = ['Fecha', 'Hora', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']
+                    data_final = data_mes[[c for c in cols_db if c in data_mes.columns]]
+                    
+                    # Pestaña traducida (Ej: Enero 2025)
+                    nombre_mes_lang = mes_ui_dict[periodo.month]
+                    name = f"{nombre_mes_lang} {periodo.year}"
+                    
+                    # Escribir datos (sin header, lo ponemos manual traducido)
                     data_final.to_excel(writer, sheet_name=name, startrow=1, header=False, index=False)
+                    
                     ws = writer.sheets[name]
-                    for i, col in enumerate(data_final.columns): ws.write(0, i, col, fmt_header)
+                    
+                    # Escribir Headers Traducidos
+                    headers_lang = t['excel']['cols'] # Lista traducida
+                    for i, h in enumerate(headers_lang): 
+                        ws.write(0, i, h, fmt_header)
+                    
                     ws.set_column('A:B', 10, fmt_base)
                     ws.set_column('C:D', 22, fmt_base)
                     ws.set_column('E:E', 10, fmt_number)
                     ws.set_column('F:G', 15, fmt_currency)
                     
                     rw = len(data_final)+1
-                    ws.write(rw, 4, "TOTAL:", fmt_total)
+                    # Total traducido
+                    ws.write(rw, 4, t['excel']['total'], fmt_total) 
                     ws.write(rw, 5, data_final['Valor_BRL'].sum(), fmt_total)
                     ws.write(rw, 6, data_final['Comissao_BRL'].sum(), fmt_total)
 
+            filename_prefix = t['excel']['filename']
             st.download_button(
-                label=t['download_label'], # "📗 Exportar para Excel (.xlsx)"
+                label=t['download_label'],
                 data=buffer, 
-                file_name=f'Relatorio_Xingu_{datetime.now().strftime("%Y-%m")}.xlsx', 
+                file_name=f'{filename_prefix}_{datetime.now().strftime("%Y-%m")}.xlsx', 
                 mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                type="primary" # ESTO LO HACE ROJO/DESTACADO
+                type="primary"
             )
         
         st.write("")
@@ -369,7 +404,8 @@ def main():
             df_table['Com_Show'] = (df_table['Valor_BRL'] * 0.02) * r
             
             df_table['Fecha_DT_Calc'] = pd.to_datetime(df_table['Fecha_Registro'], errors='coerce')
-            df_table['Mes_Auto'] = df_table['Fecha_DT_Calc'].dt.month.map(MESES_PT)
+            # Usamos el mapa de UI para mostrar el mes en el idioma seleccionado en la tabla
+            df_table['Mes_Auto'] = df_table['Fecha_DT_Calc'].dt.month.map(mes_ui_dict)
             
             cols_renombrar = {
                 'Mes_Auto': t['dash_cols']['mes'], 
@@ -411,8 +447,8 @@ def main():
             if st.button(t['forms'][4], type="primary"):
                 if emp and prod:
                     ahora = datetime.now()
-                    mes_actual = MESES_PT[ahora.month]
-                    row = [emp, prod, kg, val, val*0.02, ahora.strftime("%Y-%m-%d %H:%M:%S"), mes_actual]
+                    mes_db = MONTHS_DB[ahora.month] # Guardamos siempre en Portugués para consistencia DB
+                    row = [emp, prod, kg, val, val*0.02, ahora.strftime("%Y-%m-%d %H:%M:%S"), mes_db]
                     sheet.append_row(row)
                     
                     log_action(book, "NEW", f"{emp} | {kg}kg | {s} {val:,.2f}")
