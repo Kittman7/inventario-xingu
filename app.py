@@ -40,6 +40,10 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# --- GESTIÓN DE ESTADO (PARA LIMPIAR CAMPOS) ---
+if 'sale_key' not in st.session_state: st.session_state.sale_key = 0
+if 'stock_key' not in st.session_state: st.session_state.stock_key = 0
+
 # --- LOGIN ---
 def check_password():
     if "authenticated" not in st.session_state:
@@ -286,22 +290,28 @@ def render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, la
                 st.plotly_chart(fig2, use_container_width=True)
 
 @st.fragment
-def render_new_sale(t, empresas, productos_all, stock_real):
+def render_new_sale(t, empresas, productos_all, stock_real, df_sales, s):
     st.header(t['headers'][1])
+    
+    # LLAVE DE SESIÓN PARA LIMPIAR
+    key_suffix = str(st.session_state.sale_key)
+    
     with st.container(border=True):
         c1, c2 = st.columns(2)
         op_new = t['actions'][3]
-        sel_emp = c1.selectbox(t['forms'][0], [op_new] + empresas)
-        emp = c1.text_input(t['new_labels'][0]) if sel_emp == op_new else sel_emp
-        sel_prod = c2.selectbox(t['forms'][1], [op_new] + productos_all)
-        prod = c2.text_input(t['new_labels'][1]) if sel_prod == op_new else sel_prod
-        kg = c1.number_input(t['forms'][2], step=10.0)
-        val = c2.number_input(t['forms'][3], step=100.0)
+        sel_emp = c1.selectbox(t['forms'][0], [op_new] + empresas, key=f"emp_{key_suffix}")
+        emp = c1.text_input(t['new_labels'][0], key=f"emp_txt_{key_suffix}") if sel_emp == op_new else sel_emp
+        sel_prod = c2.selectbox(t['forms'][1], [op_new] + productos_all, key=f"prod_{key_suffix}")
+        prod = c2.text_input(t['new_labels'][1], key=f"prod_txt_{key_suffix}") if sel_prod == op_new else sel_prod
+        kg = c1.number_input(t['forms'][2], step=10.0, key=f"kg_{key_suffix}")
+        val = c2.number_input(t['forms'][3], step=100.0, key=f"val_{key_suffix}")
+        
         if prod in stock_real: st.caption(f"Stock: {stock_real[prod]:.1f} kg")
         st.markdown("<br>", unsafe_allow_html=True)
+        
         if st.button(t['forms'][4], type="primary"):
             if emp and prod:
-                bk = get_book_direct() # Connect
+                bk = get_book_direct()
                 sheet = bk.get_worksheet(0)
                 row = [emp, prod, kg, val, val*0.02, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Auto"]
                 def do_write(): sheet.append_row(row)
@@ -310,22 +320,40 @@ def render_new_sale(t, empresas, productos_all, stock_real):
                     log_action(bk, "VENTA", f"{emp} | {kg}kg | {prod}")
                     st.cache_data.clear() 
                     st.success(t['msgs'][0])
+                    # INCREMENTAR KEY PARA LIMPIAR INPUTS
+                    st.session_state.sale_key += 1
+                    
                     if PDF_AVAILABLE:
                         try:
                             pdf_data = create_pdf(emp, prod, kg, val, st.session_state.username)
                             st.download_button(t['pdf'], data=pdf_data, file_name=f"Recibo.pdf", mime="application/pdf")
                         except: pass
-                    time.sleep(1.5); st.rerun()
+                    time.sleep(1.0); st.rerun()
                 else: st.error(f"Error al guardar: {error}")
+
+    # TABLA DE ÚLTIMAS VENTAS (FEEDBACK)
+    st.divider()
+    st.caption("📋 Últimas ventas registradas:")
+    if not df_sales.empty:
+        df_mini = df_sales[['Fecha_Registro', 'Empresa', 'Producto', 'Kg', 'Valor_BRL']].iloc[::-1].head(5)
+        st.dataframe(df_mini, use_container_width=True, hide_index=True, column_config={
+            'Valor_BRL': st.column_config.NumberColumn(format=f"{s} %.2f"),
+            'Kg': st.column_config.NumberColumn(format="%.1f kg")
+        })
 
 @st.fragment
 def render_admin(t, productos_all, df_sales, s):
     st.header(t['stock_add_title'])
+    
+    # LLAVE DE STOCK PARA LIMPIAR
+    stk_suffix = str(st.session_state.stock_key)
+    
     with st.container(border=True):
         c_st1, c_st2, c_st3 = st.columns([2, 1, 1])
-        prod_stock = c_st1.selectbox("Produto", ["✨ Novo..."] + productos_all, key="stock_prod")
-        if prod_stock == "✨ Novo...": prod_stock = c_st1.text_input("Nome", key="stock_prod_new")
-        kg_stock = c_st2.number_input("Kg (+)", step=10.0, key="stock_kg")
+        prod_stock = c_st1.selectbox("Produto", ["✨ Novo..."] + productos_all, key=f"s_prod_{stk_suffix}")
+        if prod_stock == "✨ Novo...": prod_stock = c_st1.text_input("Nome", key=f"s_prod_txt_{stk_suffix}")
+        kg_stock = c_st2.number_input("Kg (+)", step=10.0, key=f"s_kg_{stk_suffix}")
+        
         if c_st3.button(t['stock_btn'], type="primary"):
             bk = get_book_direct()
             try:
@@ -339,7 +367,10 @@ def render_admin(t, productos_all, df_sales, s):
                 if success:
                     log_action(bk, "STOCK_ADD", f"{prod_stock} | +{kg_stock}kg")
                     st.cache_data.clear()
-                    st.success(t['stock_msg']); time.sleep(1.5); st.rerun()
+                    st.success(t['stock_msg'])
+                    # LIMPIAR INPUTS DE STOCK
+                    st.session_state.stock_key += 1
+                    time.sleep(1.0); st.rerun()
                 else: st.error(f"Error: {err}")
             except Exception as e: st.error(f"Error grave: {e}")
 
@@ -450,7 +481,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         
         t = TR.get(lang, TR["Português"]) 
-        st.caption("v64.0 Fluent")
+        st.caption("v65.0 Flujo Perfecto")
         
         if st.button("🔄 Forzar Actualización"):
             st.cache_data.clear()
@@ -538,7 +569,7 @@ def main():
     with tab1:
         render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, lang)
     with tab2:
-        render_new_sale(t, empresas, productos_all, stock_real)
+        render_new_sale(t, empresas, productos_all, stock_real, df_sales, s)
     with tab3:
         render_admin(t, productos_all, df_sales, s)
     with tab4:
