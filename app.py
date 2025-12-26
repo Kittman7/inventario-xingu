@@ -94,13 +94,13 @@ MONTHS_UI = {
 # --- DICCIONARIO ---
 TR = {
     "Português": {
-        "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nova Venda", "🛠️ Admin (Stock)", "📜 Log"],
-        "headers": ["Dashboard", "Registrar Venda", "Gestão de Estoque", "Auditoria"],
+        "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nova Venda", "🛠️ Admin", "📜 Log"],
+        "headers": ["Dashboard", "Registrar Venda", "Gestão", "Auditoria"],
         "metrics": ["Faturamento", "Volume Vendido", "Comissão", "Ticket Médio", "Melhor Cliente"],
         "charts": ["Tendência", "Mix Produtos", "Por Empresa"],
-        "stock_add_title": "📦 Adicionar Estoque (Entradas)",
-        "stock_btn": "➕ Adicionar ao Estoque",
-        "stock_alert": "Estoque Atual (Entradas - Vendas)",
+        "stock_add_title": "📦 Adicionar Estoque",
+        "stock_btn": "➕ Adicionar",
+        "stock_alert": "Estoque Atual",
         "table_title": "Detalhes",
         "forms": ["Cliente", "Produto", "Kg", "Valor (R$)", "✅ Confirmar Venda"],
         "actions": ["Salvar", "DELETAR", "Buscar...", "✨ Novo...", "🗑️ Apagar Seleção"],
@@ -121,13 +121,13 @@ TR = {
         "col_map": {"Fecha_Hora": "📅 Data", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"}
     },
     "Español": {
-        "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nueva Venta", "🛠️ Admin (Stock)", "📜 Log"],
-        "headers": ["Dashboard", "Registrar Venta", "Gestión de Stock", "Auditoría"],
+        "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nueva Venta", "🛠️ Admin", "📜 Log"],
+        "headers": ["Dashboard", "Registrar Venta", "Gestión", "Auditoría"],
         "metrics": ["Facturación", "Volumen Vendido", "Comisión", "Ticket Medio", "Top Cliente"],
         "charts": ["Tendencia", "Mix Productos", "Por Empresa"],
-        "stock_add_title": "📦 Añadir Stock (Entradas)",
-        "stock_btn": "➕ Sumar al Stock",
-        "stock_alert": "Stock Actual (Entradas - Ventas)",
+        "stock_add_title": "📦 Añadir Stock",
+        "stock_btn": "➕ Sumar",
+        "stock_alert": "Stock Actual",
         "table_title": "Detalles",
         "forms": ["Cliente", "Producto", "Kg", "Valor ($)", "✅ Confirmar Venta"],
         "actions": ["Guardar", "BORRAR", "Buscar...", "✨ Nuevo...", "🗑️ Borrar Selección"],
@@ -148,13 +148,13 @@ TR = {
         "col_map": {"Fecha_Hora": "📅 Fecha", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"}
     },
     "English": {
-        "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ New Sale", "🛠️ Admin (Stock)", "📜 Log"],
-        "headers": ["Dashboard", "New Sale", "Stock Mgmt", "Log"],
+        "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ New Sale", "🛠️ Admin", "📜 Log"],
+        "headers": ["Dashboard", "New Sale", "Management", "Log"],
         "metrics": ["Revenue", "Volume Sold", "Commission", "Avg Ticket", "Top Client"],
         "charts": ["Trend", "Mix", "By Company"],
-        "stock_add_title": "📦 Add Stock (Inputs)",
-        "stock_btn": "➕ Add to Stock",
-        "stock_alert": "Current Stock (Inputs - Sales)",
+        "stock_add_title": "📦 Add Stock",
+        "stock_btn": "➕ Add",
+        "stock_alert": "Current Stock",
         "table_title": "Details",
         "forms": ["Client", "Product", "Kg", "Value", "✅ Confirm Sale"],
         "actions": ["Save", "DELETE", "Search...", "✨ New...", "🗑️ Delete Selection"],
@@ -217,12 +217,12 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         
         t = TR.get(lang, TR["Português"]) 
-        st.caption("v54.0 Design Fix")
+        st.caption("v55.0 Final Design")
         if st.button(t['logout']): st.session_state.authenticated = False; st.rerun()
     
     s = RATES[lang]["s"]; r = RATES[lang]["r"]
 
-    # --- DATA LOADING (CON PROTECCIÓN) ---
+    # --- DATA LOADING (CON PROTECCIÓN MEJORADA) ---
     df_sales = pd.DataFrame()
     df_stock_in = pd.DataFrame()
     book = None
@@ -231,17 +231,18 @@ def main():
 
     try:
         book = get_data()
-        sheet_sales = book.sheet1
+        sheet_sales = book.sheet1 # Intenta abrir la hoja 1 por defecto
         df_sales = pd.DataFrame(sheet_sales.get_all_records())
     except: 
-        st.error("Error crítico de Base de Datos. Verifica 'Inventario_Xingu_DB' y la hoja 1.")
+        # Si falla, intentamos reconectar o mostrar error amable
+        st.error("Error conectando con Google Sheets. Revisa que el archivo 'Inventario_Xingu_DB' exista y tenga la hoja 1.")
         st.stop()
 
     try:
         sheet_stock = book.worksheet("Estoque")
         df_stock_in = pd.DataFrame(sheet_stock.get_all_records())
     except:
-        st.warning(f"⚠️ {t.get('stock_msg', 'Stock warning')} (Crea hoja 'Estoque': Data, Produto, Kg, Usuario)")
+        # No paramos la app si falta stock, solo avisamos
         df_stock_in = pd.DataFrame(columns=["Data", "Produto", "Kg", "Usuario"]) 
 
     # --- PROCESAMIENTO ---
@@ -257,7 +258,7 @@ def main():
         df_sales['Mes_Lang'] = df_sales['Fecha_DT'].dt.month.map(MONTHS_UI[lang])
     else: 
         empresas, prods_sales = [], []
-        df_sales = pd.DataFrame(columns=['Producto', 'Kg', 'Valor_BRL', 'Fecha_Registro'])
+        df_sales = pd.DataFrame(columns=['Producto', 'Kg', 'Valor_BRL', 'Fecha_Registro', 'Empresa', 'Comissao_BRL'])
 
     # 2. Stock
     if not df_stock_in.empty:
@@ -323,11 +324,10 @@ def main():
 
     tab1, tab2, tab3, tab4 = st.tabs(t['tabs'])
 
-    # 1. DASHBOARD
+    # 1. DASHBOARD (ORDEN CAMBIADO)
     with tab1:
         st.title(t['headers'][0])
         if not df_sales.empty:
-            # Filtro Fecha
             with st.expander(t.get("filter", "Filter Date"), expanded=False):
                 col_f1, col_f2 = st.columns(2)
                 d_min = df_sales['Fecha_DT'].min().date()
@@ -340,15 +340,12 @@ def main():
 
             if df_fil.empty: st.warning("No Data in Range")
             else:
-                # KPIs
                 k1, k2, k3 = st.columns(3)
                 k1.metric(t['metrics'][0], f"{s} {(df_fil['Valor_BRL'].sum() * r):,.0f}")
                 k2.metric(t['metrics'][1], f"{df_fil['Kg'].sum():,.0f} kg")
                 k3.metric(t['metrics'][2], f"{s} {(df_fil['Valor_BRL'].sum()*0.02*r):,.0f}")
                 
                 st.divider()
-                
-                # Stock Bars
                 st.subheader(t['stock_alert'])
                 if stock_real:
                     for p, kg_left in sorted(stock_real.items(), key=lambda item: item[1], reverse=True):
@@ -362,14 +359,13 @@ def main():
                 
                 st.divider()
 
-                # --- ⚠️ CAMBIO SOLICITADO: TABLA ARRIBA DE GRÁFICOS ---
+                # --- TABLA DETALLES (ARRIBA) ---
                 st.subheader(t['table_title'])
                 
                 # Preparamos tabla visual (Con Mes y Comisión)
-                df_show = df_fil.copy()
-                df_show = df_show[['Fecha_Registro', 'Mes_Lang', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']]
+                df_show = df_fil[['Fecha_Registro', 'Mes_Lang', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']].copy()
                 
-                # Renombrar columnas para mostrar bonito
+                # Renombrar para visualización
                 cols_view = {
                     'Fecha_Registro': t['col_map']['Fecha_Hora'],
                     'Mes_Lang': t['dash_cols']['mes'],
@@ -392,7 +388,7 @@ def main():
                 
                 st.divider()
                 
-                # GRÁFICOS
+                # GRÁFICOS (ABAJO)
                 c_izq, c_der = st.columns([2, 1])
                 with c_izq:
                     df_tr = df_fil.groupby(df_fil['Fecha_DT'].dt.date)['Valor_BRL'].sum().reset_index()
@@ -435,37 +431,57 @@ def main():
                         except: pass
                     time.sleep(2); st.rerun()
 
-    # 3. ADMIN (VISUAL TABLE + EDIT)
+    # 3. ADMIN (TABLA VISUAL + EDITAR)
     with tab3:
+        # AÑADIR STOCK
         st.header(t['stock_add_title'])
         with st.container(border=True):
             c_st1, c_st2, c_st3 = st.columns([2, 1, 1])
-            prod_stock = c_st1.selectbox("Produto / Product", ["✨ Novo..."] + productos_all, key="stock_prod")
+            prod_stock = c_st1.selectbox("Produto", ["✨ Novo..."] + productos_all, key="stock_prod")
             if prod_stock == "✨ Novo...": prod_stock = c_st1.text_input("Nome", key="stock_prod_new")
             kg_stock = c_st2.number_input("Kg (+)", step=10.0, key="stock_kg")
-            
             if c_st3.button(t['stock_btn'], type="primary"):
                 if prod_stock and kg_stock > 0 and sheet_stock:
                     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     sheet_stock.append_row([now, prod_stock, kg_stock, st.session_state.username])
                     log_action(book, "STOCK_ADD", f"{prod_stock} | +{kg_stock}kg")
                     st.success(t['stock_msg']); time.sleep(1.5); st.rerun()
-                else: st.error("Error: 'Estoque' missing.")
+                elif not sheet_stock:
+                    st.error("Error: Hoja 'Estoque' no creada en Google Sheets.")
 
         st.divider()
         st.subheader("Admin Ventas")
         filtro = st.text_input(t['actions'][2], key="admin_search") 
         
         if not df_sales.empty:
-            # ⚠️ VISTA DE TABLA (COMO LOG)
+            # 1. TABLA GENERAL (COMO HISTORIAL)
             st.caption("Vista General:")
-            st.dataframe(df_sales.iloc[::-1], use_container_width=True, hide_index=True)
+            
+            # Preparamos tabla visual para Admin
+            df_admin_show = df_sales[['Fecha_Registro', 'Empresa', 'Producto', 'Kg', 'Valor_BRL']].copy()
+            # Renombramos para que se vea bonito
+            cols_admin = {
+                'Fecha_Registro': t['col_map']['Fecha_Hora'],
+                'Empresa': t['dash_cols']['emp'],
+                'Producto': t['dash_cols']['prod'],
+                'Kg': t['dash_cols']['kg'],
+                'Valor_BRL': t['dash_cols']['val']
+            }
+            
+            st.dataframe(
+                df_admin_show.rename(columns=cols_admin).iloc[::-1], 
+                use_container_width=True, hide_index=True,
+                column_config={
+                    t['dash_cols']['val']: st.column_config.NumberColumn(format=f"{s} %.2f"),
+                    t['dash_cols']['kg']: st.column_config.NumberColumn(format="%.1f kg")
+                }
+            )
             
             st.markdown("---")
-            st.caption("Editar / Borrar:")
+            st.caption("🛠️ Editar / Borrar (Individual):")
             
-            # Edición Individual (Expanders)
-            df_s = df_sales[df_sales.astype(str).apply(lambda x: x.str.contains(filtro, case=False)).any(axis=1)] if filtro else df_sales.tail(5).iloc[::-1]
+            # 2. EDICIÓN INDIVIDUAL
+            df_s = df_sales[df_sales.astype(str).apply(lambda x: x.str.contains(filtro, case=False)).any(axis=1)] if filtro else df_sales.tail(10).iloc[::-1]
             for i, r in df_s.iterrows():
                 with st.expander(f"{r['Empresa']} | {r['Producto']} | {r['Fecha_Registro']}"):
                     c_ed1, c_ed2 = st.columns(2)
@@ -473,21 +489,21 @@ def main():
                     new_val = c_ed2.number_input("Valor", value=float(r['Valor_BRL']), key=f"v_{i}")
                     
                     c_btn1, c_btn2 = st.columns(2)
-                    if c_btn1.button("💾 Guardar Cambios", key=f"save_{i}"):
+                    if c_btn1.button("💾 Guardar", key=f"save_{i}"):
                         cell = sheet_sales.find(str(r['Fecha_Registro']))
-                        # Update cells (Cols: 3=Kg, 4=Val, 5=Comm)
                         sheet_sales.update_cell(cell.row, 3, new_kg)
                         sheet_sales.update_cell(cell.row, 4, new_val)
                         sheet_sales.update_cell(cell.row, 5, new_val*0.02)
                         st.success("Editado!"); time.sleep(1); st.rerun()
                         
-                    if c_btn2.button(t['actions'][1], key=f"del_{i}", type="secondary"): # BORRAR
+                    if c_btn2.button(t['actions'][1], key=f"del_{i}", type="secondary"):
                         cell = sheet_sales.find(str(r['Fecha_Registro']))
                         sheet_sales.delete_rows(cell.row)
                         st.success(t['msgs'][1]); time.sleep(1); st.rerun()
             
             st.divider()
-            # Borrado Masivo (RESTAURADO)
+            
+            # 3. BORRADO MASIVO
             with st.expander(t['bulk_label']):
                 df_rev = df_sales.iloc[::-1].reset_index()
                 opc = [f"{r['Empresa']} | {r['Producto']} | {r['Fecha_Registro']}" for i, r in df_rev.iterrows()]
@@ -504,7 +520,7 @@ def main():
                         log_action(book, "BORRADO_MASIVO", f"{len(rows_to_del)}")
                         st.success(t['msgs'][1]); time.sleep(1); st.rerun()
 
-    # 4. LOG (RESTAURADO)
+    # 4. LOG
     with tab4:
         st.title(t['headers'][3])
         try:
