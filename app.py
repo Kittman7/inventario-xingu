@@ -8,7 +8,7 @@ import time
 import io
 import xlsxwriter
 
-# INTENTO DE IMPORTAR FPDF (Para que no falle si falta)
+# INTENTO DE IMPORTAR FPDF
 try:
     from fpdf import FPDF
     PDF_AVAILABLE = True
@@ -21,7 +21,7 @@ except ImportError:
 NOMBRE_EMPRESA = "Xingu CEO"
 ICONO_APP = "🍇"
 
-# 🔑 LOGIN SIMPLE (Cámbiala aquí)
+# 🔑 LOGIN SIMPLE
 CONTRASEÑA_MAESTRA = "Julio777" 
 # ==========================================
 
@@ -46,7 +46,7 @@ st.markdown("""
 def check_password():
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
-        st.session_state.username = "CEO" # Nombre por defecto para el PDF
+        st.session_state.username = "CEO" 
 
     if st.session_state.authenticated:
         return True
@@ -55,7 +55,6 @@ def check_password():
     with c2:
         st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA}</h1>", unsafe_allow_html=True)
         st.write("")
-        # Solo pide contraseña
         input_pass = st.text_input("Senha / Contraseña", type="password").strip()
         
         if st.button("Entrar", type="primary"):
@@ -75,7 +74,6 @@ if PDF_AVAILABLE:
     def create_pdf(cli, prod, kg, val, vend):
         pdf = PDF(); pdf.add_page(); pdf.set_font("Arial", size=12)
         pdf.cell(0, 10, f"Data: {datetime.now().strftime('%d/%m/%Y %H:%M')}", ln=True)
-        # Usamos el nombre de usuario genérico o el de sesión
         pdf.cell(0, 10, f"Vendedor: {vend}", ln=True)
         pdf.line(10, 35, 200, 35); pdf.ln(10)
         pdf.cell(0, 10, f"Cliente: {cli}", ln=True); pdf.ln(5)
@@ -83,7 +81,7 @@ if PDF_AVAILABLE:
         pdf.cell(100, 10, f"{prod}", 1); pdf.cell(40, 10, f"{kg}", 1); pdf.cell(50, 10, f"R$ {val:,.2f}", 1)
         return pdf.output(dest='S').encode('latin-1')
 
-# --- DICCIONARIO COMPLETO (Súper Importante) ---
+# --- DICCIONARIO COMPLETO ---
 TR = {
     "Português": {
         "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nova Venda", "🛠️ Admin", "📜 Log"],
@@ -158,16 +156,21 @@ TR = {
 RATES = { "Português": {"s": "R$", "r": 1.0}, "Español": {"s": "$", "r": 165.0}, "English": {"s": "USD", "r": 0.18} }
 MESES_UI = {1: "Jan", 2: "Feb", 3: "Mar", 4: "Abr", 5: "Mai", 6: "Jun", 7: "Jul", 8: "Ago", 9: "Set", 10: "Out", 11: "Nov", 12: "Dez"}
 
-# --- DATA ---
-def get_data():
+# --- CONEXIÓN CACHEADA (AQUÍ ESTÁ LA MAGIA ⚡) ---
+@st.cache_resource(ttl=600) # Mantiene la conexión viva por 10 minutos
+def get_connection():
     scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
     creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["google_credentials"], scope)
     client = gspread.authorize(creds)
-    return client.open("Inventario_Xingu_DB")
+    return client
+
+def get_data():
+    client = get_connection()
+    book = client.open("Inventario_Xingu_DB")
+    return book
 
 def log_action(book, action, detail):
     try:
-        # Usamos st.session_state.username que será "CEO"
         u = st.session_state.get('username', 'CEO')
         book.worksheet("Historial").append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), action, f"{detail} ({u})"])
     except: pass
@@ -188,13 +191,12 @@ def main():
 
     with st.sidebar:
         st.markdown(f"<h1 style='text-align: center; font-size: 50px; margin:0;'>{ICONO_APP}</h1>", unsafe_allow_html=True)
-        # Título Simple
         st.markdown(f"<h3 style='text-align: center;'>{NOMBRE_EMPRESA}</h3>", unsafe_allow_html=True)
         
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
         st.info(t.get("install", "Install App"))
-        st.caption("v45.0 Final Simple")
+        st.caption("v46.0 Speed Cache")
     
     s = RATES[lang]["s"]; r = RATES[lang]["r"]
 
@@ -234,7 +236,7 @@ def main():
 
     tab1, tab2, tab3, tab4 = st.tabs(t['tabs'])
 
-    # 1. DASHBOARD CON FILTROS 📅
+    # 1. DASHBOARD
     with tab1:
         st.title(t['headers'][0])
         if not df.empty:
@@ -350,14 +352,11 @@ def main():
             h_dt = pd.DataFrame(sh_log.get_all_records())
             
             if not h_dt.empty:
-                # Copia y formateo
                 show_log = h_dt.copy()
                 if "Accion" in show_log.columns:
                     show_log["Accion"] = show_log["Accion"].replace(t['val_map'])
                 show_log = show_log.rename(columns=t['col_map'])
-                
                 st.dataframe(show_log.iloc[::-1], use_container_width=True)
-                
                 st.divider()
                 with st.expander(t['clean_hist_label']):
                     rev_h = h_dt.iloc[::-1].reset_index()
