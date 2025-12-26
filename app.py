@@ -259,10 +259,19 @@ def render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, la
             k3.metric(t['metrics'][2], f"{s} {(df_fil['Valor_BRL'].sum()*0.02*r):,.0f}")
             
             st.divider()
+            
+            # --- FILTRO VISUAL STOCK (NUEVO) ---
             st.subheader(t['stock_alert'])
+            all_prods_display = sorted(list(stock_real.keys()))
+            selected_view = st.multiselect("👁️ Ver solo estos productos:", all_prods_display)
+            
             if stock_real:
-                for p, kg_left in sorted(stock_real.items(), key=lambda item: item[1], reverse=True):
-                    if kg_left != 0 or p in prods_stock or p in prods_sales:
+                # Filtrar si hay selección
+                items_to_show = {k: v for k, v in stock_real.items() if k in selected_view} if selected_view else stock_real
+                
+                for p, kg_left in sorted(items_to_show.items(), key=lambda item: item[1], reverse=True):
+                    # Mostrar solo si tiene actividad o fue seleccionado
+                    if kg_left != 0 or p in selected_view or p in prods_stock:
                         c_s1, c_s2 = st.columns([3, 1])
                         pct = max(0.0, min(kg_left / 1000.0, 1.0))
                         c_s1.progress(pct, text=f"📦 **{p}**: {kg_left:,.1f} kg")
@@ -368,7 +377,7 @@ def render_admin(t, productos_all, df_sales, df_stock_in, s):
                 else: st.error(f"Error: {err}")
             except Exception as e: st.error(f"Error grave: {e}")
 
-    # BORRADO TOTAL STOCK
+    # BORRADO TOTAL STOCK (NUEVO)
     with st.expander("🔥 Borrar Todo el Stock (Peligro)"):
         st.warning("Esto borrará todas las entradas de stock. No se puede deshacer.")
         check_wipe_stk = st.checkbox("Estoy seguro de borrar el stock", key="chk_wipe_stk")
@@ -588,7 +597,7 @@ def main():
         st.markdown(f"<h3 style='text-align: center;'>{NOMBRE_EMPRESA}</h3>", unsafe_allow_html=True)
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
-        st.caption("v70.0 Admin Pro & Limpieza")
+        st.caption("v71.0 Control Visual & Limpieza")
         if st.button("🔄 Forzar Actualización"):
             st.cache_data.clear()
             st.rerun()
