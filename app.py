@@ -91,7 +91,7 @@ MONTHS_UI = {
     "English": {1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June", 7: "July", 8: "August", 9: "September", 10: "October", 11: "November", 12: "December"}
 }
 
-# --- DICCIONARIO COMPLETO (RESTAURADO) ---
+# --- DICCIONARIO ---
 TR = {
     "Português": {
         "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nova Venda", "🛠️ Admin (Stock)", "📜 Log"],
@@ -216,30 +216,33 @@ def main():
         st.markdown(f"<h3 style='text-align: center;'>{NOMBRE_EMPRESA}</h3>", unsafe_allow_html=True)
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         
-        # FIX DE IDIOMA
         t = TR.get(lang, TR["Português"]) 
-        
-        st.caption("v53.0 Restaurada Total")
+        st.caption("v54.0 Design Fix")
         if st.button(t['logout']): st.session_state.authenticated = False; st.rerun()
     
     s = RATES[lang]["s"]; r = RATES[lang]["r"]
 
+    # --- DATA LOADING (CON PROTECCIÓN) ---
+    df_sales = pd.DataFrame()
+    df_stock_in = pd.DataFrame()
+    book = None
+    sheet_sales = None
+    sheet_stock = None
+
     try:
         book = get_data()
         sheet_sales = book.sheet1
-        
-        # CARGAR STOCK (SI EXISTE)
-        try:
-            sheet_stock = book.worksheet("Estoque")
-            df_stock_in = pd.DataFrame(sheet_stock.get_all_records())
-        except:
-            st.error("⚠️ Crea hoja 'Estoque' (Data, Produto, Kg, Usuario)")
-            df_stock_in = pd.DataFrame(columns=["Data", "Produto", "Kg", "Usuario"]) 
-            sheet_stock = None
-
         df_sales = pd.DataFrame(sheet_sales.get_all_records())
+    except: 
+        st.error("Error crítico de Base de Datos. Verifica 'Inventario_Xingu_DB' y la hoja 1.")
+        st.stop()
 
-    except: st.error("DB Error"); st.stop()
+    try:
+        sheet_stock = book.worksheet("Estoque")
+        df_stock_in = pd.DataFrame(sheet_stock.get_all_records())
+    except:
+        st.warning(f"⚠️ {t.get('stock_msg', 'Stock warning')} (Crea hoja 'Estoque': Data, Produto, Kg, Usuario)")
+        df_stock_in = pd.DataFrame(columns=["Data", "Produto", "Kg", "Usuario"]) 
 
     # --- PROCESAMIENTO ---
     # 1. Ventas
@@ -248,6 +251,10 @@ def main():
             if c in df_sales.columns: df_sales[c] = pd.to_numeric(df_sales[c], errors='coerce').fillna(0)
         empresas = sorted(list(set(df_sales['Empresa'].astype(str))))
         prods_sales = list(set(df_sales['Producto'].astype(str)))
+        
+        # Generar Mes y Fecha DT
+        df_sales['Fecha_DT'] = pd.to_datetime(df_sales['Fecha_Registro'], errors='coerce')
+        df_sales['Mes_Lang'] = df_sales['Fecha_DT'].dt.month.map(MONTHS_UI[lang])
     else: 
         empresas, prods_sales = [], []
         df_sales = pd.DataFrame(columns=['Producto', 'Kg', 'Valor_BRL', 'Fecha_Registro'])
@@ -288,8 +295,6 @@ def main():
             buffer = io.BytesIO()
             with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
                 df_ex = df_sales.copy()
-                df_ex['Fecha_DT'] = pd.to_datetime(df_ex['Fecha_Registro'], errors='coerce')
-                df_ex['Mes_Lang'] = df_ex['Fecha_DT'].dt.month.map(MONTHS_UI[lang])
                 df_ex['Fecha_Clean'] = df_ex['Fecha_DT'].dt.strftime('%d/%m/%Y %H:%M')
                 
                 data_final = df_ex[['Fecha_Clean', 'Mes_Lang', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']].copy()
@@ -318,14 +323,13 @@ def main():
 
     tab1, tab2, tab3, tab4 = st.tabs(t['tabs'])
 
-    # 1. DASHBOARD (COMPLETO DE NUEVO)
+    # 1. DASHBOARD
     with tab1:
         st.title(t['headers'][0])
         if not df_sales.empty:
             # Filtro Fecha
             with st.expander(t.get("filter", "Filter Date"), expanded=False):
                 col_f1, col_f2 = st.columns(2)
-                df_sales['Fecha_DT'] = pd.to_datetime(df_sales['Fecha_Registro'], errors='coerce')
                 d_min = df_sales['Fecha_DT'].min().date()
                 d_max = df_sales['Fecha_DT'].max().date()
                 d1 = col_f1.date_input("Start", d_min)
@@ -357,8 +361,38 @@ def main():
                             else: c_s2.success("✅")
                 
                 st.divider()
+
+                # --- ⚠️ CAMBIO SOLICITADO: TABLA ARRIBA DE GRÁFICOS ---
+                st.subheader(t['table_title'])
                 
-                # GRÁFICOS RESTAURADOS
+                # Preparamos tabla visual (Con Mes y Comisión)
+                df_show = df_fil.copy()
+                df_show = df_show[['Fecha_Registro', 'Mes_Lang', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']]
+                
+                # Renombrar columnas para mostrar bonito
+                cols_view = {
+                    'Fecha_Registro': t['col_map']['Fecha_Hora'],
+                    'Mes_Lang': t['dash_cols']['mes'],
+                    'Empresa': t['dash_cols']['emp'],
+                    'Producto': t['dash_cols']['prod'],
+                    'Kg': t['dash_cols']['kg'],
+                    'Valor_BRL': t['dash_cols']['val'],
+                    'Comissao_BRL': t['dash_cols']['com']
+                }
+                
+                st.dataframe(
+                    df_show.rename(columns=cols_view).iloc[::-1],
+                    use_container_width=True, hide_index=True,
+                    column_config={
+                        t['dash_cols']['val']: st.column_config.NumberColumn(format=f"{s} %.2f"),
+                        t['dash_cols']['com']: st.column_config.NumberColumn(format=f"{s} %.2f"),
+                        t['dash_cols']['kg']: st.column_config.NumberColumn(format="%.1f kg")
+                    }
+                )
+                
+                st.divider()
+                
+                # GRÁFICOS
                 c_izq, c_der = st.columns([2, 1])
                 with c_izq:
                     df_tr = df_fil.groupby(df_fil['Fecha_DT'].dt.date)['Valor_BRL'].sum().reset_index()
@@ -371,17 +405,6 @@ def main():
                     fig2 = px.pie(df_fil, names='Producto', values='Kg', hole=0.5, title=t['charts'][1])
                     fig2.update_layout(showlegend=False)
                     st.plotly_chart(fig2, use_container_width=True)
-
-                # TABLA RESTAURADA
-                st.subheader(t['table_title'])
-                st.dataframe(
-                    df_fil[['Fecha_Registro', 'Empresa', 'Producto', 'Kg', 'Valor_BRL']].iloc[::-1],
-                    use_container_width=True, hide_index=True,
-                    column_config={
-                        "Valor_BRL": st.column_config.NumberColumn(t['dash_cols']['val'], format=f"{s} %.2f"),
-                        "Kg": st.column_config.NumberColumn(t['dash_cols']['kg'], format="%.1f kg")
-                    }
-                )
 
     # 2. VENDER
     with tab2:
@@ -412,7 +435,7 @@ def main():
                         except: pass
                     time.sleep(2); st.rerun()
 
-    # 3. ADMIN (CON STOCK Y BORRADO RESTAURADO)
+    # 3. ADMIN (VISUAL TABLE + EDIT)
     with tab3:
         st.header(t['stock_add_title'])
         with st.container(border=True):
@@ -427,17 +450,38 @@ def main():
                     sheet_stock.append_row([now, prod_stock, kg_stock, st.session_state.username])
                     log_action(book, "STOCK_ADD", f"{prod_stock} | +{kg_stock}kg")
                     st.success(t['stock_msg']); time.sleep(1.5); st.rerun()
-                else: st.error("Error: 'Estoque' sheet missing.")
+                else: st.error("Error: 'Estoque' missing.")
 
         st.divider()
         st.subheader("Admin Ventas")
         filtro = st.text_input(t['actions'][2], key="admin_search") 
+        
         if not df_sales.empty:
-            # Edición Individual
+            # ⚠️ VISTA DE TABLA (COMO LOG)
+            st.caption("Vista General:")
+            st.dataframe(df_sales.iloc[::-1], use_container_width=True, hide_index=True)
+            
+            st.markdown("---")
+            st.caption("Editar / Borrar:")
+            
+            # Edición Individual (Expanders)
             df_s = df_sales[df_sales.astype(str).apply(lambda x: x.str.contains(filtro, case=False)).any(axis=1)] if filtro else df_sales.tail(5).iloc[::-1]
             for i, r in df_s.iterrows():
-                with st.expander(f"{r['Empresa']} | {r['Producto']}"):
-                    if st.button(t['actions'][1], key=f"d{i}"):
+                with st.expander(f"{r['Empresa']} | {r['Producto']} | {r['Fecha_Registro']}"):
+                    c_ed1, c_ed2 = st.columns(2)
+                    new_kg = c_ed1.number_input("Kg", value=float(r['Kg']), key=f"k_{i}")
+                    new_val = c_ed2.number_input("Valor", value=float(r['Valor_BRL']), key=f"v_{i}")
+                    
+                    c_btn1, c_btn2 = st.columns(2)
+                    if c_btn1.button("💾 Guardar Cambios", key=f"save_{i}"):
+                        cell = sheet_sales.find(str(r['Fecha_Registro']))
+                        # Update cells (Cols: 3=Kg, 4=Val, 5=Comm)
+                        sheet_sales.update_cell(cell.row, 3, new_kg)
+                        sheet_sales.update_cell(cell.row, 4, new_val)
+                        sheet_sales.update_cell(cell.row, 5, new_val*0.02)
+                        st.success("Editado!"); time.sleep(1); st.rerun()
+                        
+                    if c_btn2.button(t['actions'][1], key=f"del_{i}", type="secondary"): # BORRAR
                         cell = sheet_sales.find(str(r['Fecha_Registro']))
                         sheet_sales.delete_rows(cell.row)
                         st.success(t['msgs'][1]); time.sleep(1); st.rerun()
@@ -475,7 +519,6 @@ def main():
                 st.dataframe(show_log.iloc[::-1], use_container_width=True)
                 
                 st.divider()
-                # Limpieza Historial (RESTAURADO)
                 with st.expander(t['clean_hist_label']):
                     rev_h = h_dt.iloc[::-1].reset_index()
                     opc_h = [f"{r['Fecha_Hora']} | {r['Accion']} | {r['Detalles']}" for i, r in rev_h.iterrows()]
