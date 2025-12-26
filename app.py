@@ -41,12 +41,10 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- GESTIÓN DE ESTADO Y MEMORIA ---
+# --- GESTIÓN DE ESTADO ---
 if 'sale_key' not in st.session_state: st.session_state.sale_key = 0
 if 'stock_key' not in st.session_state: st.session_state.stock_key = 0
 if 'show_log' not in st.session_state: st.session_state.show_log = False
-# Memoria para el filtro del Dashboard (Se inicializa vacía)
-if 'dash_filter_state' not in st.session_state: st.session_state.dash_filter_state = []
 
 # --- LOGIN ---
 def check_password():
@@ -88,7 +86,7 @@ if PDF_AVAILABLE:
         pdf.cell(100, 10, f"{prod}", 1); pdf.cell(40, 10, f"{kg}", 1); pdf.cell(50, 10, f"R$ {val:,.2f}", 1)
         return pdf.output(dest='S').encode('latin-1')
 
-# --- DICCIONARIO COMPLETO (SOLUCIONADO EL ERROR VAL_MAP) ---
+# --- DICCIONARIO ---
 MESES_PT = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto", 9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"}
 MONTHS_UI = {
     "Português": MESES_PT,
@@ -118,6 +116,7 @@ TR = {
         "stock_msg": "Estoque Adicionado!",
         "user_lbl": "Usuário / Responsável",
         "filter_viz": "👁️ Ver apenas estes produtos:",
+        "save_view": "💾 Salvar Vista Padrão",
         "hist_entries": "Histórico de Entradas",
         "search_stk": "🔍 Buscar no histórico de estoque:",
         "edit_del_stk": "Editar ou Apagar Entrada",
@@ -158,6 +157,7 @@ TR = {
         "stock_msg": "¡Stock Añadido!",
         "user_lbl": "Usuario / Responsable",
         "filter_viz": "👁️ Ver solo estos productos:",
+        "save_view": "💾 Guardar Vista Predeterminada",
         "hist_entries": "Historial de Entradas",
         "search_stk": "🔍 Buscar en historial de stock:",
         "edit_del_stk": "Editar o Borrar Entrada",
@@ -198,6 +198,7 @@ TR = {
         "stock_msg": "Stock Added!",
         "user_lbl": "User / Responsible",
         "filter_viz": "👁️ View only these products:",
+        "save_view": "💾 Save Default View",
         "hist_entries": "Stock Input History",
         "search_stk": "🔍 Search stock history:",
         "edit_del_stk": "Edit or Delete Entry",
@@ -265,22 +266,37 @@ def log_action(book, action, detail):
         book.worksheet("Historial").append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), action, f"{detail} ({u})"])
     except: pass
 
-def get_goal(book, key):
+# --- NUEVO SISTEMA DE CONFIGURACIÓN PERSISTENTE ---
+def get_config(book):
+    """Lee la hoja 'Config' para recuperar Meta y Filtros."""
     try:
-        rows = book.worksheet("Historial").get_all_values()
-        for row in reversed(rows[1:]):
-            if len(row) >= 3 and row[1] == 'META_UPDATE' and "|" in str(row[2]):
-                p, v = str(row[2]).split("|")
-                if p == key: return float(v)
-    except: pass
-    return 0.0
+        sh = book.worksheet("Config")
+    except:
+        # Si no existe, se crea
+        sh = book.add_worksheet("Config", 100, 2)
+        sh.append_row(["Key", "Value"])
+    
+    records = sh.get_all_values()
+    cfg = {}
+    for r in records[1:]:
+        if len(r) >= 2: cfg[r[0]] = r[1]
+    return sh, cfg
+
+def save_conf(book, key, val):
+    """Guarda un valor en la hoja Config."""
+    sh, cfg = get_config(book)
+    try:
+        cell = sh.find(key)
+        sh.update_cell(cell.row, 2, str(val))
+    except:
+        sh.append_row([key, str(val)])
 
 # ==========================================
-# 🧩 FRAGMENTOS (PÁGINAS)
+# 🧩 FRAGMENTOS
 # ==========================================
 
 @st.fragment
-def render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, lang):
+def render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, lang, saved_filter):
     st.title(t['headers'][0])
     if not df_sales.empty:
         with st.expander(t.get("filter", "Filter Date"), expanded=False):
@@ -305,19 +321,28 @@ def render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, la
             st.subheader(t['stock_alert'])
             all_prods_display = sorted(list(stock_real.keys()))
             
-            # Usamos session_state para que recuerde la selección
-            selected_view = st.multiselect(
-                t['filter_viz'], 
-                all_prods_display, 
-                key="dash_filter_state" # CLAVE DE MEMORIA
-            )
+            # Recuperar filtro guardado si existe
+            default_selection = []
+            if saved_filter:
+                default_selection = [p for p in saved_filter.split(',') if p in all_prods_display]
+
+            # Multiselect con lo guardado
+            selected_view = st.multiselect(t['filter_viz'], all_prods_display, default=default_selection)
+            
+            # BOTÓN PARA GUARDAR VISTA
+            if st.button(t['save_view']):
+                bk = get_book_direct()
+                val_to_save = ",".join(selected_view)
+                save_conf(bk, "stock_view_pref", val_to_save)
+                st.success("✅ Vista Guardada")
+                time.sleep(1) # Feedback visual
             
             if stock_real:
                 items_to_show = {k: v for k, v in stock_real.items() if k in selected_view} if selected_view else stock_real
                 for p, kg_left in sorted(items_to_show.items(), key=lambda item: item[1], reverse=True):
-                    # Mostrar SI está seleccionado O SI no hay selección y tiene stock/actividad
+                    # Lógica estricta de visualización
                     show_it = False
-                    if selected_view: show_it = True # Si está en items_to_show es porque fue seleccionado
+                    if selected_view: show_it = True 
                     elif kg_left != 0 or p in prods_stock: show_it = True
                     
                     if show_it:
@@ -396,21 +421,15 @@ def render_new_sale(t, empresas, productos_all, stock_real, df_sales, s):
 
 @st.fragment
 def render_stock_management(t, productos_all, df_stock_in):
-    # --- PESTAÑA: GESTIÓN DE STOCK ---
     st.title(t['headers'][2])
-    
     stk_suffix = str(st.session_state.stock_key)
     with st.container(border=True):
         st.caption(t['stock_add_title'])
         c_st1, c_st2, c_st3, c_st4 = st.columns([2, 1, 1, 1])
-        
         prod_stock = c_st1.selectbox(t['forms'][1], ["✨ Novo..."] + productos_all, key=f"s_prod_{stk_suffix}")
         if prod_stock == "✨ Novo...": prod_stock = c_st1.text_input(t['new_labels'][1], key=f"s_prod_txt_{stk_suffix}")
-        
         kg_stock = c_st2.number_input("Kg (+)", step=10.0, key=f"s_kg_{stk_suffix}")
-        
         user_stock = c_st3.text_input(t['user_lbl'], value="CEO", key=f"s_usr_{stk_suffix}")
-        
         if c_st4.button(t['stock_btn'], type="primary"):
             bk = get_book_direct()
             try:
@@ -419,9 +438,7 @@ def render_stock_management(t, productos_all, df_stock_in):
                     sh_stk = bk.add_worksheet(title="Estoque", rows=1000, cols=10)
                     sh_stk.append_row(["Data", "Produto", "Kg", "Usuario"])
                 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                
                 def do_stock(): sh_stk.append_row([now, prod_stock, kg_stock, user_stock])
-                
                 success, err = safe_api_action(do_stock)
                 if success:
                     log_action(bk, "STOCK_ADD", f"{prod_stock} | +{kg_stock}kg")
@@ -450,21 +467,16 @@ def render_stock_management(t, productos_all, df_stock_in):
 
     st.write("")
     st.subheader(t['hist_entries'])
-    
     filtro_stock = st.text_input(t['search_stk'], key="search_stk")
-    
     if not df_stock_in.empty:
         if filtro_stock:
             df_stk_view = df_stock_in[df_stock_in.astype(str).apply(lambda x: x.str.contains(filtro_stock, case=False)).any(axis=1)]
         else:
             df_stk_view = df_stock_in
-            
         st.dataframe(df_stk_view.iloc[::-1], use_container_width=True, hide_index=True)
         st.write("---")
         st.caption(t['edit_del_stk'])
-        
         to_edit = df_stk_view.iloc[::-1] if filtro_stock else df_stk_view.tail(10).iloc[::-1]
-        
         for i, r in to_edit.iterrows():
             row_label = f"📦 {r.get('Produto', '?')} | {r.get('Data', '?')} | {r.get('Kg', 0)}kg"
             with st.expander(row_label):
@@ -501,28 +513,23 @@ def render_stock_management(t, productos_all, df_stock_in):
 def render_sales_management(t, df_sales, s):
     st.title(t['admin_sales_title'])
     filtro = st.text_input(t['search_sales'], key="admin_search") 
-    
     if not df_sales.empty:
         if filtro:
             df_filtered = df_sales[df_sales.astype(str).apply(lambda x: x.str.contains(filtro, case=False)).any(axis=1)]
             st.info(f"Resultados: {len(df_filtered)}")
         else:
             df_filtered = df_sales.tail(5)
-
         df_admin_show = df_filtered[['Fecha_Registro', 'Empresa', 'Producto', 'Kg', 'Valor_BRL']].copy()
         cols_admin = {'Fecha_Registro': t['col_map']['Fecha_Hora'], 'Empresa': t['dash_cols']['emp'], 'Producto': t['dash_cols']['prod'], 'Kg': t['dash_cols']['kg'], 'Valor_BRL': t['dash_cols']['val']}
         st.dataframe(df_admin_show.rename(columns=cols_admin).iloc[::-1], use_container_width=True, hide_index=True, column_config={t['dash_cols']['val']: st.column_config.NumberColumn(format=f"{s} %.2f"), t['dash_cols']['kg']: st.column_config.NumberColumn(format="%.1f kg")})
-        
         st.write("")
         st.caption(t['edit_del_stk'])
-        
         for i, r in df_filtered.iloc[::-1].iterrows():
             with st.expander(f"💰 {r['Empresa']} | {r['Producto']} | {r['Fecha_Registro']}"):
                 c_ed1, c_ed2 = st.columns(2)
                 new_kg = c_ed1.number_input("Kg", value=float(r['Kg']), key=f"k_{i}")
                 new_val = c_ed2.number_input("Valor", value=float(r['Valor_BRL']), key=f"v_{i}")
                 c_btn1, c_btn2 = st.columns(2)
-                
                 if c_btn1.button(t['save_changes'], key=f"save_{i}"):
                     bk = get_book_direct()
                     sh_sl = bk.get_worksheet(0)
@@ -534,7 +541,6 @@ def render_sales_management(t, df_sales, s):
                     success, err = safe_api_action(do_update)
                     if success: st.cache_data.clear(); st.success(t['msgs'][3]); time.sleep(1); st.rerun()
                     else: st.error(f"Error: {err}")
-                    
                 if c_btn2.button(t['del_entry'], key=f"del_{i}", type="secondary"):
                     bk = get_book_direct()
                     sh_sl = bk.get_worksheet(0)
@@ -543,7 +549,6 @@ def render_sales_management(t, df_sales, s):
                     success, err = safe_api_action(do_del)
                     if success: st.cache_data.clear(); st.success(t['msgs'][1]); time.sleep(1); st.rerun()
                     else: st.error(f"Error: {err}")
-
         st.write("")
         with st.expander(t['wipe_sales_title']):
             st.warning(t['wipe_stk_warn'])
@@ -563,8 +568,6 @@ def render_sales_management(t, df_sales, s):
 def render_log(t):
     st.title(t['headers'][3])
     col_btn, col_info = st.columns([1, 2])
-    
-    # BOTÓN MAESTRO DE ESTADO (MANTIENE ABIERTO O CERRADO)
     if col_btn.button("🔄 Cargar/Ocultar Historial", type="secondary"):
         st.session_state.show_log = not st.session_state.show_log
         st.rerun()
@@ -574,19 +577,15 @@ def render_log(t):
             bk = get_book_direct()
             sh_log = bk.worksheet("Historial")
             h_dt = pd.DataFrame(sh_log.get_all_records())
-            
             if not h_dt.empty:
                 show_log = h_dt.copy()
-                # AQUI SE USA VAL_MAP (AHORA CORREGIDO)
                 if "Accion" in show_log.columns:
                     emoji_map = t['val_map'].copy()
                     show_log["Accion"] = show_log["Accion"].replace(emoji_map)
                 show_log = show_log.rename(columns=t['col_map'])
                 st.dataframe(show_log.iloc[::-1], use_container_width=True)
-                
                 st.divider()
                 st.markdown("### 🗑️")
-                
                 with st.expander(t['msgs'][4]):
                     rev_h = h_dt.iloc[::-1].reset_index()
                     opc_h = [f"{r['Fecha_Hora']} | {r['Accion']} | {r['Detalles']}" for i, r in rev_h.iterrows()]
@@ -605,7 +604,6 @@ def render_log(t):
                             success, err = safe_api_action(do_log_del)
                             if success: st.success(t['msgs'][1]); time.sleep(1); st.rerun()
                             else: st.error(f"Error: {err}")
-
                 st.write("")
                 col_danger1, col_danger2 = st.columns([3, 1])
                 check_danger = col_danger1.checkbox(t['wipe_stk_check'])
@@ -635,7 +633,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
         t["tabs"] = [t['tabs'][0], t['tabs'][1], t['tabs'][2], t['tabs'][3], t['tabs'][4]]
-        st.caption("v76.0 Memory Fix")
+        st.caption("v77.0 Eternal Memory")
         if st.button("🔄"):
             st.cache_data.clear()
             st.rerun()
@@ -643,10 +641,18 @@ def main():
     
     s = RATES[lang]["s"]; r = RATES[lang]["r"]
 
+    # CARGA DE DATOS + CONFIGURACION
     df_sales, df_stock_in = load_cached_data()
     if df_sales is None:
         st.error("⏳ Google Error 429. Wait 1 min.")
         st.stop()
+    
+    # LEER CONFIGURACIÓN (META Y FILTRO)
+    bk_conf = get_book_direct() # Acceso directo a config para leer
+    _, cfg = get_config(bk_conf)
+    
+    saved_meta = float(cfg.get('meta_goal', 0.0))
+    saved_filter = cfg.get('stock_view_pref', "")
 
     if not df_sales.empty:
         for c in ['Valor_BRL', 'Kg', 'Comissao_BRL']:
@@ -676,20 +682,15 @@ def main():
     with st.sidebar:
         st.write(f"**{t['goal_lbl']} {MESES_UI_SIDEBAR[ahora.month]}**")
         
-        # --- META PERSISTENTE (READ FROM DB) ---
-        if "meta_cache" not in st.session_state:
-            try: 
-                b_meta = get_book_direct()
-                st.session_state.meta_cache = get_goal(b_meta, periodo_clave)
-            except: st.session_state.meta_cache = 0.0
-            
-        meta = st.number_input("Meta", value=st.session_state.meta_cache, step=1000.0, label_visibility="collapsed")
+        # META DESDE CONFIG (PERSISTENTE)
+        meta = st.number_input("Meta", value=saved_meta, step=1000.0, label_visibility="collapsed")
         
         if st.button(t['goal_btn']):
             bk = get_book_direct()
-            log_action(bk, "META_UPDATE", f"{periodo_clave}|{meta}")
-            st.session_state.meta_cache = meta
+            # GUARDAR EN CONFIG HOJA
+            save_conf(bk, "meta_goal", meta)
             st.success("OK!")
+            time.sleep(0.5); st.rerun()
             
         val_mes = df_sales[df_sales['Fecha_Registro'].str.contains(periodo_clave, na=False)]['Valor_BRL'].sum() * r if not df_sales.empty else 0
         if meta > 0:
@@ -721,9 +722,9 @@ def main():
                 st.download_button(t['dl_excel'], data=buffer, file_name=f"Reporte_{datetime.now().strftime('%Y-%m-%d')}.xlsx", mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             except Exception as ex: st.warning(f"⚠️ ({ex})")
 
-    # TABS
+    # TABS (PASAMOS EL FILTRO GUARDADO AL DASHBOARD)
     tab1, tab2, tab3, tab4, tab5 = st.tabs(t['tabs'])
-    with tab1: render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, lang)
+    with tab1: render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, lang, saved_filter)
     with tab2: render_new_sale(t, empresas, productos_all, stock_real, df_sales, s)
     with tab3: render_stock_management(t, productos_all, df_stock_in)
     with tab4: render_sales_management(t, df_sales, s)
