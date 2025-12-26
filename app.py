@@ -43,6 +43,7 @@ st.markdown("""
 # --- GESTIÓN DE ESTADO ---
 if 'sale_key' not in st.session_state: st.session_state.sale_key = 0
 if 'stock_key' not in st.session_state: st.session_state.stock_key = 0
+if 'show_log' not in st.session_state: st.session_state.show_log = False # MEMORIA DEL LOG
 
 # --- LOGIN ---
 def check_password():
@@ -186,7 +187,7 @@ def get_connection():
     return client
 
 # --- DATOS CACHEADOS ---
-@st.cache_data(ttl=900) # 15 minutos de caché para lecturas masivas
+@st.cache_data(ttl=900)
 def load_cached_data():
     client = get_connection()
     try:
@@ -206,7 +207,6 @@ def get_book_direct():
     client = get_connection()
     return client.open("Inventario_Xingu_DB")
 
-# ACCIÓN SEGURA CON ESPERA EXPONENCIAL
 def safe_api_action(action_func, *args):
     last_error = None
     for attempt in range(1, 4): 
@@ -215,7 +215,6 @@ def safe_api_action(action_func, *args):
             return True, None 
         except Exception as e:
             last_error = e
-            # Espera inteligente: 1s, 2s, 4s...
             time.sleep(2 ** attempt) 
     return False, last_error
 
@@ -321,7 +320,6 @@ def render_new_sale(t, empresas, productos_all, stock_real, df_sales, s):
                     st.cache_data.clear() 
                     st.success(t['msgs'][0])
                     st.session_state.sale_key += 1
-                    
                     if PDF_AVAILABLE:
                         try:
                             pdf_data = create_pdf(emp, prod, kg, val, st.session_state.username)
@@ -343,13 +341,11 @@ def render_new_sale(t, empresas, productos_all, stock_real, df_sales, s):
 def render_admin(t, productos_all, df_sales, s):
     st.header(t['stock_add_title'])
     stk_suffix = str(st.session_state.stock_key)
-    
     with st.container(border=True):
         c_st1, c_st2, c_st3 = st.columns([2, 1, 1])
         prod_stock = c_st1.selectbox("Produto", ["✨ Novo..."] + productos_all, key=f"s_prod_{stk_suffix}")
         if prod_stock == "✨ Novo...": prod_stock = c_st1.text_input("Nome", key=f"s_prod_txt_{stk_suffix}")
         kg_stock = c_st2.number_input("Kg (+)", step=10.0, key=f"s_kg_{stk_suffix}")
-        
         if c_st3.button(t['stock_btn'], type="primary"):
             bk = get_book_direct()
             try:
@@ -387,7 +383,6 @@ def render_admin(t, productos_all, df_sales, s):
                 new_kg = c_ed1.number_input("Kg", value=float(r['Kg']), key=f"k_{i}")
                 new_val = c_ed2.number_input("Valor", value=float(r['Valor_BRL']), key=f"v_{i}")
                 c_btn1, c_btn2 = st.columns(2)
-                
                 if c_btn1.button("💾 Guardar", key=f"save_{i}"):
                     bk = get_book_direct()
                     sh_sl = bk.get_worksheet(0)
@@ -399,7 +394,6 @@ def render_admin(t, productos_all, df_sales, s):
                     success, err = safe_api_action(do_update)
                     if success: st.cache_data.clear(); st.success("Editado!"); time.sleep(1); st.rerun()
                     else: st.error(f"Error: {err}")
-                    
                 if c_btn2.button(t['actions'][1], key=f"del_{i}", type="secondary"):
                     bk = get_book_direct()
                     sh_sl = bk.get_worksheet(0)
@@ -433,9 +427,14 @@ def render_admin(t, productos_all, df_sales, s):
 @st.fragment
 def render_log(t):
     st.title(t['headers'][3])
-    st.info("💡 Para proteger la velocidad de la App, el historial no carga automáticamente.")
     
-    if st.button("📂 Cargar Historial Completo", type="primary"):
+    # BOTÓN MAESTRO PARA CARGAR/OCULTAR
+    col_btn, col_info = st.columns([1, 2])
+    if col_btn.button("🔄 Cargar/Ocultar Historial", type="secondary"):
+        st.session_state.show_log = not st.session_state.show_log
+        st.rerun()
+
+    if st.session_state.show_log:
         try:
             bk = get_book_direct()
             sh_log = bk.worksheet("Historial")
@@ -448,8 +447,12 @@ def render_log(t):
                     show_log["Accion"] = show_log["Accion"].replace(emoji_map)
                 show_log = show_log.rename(columns=t['col_map'])
                 st.dataframe(show_log.iloc[::-1], use_container_width=True)
+                
                 st.divider()
-                with st.expander(t['clean_hist_label']):
+                st.markdown("### 🗑️ Zona de Borrado")
+                
+                # 1. BORRADO SELECTIVO
+                with st.expander("Seleccionar items para borrar"):
                     rev_h = h_dt.iloc[::-1].reset_index()
                     opc_h = [f"{r['Fecha_Hora']} | {r['Accion']} | {r['Detalles']}" for i, r in rev_h.iterrows()]
                     sel_h = st.multiselect(t['msgs'][4], opc_h)
@@ -467,10 +470,26 @@ def render_log(t):
                             success, err = safe_api_action(do_log_del)
                             if success: st.success(t['msgs'][1]); time.sleep(1); st.rerun()
                             else: st.error(f"Error: {err}")
+
+                # 2. BORRADO TOTAL (NUEVO)
+                st.write("")
+                col_danger1, col_danger2 = st.columns([3, 1])
+                check_danger = col_danger1.checkbox("⚠️ Habilitar borrado completo (Irreversible)")
+                if check_danger:
+                    if col_danger2.button("🔥 BORRAR TODO", type="primary"):
+                        def do_wipe():
+                            sh_log.clear()
+                            sh_log.append_row(["Fecha_Hora", "Accion", "Detalles"]) # Restaurar Headers
+                        success, err = safe_api_action(do_wipe)
+                        if success: st.success("¡Historial vaciado!"); time.sleep(1); st.rerun()
+                        else: st.error(f"Error: {err}")
+
             else:
                 st.info("El historial está limpio.")
         except Exception as e:
-            st.error(f"Error: {e}")
+            st.error(f"Error leyendo historial: {e}")
+    else:
+        st.info("El historial está oculto para mayor velocidad. Dale al botón para verlo.")
 
 # --- APP MAIN ---
 def main():
@@ -481,23 +500,18 @@ def main():
         except: st.markdown(f"<h1 style='text-align: center; font-size: 50px; margin:0;'>🍇</h1>", unsafe_allow_html=True)
         st.markdown(f"<h3 style='text-align: center;'>{NOMBRE_EMPRESA}</h3>", unsafe_allow_html=True)
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
-        
         t = TR.get(lang, TR["Português"]) 
-        st.caption("v67.0 Modo Turbo")
-        
+        st.caption("v68.0 Log Persistente")
         if st.button("🔄 Forzar Actualización"):
             st.cache_data.clear()
             st.rerun()
-            
         if st.button(t['logout']): st.session_state.authenticated = False; st.rerun()
     
     s = RATES[lang]["s"]; r = RATES[lang]["r"]
 
     df_sales, df_stock_in = load_cached_data()
-    
     if df_sales is None:
-        st.error("⏳ Google está ocupado (Error 429).")
-        st.info("Espera 1 min y dale al botón 'Forzar Actualización'.")
+        st.error("⏳ Google está ocupado (Error 429). Espera 1 min.")
         st.stop()
 
     if not df_sales.empty:
@@ -565,17 +579,12 @@ def main():
                 ws.write(lr, 3, t['xls_tot'], fmt_total); ws.write(lr, 4, data_final['Kg'].sum(), fmt_total); ws.write(lr, 5, data_final['Valor_BRL'].sum(), fmt_total); ws.write(lr, 6, data_final['Comissao_BRL'].sum(), fmt_total)
             st.download_button(t['dl_excel'], data=buffer, file_name=f"Reporte_{datetime.now().strftime('%Y-%m-%d')}.xlsx", mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
-    # TABS CON FRAGMENTOS
+    # TABS
     tab1, tab2, tab3, tab4 = st.tabs(t['tabs'])
-
-    with tab1:
-        render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, lang)
-    with tab2:
-        render_new_sale(t, empresas, productos_all, stock_real, df_sales, s)
-    with tab3:
-        render_admin(t, productos_all, df_sales, s)
-    with tab4:
-        render_log(t)
+    with tab1: render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, lang)
+    with tab2: render_new_sale(t, empresas, productos_all, stock_real, df_sales, s)
+    with tab3: render_admin(t, productos_all, df_sales, s)
+    with tab4: render_log(t)
 
 if __name__ == "__main__":
     main()
