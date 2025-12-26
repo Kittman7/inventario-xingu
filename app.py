@@ -19,7 +19,7 @@ except ImportError:
 # 🎨 ZONA DE PERSONALIZACIÓN
 # ==========================================
 NOMBRE_EMPRESA = "Xingu CEO"
-ICONO_APP = "logo.png"
+ICONO_APP = "logo.png" # Asegúrate de que logo.png esté en GitHub
 CONTRASEÑA_MAESTRA = "Julio777" 
 # ==========================================
 
@@ -57,11 +57,13 @@ def check_password():
         with st.form("login_form"):
             input_pass = st.text_input("Senha / Contraseña", type="password")
             submit_btn = st.form_submit_button("Entrar", type="primary")
+        
         if submit_btn:
             if input_pass.strip() == CONTRASEÑA_MAESTRA:
                 st.session_state.authenticated = True
                 st.rerun()
-            else: st.error("🚫 Incorrecto")
+            else:
+                st.error("🚫 Incorrecto")
     return False
 
 # --- PDF ---
@@ -80,13 +82,15 @@ if PDF_AVAILABLE:
         pdf.cell(100, 10, f"{prod}", 1); pdf.cell(40, 10, f"{kg}", 1); pdf.cell(50, 10, f"R$ {val:,.2f}", 1)
         return pdf.output(dest='S').encode('latin-1')
 
-# --- DICCIONARIO ---
+# --- MAPA DE MESES ---
 MESES_PT = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto", 9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"}
 MONTHS_UI = {
     "Português": MESES_PT,
     "Español": {1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril", 5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto", 9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"},
     "English": {1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June", 7: "July", 8: "August", 9: "September", 10: "October", 11: "November", 12: "December"}
 }
+
+# --- DICCIONARIO ---
 TR = {
     "Português": {
         "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nova Venda", "🛠️ Admin (Stock)", "📜 Log"],
@@ -94,8 +98,8 @@ TR = {
         "metrics": ["Faturamento", "Volume Vendido", "Comissão", "Ticket Médio", "Melhor Cliente"],
         "charts": ["Tendência", "Mix Produtos", "Por Empresa"],
         "stock_add_title": "📦 Adicionar Estoque (Entradas)",
-        "stock_btn": "➕ Adicionar",
-        "stock_alert": "Estoque Atual",
+        "stock_btn": "➕ Adicionar ao Estoque",
+        "stock_alert": "Estoque Atual (Entradas - Vendas)",
         "table_title": "Detalhes",
         "forms": ["Cliente", "Produto", "Kg", "Valor (R$)", "✅ Confirmar Venda"],
         "actions": ["Salvar", "DELETAR", "Buscar...", "✨ Novo...", "🗑️ Apagar Seleção"],
@@ -173,7 +177,8 @@ TR = {
 RATES = { "Português": {"s": "R$", "r": 1.0}, "Español": {"s": "$", "r": 165.0}, "English": {"s": "USD", "r": 0.18} }
 MESES_UI_SIDEBAR = {1: "Jan", 2: "Feb", 3: "Mar", 4: "Abr", 5: "Mai", 6: "Jun", 7: "Jul", 8: "Ago", 9: "Set", 10: "Out", 11: "Nov", 12: "Dez"}
 
-# --- DATA CONNECTION ---
+# --- DATA CONNECTION (CACHEADA) ---
+# Usamos caché para no saturar a Google (Error 429)
 @st.cache_resource(ttl=600) 
 def get_connection():
     scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
@@ -183,8 +188,8 @@ def get_connection():
 
 def get_data():
     client = get_connection()
-    # INTENTA ABRIR EXACTAMENTE ESTE NOMBRE
-    return client.open("Inventario_Xingu_DB") 
+    book = client.open("Inventario_Xingu_DB")
+    return book
 
 def log_action(book, action, detail):
     try:
@@ -202,7 +207,7 @@ def get_goal(book, key):
     except: pass
     return 0.0
 
-# --- APP MAIN ---
+# --- APP ---
 def main():
     if not check_password(): return
 
@@ -211,54 +216,40 @@ def main():
         except: st.markdown(f"<h1 style='text-align: center; font-size: 50px; margin:0;'>🍇</h1>", unsafe_allow_html=True)
         st.markdown(f"<h3 style='text-align: center;'>{NOMBRE_EMPRESA}</h3>", unsafe_allow_html=True)
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
+        
         t = TR.get(lang, TR["Português"]) 
-        st.caption("v59.0 Revelador")
+        st.caption("v60.0 Anti-Block")
         if st.button(t['logout']): st.session_state.authenticated = False; st.rerun()
     
     s = RATES[lang]["s"]; r = RATES[lang]["r"]
 
-    # --- DATA LOADING + DIAGNÓSTICO DE ARCHIVOS ---
-    df_sales = pd.DataFrame(); df_stock_in = pd.DataFrame()
-    book = None; sheet_sales = None; sheet_stock = None
+    # --- DATA LOADING (LIGERO) ---
+    df_sales = pd.DataFrame()
+    df_stock_in = pd.DataFrame()
+    book = None
+    sheet_sales = None
+    sheet_stock = None
 
     try:
         book = get_data()
-        sheet_sales = book.get_worksheet(0)
+        sheet_sales = book.get_worksheet(0) 
         df_sales = pd.DataFrame(sheet_sales.get_all_records())
     except Exception as e:
-        st.error("⛔ ERROR DE CONEXIÓN")
-        st.warning(f"No encuentro 'Inventario_Xingu_DB' o no tengo permiso.")
-        
-        # --- EL REVELADOR DE ARCHIVOS ---
-        try:
-            st.markdown("### 📂 Archivos que el Robot PUEDE ver:")
-            client = get_connection()
-            # Listar archivos disponibles para el bot
-            file_list = client.openall()
-            titulos = [f.title for f in file_list]
-            
-            if not titulos:
-                st.info("❌ La lista está VACÍA. El robot no ha sido invitado a ningún archivo.")
-                try:
-                    email = st.secrets["google_credentials"]["client_email"]
-                    st.write(f"Invita a: `{email}`")
-                except: pass
-            else:
-                st.success(f"✅ El robot ve estos archivos: {titulos}")
-                st.info("Si tu archivo está aquí pero con otro nombre, cámbialo en el código.")
-        except Exception as e2:
-            st.write(f"No pude ni listar los archivos: {e2}")
-            
+        # Si falla, es probable que sea el error de cuota o permisos
+        st.error("⚠️ Error de Conexión: Google está saturado o falta permiso.")
+        st.info("Espera 1 minuto y recarga. Si sigue fallando, verifica el correo del robot.")
+        if "429" in str(e):
+            st.warning("⏳ Has excedido el límite de velocidad de Google. ¡Espera un poco!")
         st.stop()
 
     try:
         sheet_stock = book.worksheet("Estoque")
         df_stock_in = pd.DataFrame(sheet_stock.get_all_records())
     except:
-        st.warning("⚠️ Falta hoja 'Estoque'.")
+        st.warning("⚠️ Crea la hoja 'Estoque' para gestionar inventario.")
         df_stock_in = pd.DataFrame(columns=["Data", "Produto", "Kg", "Usuario"]) 
 
-    # --- LÓGICA DE NEGOCIO ---
+    # --- PROCESAMIENTO ---
     if not df_sales.empty:
         for c in ['Valor_BRL', 'Kg', 'Comissao_BRL']:
             if c in df_sales.columns: df_sales[c] = pd.to_numeric(df_sales[c], errors='coerce').fillna(0)
@@ -277,13 +268,14 @@ def main():
 
     productos_all = sorted(list(set(["AÇAI MÉDIO", "AÇAI POP", "CUPUAÇU"] + prods_sales + prods_stock)))
 
+    # Stock calc
     stock_real = {}
     for p in productos_all:
         total_in = df_stock_in[df_stock_in['Produto'] == p]['Kg'].sum() if not df_stock_in.empty else 0
         total_out = df_sales[df_sales['Producto'] == p]['Kg'].sum() if not df_sales.empty else 0
         stock_real[p] = total_in - total_out
 
-    # --- SIDEBAR EXCEL ---
+    # --- SIDEBAR META ---
     ahora = datetime.now(); periodo_clave = ahora.strftime("%Y-%m")
     with st.sidebar:
         st.write(f"**{t['goal_lbl']} {MESES_UI_SIDEBAR[ahora.month]}**")
@@ -317,10 +309,7 @@ def main():
                 ws.set_column('A:A', 18, fmt_base); ws.set_column('B:B', 12, fmt_base); ws.set_column('C:D', 22, fmt_base)
                 ws.set_column('E:E', 12, fmt_num); ws.set_column('F:G', 18, fmt_money)
                 lr = len(data_final) + 1
-                ws.write(lr, 3, t['xls_tot'], fmt_total)
-                ws.write(lr, 4, data_final['Kg'].sum(), fmt_total)
-                ws.write(lr, 5, data_final['Valor_BRL'].sum(), fmt_total)
-                ws.write(lr, 6, data_final['Comissao_BRL'].sum(), fmt_total)
+                ws.write(lr, 3, t['xls_tot'], fmt_total); ws.write(lr, 4, data_final['Kg'].sum(), fmt_total); ws.write(lr, 5, data_final['Valor_BRL'].sum(), fmt_total); ws.write(lr, 6, data_final['Comissao_BRL'].sum(), fmt_total)
             st.download_button(t['dl_excel'], data=buffer, file_name=f"Reporte_{datetime.now().strftime('%Y-%m-%d')}.xlsx", mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
     tab1, tab2, tab3, tab4 = st.tabs(t['tabs'])
@@ -360,11 +349,7 @@ def main():
                 st.divider()
                 st.subheader(t['table_title'])
                 df_show = df_fil[['Fecha_Registro', 'Mes_Lang', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']].copy()
-                cols_view = {
-                    'Fecha_Registro': t['col_map']['Fecha_Hora'], 'Mes_Lang': t['dash_cols']['mes'],
-                    'Empresa': t['dash_cols']['emp'], 'Producto': t['dash_cols']['prod'],
-                    'Kg': t['dash_cols']['kg'], 'Valor_BRL': t['dash_cols']['val'], 'Comissao_BRL': t['dash_cols']['com']
-                }
+                cols_view = {'Fecha_Registro': t['col_map']['Fecha_Hora'], 'Mes_Lang': t['dash_cols']['mes'], 'Empresa': t['dash_cols']['emp'], 'Producto': t['dash_cols']['prod'], 'Kg': t['dash_cols']['kg'], 'Valor_BRL': t['dash_cols']['val'], 'Comissao_BRL': t['dash_cols']['com']}
                 st.dataframe(df_show.rename(columns=cols_view).iloc[::-1], use_container_width=True, hide_index=True, column_config={t['dash_cols']['val']: st.column_config.NumberColumn(format=f"{s} %.2f"), t['dash_cols']['com']: st.column_config.NumberColumn(format=f"{s} %.2f"), t['dash_cols']['kg']: st.column_config.NumberColumn(format="%.1f kg")})
                 
                 st.divider()
