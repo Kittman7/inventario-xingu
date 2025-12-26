@@ -56,13 +56,11 @@ def check_password():
         st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA}</h1>", unsafe_allow_html=True)
         st.write("")
         
-        # Formulario para que el navegador guarde la contraseña
         with st.form("login_form"):
             input_pass = st.text_input("Senha / Contraseña", type="password")
             submit_btn = st.form_submit_button("Entrar", type="primary")
         
         if submit_btn:
-            # .strip() elimina espacios accidentales
             if input_pass.strip() == CONTRASEÑA_MAESTRA:
                 st.session_state.authenticated = True
                 st.rerun()
@@ -98,7 +96,7 @@ TR = {
         "actions": ["Salvar", "DELETAR", "Buscar...", "✨ Novo...", "🗑️ Apagar Seleção"],
         "bulk_label": "Gestão em Massa (Apagar Vários)",
         "clean_hist_label": "Limpeza de Histórico",
-        "dl_excel": "📗 Baixar Excel",
+        "dl_excel": "📗 Baixar Excel (Pro)",
         "logout": "🔒 Sair",
         "goal_lbl": "🎯 Meta de", "goal_btn": "💾 Salvar Meta",
         "msgs": ["Sucesso!", "Apagado!", "Sem dados", "Atualizado!", "Seleccione items"],
@@ -121,7 +119,7 @@ TR = {
         "actions": ["Guardar", "BORRAR", "Buscar...", "✨ Nuevo...", "🗑️ Borrar Selección"],
         "bulk_label": "Gestión Masiva (Borrar Varios)",
         "clean_hist_label": "Limpieza de Historial",
-        "dl_excel": "📗 Bajar Excel",
+        "dl_excel": "📗 Bajar Excel (Pro)",
         "logout": "🔒 Salir",
         "goal_lbl": "🎯 Meta de", "goal_btn": "💾 Salvar Meta",
         "msgs": ["¡Éxito!", "¡Borrado!", "Sin datos", "¡Actualizado!", "Seleccione items"],
@@ -144,7 +142,7 @@ TR = {
         "actions": ["Save", "DELETE", "Search...", "✨ New...", "🗑️ Delete Selection"],
         "bulk_label": "Bulk Management",
         "clean_hist_label": "Clear History",
-        "dl_excel": "📗 Download Excel",
+        "dl_excel": "📗 Download Excel (Pro)",
         "logout": "🔒 Logout",
         "goal_lbl": "🎯 Goal for", "goal_btn": "💾 Save Goal",
         "msgs": ["Success!", "Deleted!", "No data", "Updated!", "Select items"],
@@ -201,7 +199,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
         st.info(t.get("install", "Install App"))
-        st.caption("v48.0 Excel Clásico")
+        st.caption("v49.0 Excel Pro")
     
     s = RATES[lang]["s"]; r = RATES[lang]["r"]
 
@@ -234,16 +232,51 @@ def main():
             st.caption(f"{val_mes/meta*100:.1f}% ({s} {val_mes:,.0f} / {s} {meta:,.0f})")
         st.divider()
         
-        # --- EXCEL SIMPLE (COMO ANTES) ---
+        # --- EXCEL PRO (PROFESIONAL Y ORDENADO) ---
         if not df.empty:
             buffer = io.BytesIO()
             with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-                # Solo descargamos los datos tal cual, sin hojas extra ni formatos raros
-                df.to_excel(writer, index=False)
+                # 1. Preparar datos limpios
+                df_ex = df.copy()
+                # Formatear fecha para que no sea un string feo
+                try:
+                    df_ex['Fecha_Registro'] = pd.to_datetime(df_ex['Fecha_Registro']).dt.strftime('%d/%m/%Y %H:%M')
+                except: pass
+                
+                # Columnas ordenadas
+                cols_export = ['Fecha_Registro', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']
+                # Verificar que existan (por seguridad)
+                cols_final = [c for c in cols_export if c in df_ex.columns]
+                df_final = df_ex[cols_final]
+                
+                # 2. Escribir a Excel (Sin índice)
+                df_final.to_excel(writer, index=False, sheet_name='Reporte')
+                
+                # 3. Aplicar Formatos Profesionales
+                workbook = writer.book
+                worksheet = writer.sheets['Reporte']
+                
+                # Definir Estilos
+                fmt_header = workbook.add_format({'bold': True, 'fg_color': '#2C3E50', 'font_color': 'white', 'border': 1, 'align': 'center', 'valign': 'vcenter'})
+                fmt_money = workbook.add_format({'num_format': 'R$ #,##0.00', 'border': 1, 'align': 'right'})
+                fmt_num = workbook.add_format({'num_format': '0.0', 'border': 1, 'align': 'center'})
+                fmt_date = workbook.add_format({'border': 1, 'align': 'center'})
+                fmt_text = workbook.add_format({'border': 1, 'align': 'left'})
+                
+                # Aplicar anchos y formatos a columnas (A=0, B=1, etc.)
+                worksheet.set_column('A:A', 20, fmt_date) # Fecha
+                worksheet.set_column('B:C', 25, fmt_text) # Empresa, Producto
+                worksheet.set_column('D:D', 12, fmt_num)  # Kg
+                worksheet.set_column('E:F', 18, fmt_money)# Valor, Comissao
+                
+                # Sobrescribir Encabezados para que tengan estilo
+                for col_num, value in enumerate(df_final.columns):
+                    worksheet.write(0, col_num, value, fmt_header)
+
             st.download_button(
                 label=t['dl_excel'],
                 data=buffer, 
-                file_name=f"Data_Xingu_{datetime.now().strftime('%Y-%m-%d')}.xlsx",
+                file_name=f"Reporte_Xingu_{datetime.now().strftime('%Y-%m-%d')}.xlsx",
                 mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             )
             
