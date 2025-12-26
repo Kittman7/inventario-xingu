@@ -41,10 +41,12 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- GESTIÓN DE ESTADO ---
+# --- GESTIÓN DE ESTADO Y MEMORIA ---
 if 'sale_key' not in st.session_state: st.session_state.sale_key = 0
 if 'stock_key' not in st.session_state: st.session_state.stock_key = 0
 if 'show_log' not in st.session_state: st.session_state.show_log = False
+# Memoria para el filtro del Dashboard (Se inicializa vacía)
+if 'dash_filter_state' not in st.session_state: st.session_state.dash_filter_state = []
 
 # --- LOGIN ---
 def check_password():
@@ -86,7 +88,7 @@ if PDF_AVAILABLE:
         pdf.cell(100, 10, f"{prod}", 1); pdf.cell(40, 10, f"{kg}", 1); pdf.cell(50, 10, f"R$ {val:,.2f}", 1)
         return pdf.output(dest='S').encode('latin-1')
 
-# --- TRADUCCIÓN COMPLETA (CORREGIDA) ---
+# --- DICCIONARIO COMPLETO (SOLUCIONADO EL ERROR VAL_MAP) ---
 MESES_PT = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto", 9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"}
 MONTHS_UI = {
     "Português": MESES_PT,
@@ -131,7 +133,8 @@ TR = {
         "wipe_sales_btn": "APAGAR TODAS VENDAS",
         "col_map": {"Fecha_Hora": "📅 Data", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"},
         "xls_head": ["Data", "Mês", "Empresa", "Produto", "Kg", "Valor (R$)", "Comissão (R$)"],
-        "xls_tot": "TOTAL GERAL:"
+        "xls_tot": "TOTAL GERAL:",
+        "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edição", "BORRAR": "🗑️ Apagado", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"}
     },
     "Español": {
         "tabs": [f"📊 Dashboard", "➕ Nueva Venta", "📦 Stock", "💰 Admin Ventas", "📜 Log"],
@@ -170,7 +173,8 @@ TR = {
         "wipe_sales_btn": "BORRAR TODAS VENTAS",
         "col_map": {"Fecha_Hora": "📅 Fecha", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"},
         "xls_head": ["Fecha", "Mes", "Empresa", "Producto", "Kg", "Valor ($)", "Comisión ($)"],
-        "xls_tot": "TOTAL GENERAL:"
+        "xls_tot": "TOTAL GENERAL:",
+        "val_map": {"NEW": "🆕 Nuevo", "VENTA": "💰 Venta", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Masa", "CREAR": "✨ Crear", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"}
     },
     "English": {
         "tabs": [f"📊 Dashboard", "➕ New Sale", "📦 Stock", "💰 Admin Sales", "📜 Log"],
@@ -209,7 +213,8 @@ TR = {
         "wipe_sales_btn": "WIPE ALL SALES",
         "col_map": {"Fecha_Hora": "📅 Date", "Accion": "⚡ Action", "Detalles": "📝 Details"},
         "xls_head": ["Date", "Month", "Company", "Product", "Kg", "Value", "Commission"],
-        "xls_tot": "GRAND TOTAL:"
+        "xls_tot": "GRAND TOTAL:",
+        "val_map": {"NEW": "🆕 New", "VENTA": "💰 Sale", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Deleted", "BORRADO_MASIVO": "🔥 Bulk", "CREAR": "✨ Create", "HIST_DEL": "🧹 Clean", "META_UPDATE": "🎯 Goal"}
     }
 }
 RATES = { "Português": {"s": "R$", "r": 1.0}, "Español": {"s": "$", "r": 165.0}, "English": {"s": "USD", "r": 0.18} }
@@ -271,7 +276,7 @@ def get_goal(book, key):
     return 0.0
 
 # ==========================================
-# 🧩 FRAGMENTOS
+# 🧩 FRAGMENTOS (PÁGINAS)
 # ==========================================
 
 @st.fragment
@@ -296,15 +301,26 @@ def render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, la
             
             st.divider()
             
-            # --- FILTRO VISUAL STOCK ---
+            # --- FILTRO VISUAL STOCK CON MEMORIA ---
             st.subheader(t['stock_alert'])
             all_prods_display = sorted(list(stock_real.keys()))
-            selected_view = st.multiselect(t['filter_viz'], all_prods_display)
+            
+            # Usamos session_state para que recuerde la selección
+            selected_view = st.multiselect(
+                t['filter_viz'], 
+                all_prods_display, 
+                key="dash_filter_state" # CLAVE DE MEMORIA
+            )
             
             if stock_real:
                 items_to_show = {k: v for k, v in stock_real.items() if k in selected_view} if selected_view else stock_real
                 for p, kg_left in sorted(items_to_show.items(), key=lambda item: item[1], reverse=True):
-                    if kg_left != 0 or p in selected_view or p in prods_stock:
+                    # Mostrar SI está seleccionado O SI no hay selección y tiene stock/actividad
+                    show_it = False
+                    if selected_view: show_it = True # Si está en items_to_show es porque fue seleccionado
+                    elif kg_left != 0 or p in prods_stock: show_it = True
+                    
+                    if show_it:
                         c_s1, c_s2 = st.columns([3, 1])
                         pct = max(0.0, min(kg_left / 1000.0, 1.0))
                         c_s1.progress(pct, text=f"📦 **{p}**: {kg_left:,.1f} kg")
@@ -547,6 +563,8 @@ def render_sales_management(t, df_sales, s):
 def render_log(t):
     st.title(t['headers'][3])
     col_btn, col_info = st.columns([1, 2])
+    
+    # BOTÓN MAESTRO DE ESTADO (MANTIENE ABIERTO O CERRADO)
     if col_btn.button("🔄 Cargar/Ocultar Historial", type="secondary"):
         st.session_state.show_log = not st.session_state.show_log
         st.rerun()
@@ -559,6 +577,7 @@ def render_log(t):
             
             if not h_dt.empty:
                 show_log = h_dt.copy()
+                # AQUI SE USA VAL_MAP (AHORA CORREGIDO)
                 if "Accion" in show_log.columns:
                     emoji_map = t['val_map'].copy()
                     show_log["Accion"] = show_log["Accion"].replace(emoji_map)
@@ -616,7 +635,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
         t["tabs"] = [t['tabs'][0], t['tabs'][1], t['tabs'][2], t['tabs'][3], t['tabs'][4]]
-        st.caption("v75.0 Bug Fix")
+        st.caption("v76.0 Memory Fix")
         if st.button("🔄"):
             st.cache_data.clear()
             st.rerun()
@@ -656,24 +675,28 @@ def main():
     ahora = datetime.now(); periodo_clave = ahora.strftime("%Y-%m")
     with st.sidebar:
         st.write(f"**{t['goal_lbl']} {MESES_UI_SIDEBAR[ahora.month]}**")
+        
+        # --- META PERSISTENTE (READ FROM DB) ---
         if "meta_cache" not in st.session_state:
             try: 
                 b_meta = get_book_direct()
                 st.session_state.meta_cache = get_goal(b_meta, periodo_clave)
             except: st.session_state.meta_cache = 0.0
+            
         meta = st.number_input("Meta", value=st.session_state.meta_cache, step=1000.0, label_visibility="collapsed")
+        
         if st.button(t['goal_btn']):
             bk = get_book_direct()
             log_action(bk, "META_UPDATE", f"{periodo_clave}|{meta}")
             st.session_state.meta_cache = meta
             st.success("OK!")
+            
         val_mes = df_sales[df_sales['Fecha_Registro'].str.contains(periodo_clave, na=False)]['Valor_BRL'].sum() * r if not df_sales.empty else 0
         if meta > 0:
             st.progress(min(val_mes/meta, 1.0))
             st.caption(f"{val_mes/meta*100:.1f}% ({s} {val_mes:,.0f} / {s} {meta:,.0f})")
         st.divider()
         if not df_sales.empty:
-            # --- EXCEL SEGURO (SAFE FALLBACK) ---
             try:
                 buffer = io.BytesIO()
                 with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
@@ -688,19 +711,15 @@ def main():
                     fmt_num = workbook.add_format({'num_format': '0.0', 'border': 1, 'align': 'center'})
                     fmt_base = workbook.add_format({'border': 1})
                     fmt_total = workbook.add_format({'bold': True, 'bg_color': '#D3D3D3', 'num_format': 'R$ #,##0.00', 'border': 1})
-                    
-                    # HEADER SAFE GET
                     xls_headers = t.get('xls_head', ["Fecha", "Mes", "Empresa", "Producto", "Kg", "Valor", "Comisión"])
                     xls_total_lbl = t.get('xls_tot', "TOTAL:")
-                    
                     for col_num, h in enumerate(xls_headers): ws.write(0, col_num, h, fmt_head)
                     ws.set_column('A:A', 18, fmt_base); ws.set_column('B:B', 12, fmt_base); ws.set_column('C:D', 22, fmt_base)
                     ws.set_column('E:E', 12, fmt_num); ws.set_column('F:G', 18, fmt_money)
                     lr = len(data_final) + 1
                     ws.write(lr, 3, xls_total_lbl, fmt_total); ws.write(lr, 4, data_final['Kg'].sum(), fmt_total); ws.write(lr, 5, data_final['Valor_BRL'].sum(), fmt_total); ws.write(lr, 6, data_final['Comissao_BRL'].sum(), fmt_total)
                 st.download_button(t['dl_excel'], data=buffer, file_name=f"Reporte_{datetime.now().strftime('%Y-%m-%d')}.xlsx", mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-            except Exception as ex:
-                st.warning(f"⚠️ Reporte no disponible temporalmente ({ex})")
+            except Exception as ex: st.warning(f"⚠️ ({ex})")
 
     # TABS
     tab1, tab2, tab3, tab4, tab5 = st.tabs(t['tabs'])
