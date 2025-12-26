@@ -7,6 +7,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 import time
 import io
 import xlsxwriter
+from PIL import Image # Necesario para procesar el icono si es complejo
 
 # INTENTO DE IMPORTAR FPDF
 try:
@@ -19,11 +20,18 @@ except ImportError:
 # 🎨 ZONA DE PERSONALIZACIÓN
 # ==========================================
 NOMBRE_EMPRESA = "Xingu CEO"
-ICONO_APP = "logo.png"
+ICONO_ARCHIVO = "logo.png" # DEBE EXISTIR ESTE ARCHIVO
 CONTRASEÑA_MAESTRA = "Julio777" 
 # ==========================================
 
-st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon=ICONO_APP, layout="wide")
+# CONFIGURACIÓN DE PÁGINA E ICONO
+# Intentamos cargar la imagen para el icono. Si falla, usamos un emoji de uva.
+try:
+    img_icon = Image.open(ICONO_ARCHIVO)
+    st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon=img_icon, layout="wide")
+except:
+    # Si no encuentra logo.png, usa la uva para que no salga la corona roja por defecto
+    st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon="🍇", layout="wide")
 
 st.markdown("""
     <style>
@@ -57,7 +65,8 @@ def check_password():
     
     c1, c2, c3 = st.columns([1,2,1])
     with c2:
-        try: st.image(ICONO_APP, width=150)
+        # Intenta mostrar el logo, si no hay, muestra título
+        try: st.image(ICONO_ARCHIVO, width=150)
         except: st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA}</h1>", unsafe_allow_html=True)
         st.write("")
         with st.form("login_form"):
@@ -107,7 +116,7 @@ TR = {
         "actions": ["Salvar", "DELETAR", "Buscar...", "✨ Novo...", "🗑️ Apagar Seleção"],
         "bulk_label": "Gestão em Massa (Apagar Vários)",
         "clean_hist_label": "Limpeza de Histórico",
-        "dl_excel": "📗 Baixar Relatório (Excel Dashboard)",
+        "dl_excel": "📗 Baixar Relatório (Pro)",
         "logout": "🔒 Sair",
         "goal_lbl": "🎯 Meta de", "goal_btn": "💾 Salvar Meta",
         "new_labels": ["Nome Cliente:", "Nome Produto:"],
@@ -476,7 +485,7 @@ def render_stock_management(t, productos_all, df_stock_in):
                 c_btn_s1, c_btn_s2 = st.columns(2)
                 if c_btn_s1.button(t['save_changes'], key=f"sav_stk_{i}"):
                     bk = get_book_direct()
-                    sh_stk = bk.worksheet("Estoque")
+                    sh_sl = bk.worksheet("Estoque")
                     try:
                         cell = sh_stk.find(str(r['Data']))
                         def do_stk_update():
@@ -623,7 +632,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
         t["tabs"] = [t['tabs'][0], t['tabs'][1], t['tabs'][2], t['tabs'][3], t['tabs'][4]]
-        st.caption("v80.0 Excel Dashboard")
+        st.caption("v81.0 Icon Fix")
         if st.button("🔄"):
             st.cache_data.clear()
             st.rerun()
