@@ -3,5 +3,7 @@ pandas
 plotly
 gspread
 oauth2client
-XlsxWriter  
+XlsxWriter 
+fpdf
+
 
