@@ -40,7 +40,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- GESTIÓN DE ESTADO (PARA LIMPIAR CAMPOS) ---
+# --- GESTIÓN DE ESTADO ---
 if 'sale_key' not in st.session_state: st.session_state.sale_key = 0
 if 'stock_key' not in st.session_state: st.session_state.stock_key = 0
 
@@ -344,8 +344,6 @@ def render_new_sale(t, empresas, productos_all, stock_real, df_sales, s):
 @st.fragment
 def render_admin(t, productos_all, df_sales, s):
     st.header(t['stock_add_title'])
-    
-    # LLAVE DE STOCK PARA LIMPIAR
     stk_suffix = str(st.session_state.stock_key)
     
     with st.container(border=True):
@@ -368,7 +366,6 @@ def render_admin(t, productos_all, df_sales, s):
                     log_action(bk, "STOCK_ADD", f"{prod_stock} | +{kg_stock}kg")
                     st.cache_data.clear()
                     st.success(t['stock_msg'])
-                    # LIMPIAR INPUTS DE STOCK
                     st.session_state.stock_key += 1
                     time.sleep(1.0); st.rerun()
                 else: st.error(f"Error: {err}")
@@ -442,6 +439,7 @@ def render_log(t):
         bk = get_book_direct()
         sh_log = bk.worksheet("Historial")
         h_dt = pd.DataFrame(sh_log.get_all_records())
+        
         if not h_dt.empty:
             show_log = h_dt.copy()
             if "Accion" in show_log.columns:
@@ -468,7 +466,11 @@ def render_log(t):
                         success, err = safe_api_action(do_log_del)
                         if success: st.success(t['msgs'][1]); time.sleep(1); st.rerun()
                         else: st.error(f"Error: {err}")
-    except: st.write("Log vacío")
+        else:
+            st.info("El historial está limpio.")
+    except Exception as e:
+        if "429" in str(e): st.warning("⏳ Google está ocupado, reintentando...")
+        else: st.write("Historial vacío o error de lectura.")
 
 # --- APP MAIN ---
 def main():
@@ -481,7 +483,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         
         t = TR.get(lang, TR["Português"]) 
-        st.caption("v65.0 Flujo Perfecto")
+        st.caption("v66.0 Pulido")
         
         if st.button("🔄 Forzar Actualización"):
             st.cache_data.clear()
