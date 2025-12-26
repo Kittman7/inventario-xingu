@@ -374,7 +374,7 @@ def render_dashboard(t, df_sales, stock_real, sales_real, prods_stock, prods_sal
                 bk = get_book_direct()
                 val_to_save = ",".join(selected_view)
                 save_conf(bk, "stock_view_pref", val_to_save)
-                st.toast("✅ Vista Guardada", icon="💾")
+                st.toast("✅ Visualização salva", icon="💾")
             
             if stock_real:
                 items_to_show = {k: v for k, v in stock_real.items() if k in selected_view} if selected_view else stock_real
@@ -428,14 +428,14 @@ def render_new_sale(t, empresas, productos_all, stock_real, df_sales, s):
         
         current_stock = stock_real.get(prod, 0.0) if prod in stock_real else 0.0
         
-        # --- NUEVA LÓGICA DE ALERTA DE STOCK ---
+        # --- ALERTA DE STOCK (100% PORTUGUÊS) ---
         if prod in stock_real: 
             if current_stock <= 0: 
-                st.error(f"⚠️ Stock Agotado: {current_stock:.1f} kg")
+                st.error(f"⚠️ Estoque Esgotado: {current_stock:.1f} kg")
             elif current_stock < 20: 
-                st.warning(f"🟠 Stock Bajo: {current_stock:.1f} kg (¡Reponer!)")
+                st.warning(f"🟠 Estoque Baixo: {current_stock:.1f} kg (Repor!)")
             else: 
-                st.success(f"✅ Stock Disponible: {current_stock:.1f} kg")
+                st.success(f"✅ Estoque Disponível: {current_stock:.1f} kg")
                 
         st.markdown("<br>", unsafe_allow_html=True)
         
@@ -444,9 +444,9 @@ def render_new_sale(t, empresas, productos_all, stock_real, df_sales, s):
         if st.button(t['forms'][4], type="primary"):
             if emp and prod:
                 if kg > current_stock:
-                    st.error(f"🚫 Error: No tienes suficiente stock. Tienes {current_stock:.1f} kg y quieres vender {kg:.1f} kg.")
+                    st.error(f"🚫 Erro: Estoque insuficiente. Você tem {current_stock:.1f} kg e tenta vender {kg:.1f} kg.")
                 else:
-                    with st.spinner("⏳ Guardando venta..."):
+                    with st.spinner("⏳ Salvando venda..."):
                         bk = get_book_direct()
                         sheet = bk.get_worksheet(0)
                         row = [emp, prod, kg, val, val*0.02, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Auto"]
@@ -462,15 +462,15 @@ def render_new_sale(t, empresas, productos_all, stock_real, df_sales, s):
                                     st.download_button(t['pdf'], data=pdf_data, file_name=f"Recibo.pdf", mime="application/pdf")
                                 except: pass
                             success_flag = True
-                        else: st.error(f"Error: {error}")
+                        else: st.error(f"Erro: {error}")
         
         if success_flag:
-            st.toast(t['msgs'][0], icon="✅")
+            st.toast("Venda registrada com sucesso!", icon="✅")
             time.sleep(0.5)
             st.rerun()
 
     st.divider()
-    st.caption("📋 Últimas ventas registradas (Top 3):")
+    st.caption("📋 Últimas vendas registradas (Top 3):")
     if not df_sales.empty:
         df_mini = df_sales[['Fecha_Registro', 'Empresa', 'Producto', 'Kg', 'Valor_BRL']].iloc[::-1].head(3)
         st.dataframe(df_mini, use_container_width=True, hide_index=True, column_config={
@@ -493,7 +493,7 @@ def render_stock_management(t, productos_all, df_stock_in):
         success_stock = False
         
         if c_st4.button(t['stock_btn'], type="primary"):
-            with st.spinner("📦 Sumando stock..."):
+            with st.spinner("📦 Adicionando estoque..."):
                 bk = get_book_direct()
                 try:
                     try: sh_stk = bk.worksheet("Estoque")
@@ -522,7 +522,7 @@ def render_stock_management(t, productos_all, df_stock_in):
         if check_wipe_stk:
             wipe_success = False
             if st.button(t['wipe_stk_btn'], type="primary"):
-                with st.spinner("🔥 Eliminando todo..."):
+                with st.spinner("🔥 Excluindo tudo..."):
                     bk = get_book_direct()
                     try:
                         sh_stk = bk.worksheet("Estoque")
@@ -565,7 +565,7 @@ def render_stock_management(t, productos_all, df_stock_in):
                 del_success = False
                 
                 if c_btn_s1.button(t['save_changes'], key=f"sav_stk_{i}"):
-                    with st.spinner("Guardando cambios..."):
+                    with st.spinner("Salvando alterações..."):
                         bk = get_book_direct()
                         sh_stk = bk.worksheet("Estoque")
                         
@@ -584,7 +584,7 @@ def render_stock_management(t, productos_all, df_stock_in):
                             else: st.error(f"Error: {err}")
 
                 if c_btn_s2.button(t['del_entry'], key=f"del_stk_{i}", type="secondary"):
-                    with st.spinner("Borrando..."):
+                    with st.spinner("Apagando..."):
                         bk = get_book_direct()
                         sh_stk = bk.worksheet("Estoque")
                         
@@ -641,7 +641,7 @@ def render_sales_management(t, df_sales, s):
                 del_flag = False
                 
                 if c_btn1.button(t['save_changes'], key=f"save_{i}"):
-                    with st.spinner("Actualizando..."):
+                    with st.spinner("Atualizando..."):
                         bk = get_book_direct()
                         sh_sl = bk.get_worksheet(0)
                         try:
@@ -658,7 +658,7 @@ def render_sales_management(t, df_sales, s):
                         except: st.error("No encontrado.")
                 
                 if c_btn2.button(t['del_entry'], key=f"del_{i}", type="secondary"):
-                    with st.spinner("Eliminando..."):
+                    with st.spinner("Excluindo..."):
                         bk = get_book_direct()
                         sh_sl = bk.get_worksheet(0)
                         try:
@@ -687,7 +687,7 @@ def render_sales_management(t, df_sales, s):
             if check_wipe_sales:
                 wipe_sales_flag = False
                 if st.button(t['wipe_sales_btn'], type="primary"):
-                    with st.spinner("Eliminando TODO..."):
+                    with st.spinner("Excluindo TUDO..."):
                         bk = get_book_direct()
                         sh_sl = bk.get_worksheet(0)
                         def do_wipe_sales():
@@ -705,10 +705,10 @@ def render_sales_management(t, df_sales, s):
         
         # --- ZONA DE BACKUP (NUEVA) ---
         st.divider()
-        with st.expander("🛡️ Zona de Seguridad (Backup)"):
-            st.info("Descarga una copia completa de toda la base de datos (Ventas, Stock y Historial).")
+        with st.expander("🛡️ Área de Segurança (Backup)"):
+            st.info("Baixe uma cópia completa de todo o banco de dados (Vendas, Estoque e Histórico).")
             if st.button("📦 Preparar Backup Completo"):
-                with st.spinner("Generando archivo de seguridad..."):
+                with st.spinner("Gerando arquivo de segurança..."):
                     bk = get_book_direct()
                     # LEER TODAS LAS HOJAS
                     d_sales = pd.DataFrame(bk.get_worksheet(0).get_all_records())
@@ -722,7 +722,7 @@ def render_sales_management(t, df_sales, s):
                         d_hist.to_excel(writer, sheet_name='Historial', index=False)
                     
                     st.download_button(
-                        label="📥 Descargar Archivo de Seguridad",
+                        label="📥 Baixar Arquivo de Segurança",
                         data=buffer,
                         file_name=f"Backup_Xingu_{datetime.now().strftime('%Y-%m-%d')}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -758,7 +758,7 @@ def render_log(t):
                     del_log_flag = False
                     if st.button(t['actions'][4], key="btn_h", type="primary"):
                         if sel_h:
-                            with st.spinner("Borrando registros..."):
+                            with st.spinner("Apagando registros..."):
                                 dts_h = [x.split(" | ")[0] for x in sel_h]
                                 all_vals = sh_log.get_all_values()
                                 dels = []
@@ -785,7 +785,7 @@ def render_log(t):
                 if check_danger:
                     wipe_log_flag = False
                     if col_danger2.button("🔥 BORRAR LOG", type="primary"):
-                        with st.spinner("Limpiando historial..."):
+                        with st.spinner("Limpando histórico..."):
                             def do_wipe():
                                 sh_log.clear()
                                 sh_log.append_row(["Fecha_Hora", "Accion", "Detalles"])
@@ -814,7 +814,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
         t["tabs"] = [t['tabs'][0], t['tabs'][1], t['tabs'][2], t['tabs'][3], t['tabs'][4]]
-        st.caption("v88.0 Ultimate Pro")
+        st.caption("v89.0 100% PT-BR")
         if st.button("🔄"):
             st.cache_data.clear()
             st.rerun()
@@ -869,7 +869,7 @@ def main():
         if st.button(t['goal_btn']):
             bk = get_book_direct()
             save_conf(bk, "meta_goal", meta)
-            st.toast("Meta Actualizada", icon="🎯")
+            st.toast("Meta Atualizada", icon="🎯")
             time.sleep(0.5); st.rerun()
         val_mes = df_sales[df_sales['Fecha_Registro'].str.contains(periodo_clave, na=False)]['Valor_BRL'].sum() * r if not df_sales.empty else 0
         if meta > 0:
