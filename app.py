@@ -417,24 +417,18 @@ def save_conf(book, key, val):
 # --- FUNCIÓN DE BÚSQUEDA ROBUSTA (FIX NO ENCONTRADO) ---
 def find_row_by_date(sheet, date_str):
     """Busca una fila por la fecha (col 1), intentando ser robusto ante formatos."""
-    # 1. Intento directo
+    clean_date = str(date_str).strip()
     try:
-        return sheet.find(date_str)
+        return sheet.find(clean_date)
     except:
-        pass
-    
-    # 2. Intento manual (recorrer columna 1)
-    try:
-        col_values = sheet.col_values(1)
-        # Buscamos coincidencia exacta de string
-        if date_str in col_values:
-            row_idx = col_values.index(date_str) + 1
-            # Mock cell object para compatibilidad
-            class MockCell:
-                def __init__(self, r): self.row = r
-            return MockCell(row_idx)
-    except: pass
-    
+        try:
+            col_values = sheet.col_values(1)
+            for idx, val in enumerate(col_values):
+                if str(val).strip() == clean_date:
+                    class MockCell:
+                        def __init__(self, r): self.row = r
+                    return MockCell(idx + 1)
+        except: pass
     return None
 
 # ==========================================
@@ -622,7 +616,6 @@ def render_stock_management(t, productos_all, df_stock_in):
             time.sleep(0.5)
             st.rerun()
 
-    # --- BOTÓN BORRAR TODO EN STOCK ---
     with st.expander(t['wipe_stk_title']):
         st.warning(t['wipe_stk_warn'])
         check_wipe_stk = st.checkbox(t['wipe_stk_check'], key="chk_wipe_stk")
@@ -652,7 +645,6 @@ def render_stock_management(t, productos_all, df_stock_in):
     st.write("")
     st.divider()
     
-    # --- ZONA DE HISTÓRICO Y EDICIÓN ---
     c_laz1, c_laz2 = st.columns([3,1])
     c_laz1.subheader(t['hist_entries'])
     use_all = c_laz2.checkbox(t['alerts']['show_all'], value=False)
@@ -660,7 +652,6 @@ def render_stock_management(t, productos_all, df_stock_in):
     filtro_stock = st.text_input(t['search_stk'], key="search_stk")
     
     if not df_stock_in.empty:
-        # Lógica de visualización
         if not use_all and not filtro_stock:
             df_view = df_stock_in.tail(50)
             st.caption(f"⚡ {t['alerts']['lazy_msg']}")
@@ -670,7 +661,6 @@ def render_stock_management(t, productos_all, df_stock_in):
         if filtro_stock:
             df_view = df_view[df_view.astype(str).apply(lambda x: x.str.contains(filtro_stock, case=False)).any(axis=1)]
         
-        # 1. TABLA EXCEL (Edición rápida)
         st.caption(f"{t['alerts']['excel_edit_mode']}")
         df_editor = df_view.iloc[::-1].copy()
         
@@ -678,7 +668,7 @@ def render_stock_management(t, productos_all, df_stock_in):
             df_editor,
             num_rows="fixed",
             use_container_width=True,
-            disabled=["Data"], # Solo fecha bloqueada
+            disabled=["Data"], 
             key="stock_editor"
         )
         
@@ -688,7 +678,6 @@ def render_stock_management(t, productos_all, df_stock_in):
                 sh_stk = bk.worksheet("Estoque")
                 updated_count = 0
                 for index, row in edited_df.iterrows():
-                    # Usamos nuestra funcion de busqueda robusta
                     cell = find_row_by_date(sh_stk, str(row['Data']))
                     if cell:
                         sh_stk.update_cell(cell.row, 2, row['Produto'])
@@ -704,7 +693,6 @@ def render_stock_management(t, productos_all, df_stock_in):
                 time.sleep(1)
                 st.rerun()
 
-        # 2. LISTA DE EDICIÓN INDIVIDUAL
         st.write("---")
         st.caption(f"{t['alerts']['manual_mode']}")
         
@@ -730,20 +718,17 @@ def render_stock_management(t, productos_all, df_stock_in):
                                 sh_stk.update_cell(cell.row, 3, new_stk_kg)   
                             success, err = safe_api_action(do_stk_update)
                             if success: 
-                                # DETALLE DE CAMBIOS
                                 diffs = []
                                 if str(r['Produto']) != str(new_stk_prod): diffs.append(f"Prod: {r['Produto']}->{new_stk_prod}")
                                 if float(r['Kg']) != float(new_stk_kg): diffs.append(f"Kg: {r['Kg']}->{new_stk_kg}")
-                                
                                 log_msg = f"Editado Stock: {r['Data']} | " + " | ".join(diffs)
                                 log_action(bk, "EDIT_STOCK", log_msg)
-                                
                                 st.cache_data.clear()
                                 st.toast(t['msgs'][3], icon="💾")
                                 time.sleep(0.5)
                                 st.rerun()
                             else: st.error(f"Error: {err}")
-                        else: st.error("No encontré la fila (Error de formato de fecha).")
+                        else: st.error("No encontré la fila.")
 
                 if c_btn_s2.button(t['del_entry'], key=f"del_stk_{i}", type="secondary"):
                     with st.spinner(f"{t['alerts']['deleting']}"):
@@ -760,7 +745,7 @@ def render_stock_management(t, productos_all, df_stock_in):
                                 time.sleep(0.5)
                                 st.rerun()
                             else: st.error(f"Error: {err}")
-                        else: st.error("Error: No se encuentra la fila.")
+                        else: st.error("Error.")
 
     else:
         st.info(t['msgs'][2])
@@ -783,11 +768,9 @@ def render_sales_management(t, df_sales, s):
             df_filtered = df_filtered[df_filtered.astype(str).apply(lambda x: x.str.contains(filtro, case=False)).any(axis=1)]
             st.info(f"Resultados: {len(df_filtered)}")
         
-        # MODO EXCEL
         st.caption(f"{t['alerts']['excel_edit_mode']}")
         df_editor_sales = df_filtered.iloc[::-1].copy()
         
-        # PERMITIMOS EDITAR EMPRESA Y PRODUCTO
         edited_sales = st.data_editor(
             df_editor_sales,
             use_container_width=True,
@@ -805,7 +788,6 @@ def render_sales_management(t, df_sales, s):
                 sh_sl = bk.get_worksheet(0)
                 updated_count = 0
                 for index, row in edited_sales.iterrows():
-                    # Usamos busqueda robusta
                     cell = find_row_by_date(sh_sl, str(row['Fecha_Registro']))
                     if cell:
                         sh_sl.update_cell(cell.row, 1, row['Empresa'])
@@ -823,13 +805,11 @@ def render_sales_management(t, df_sales, s):
                 time.sleep(1)
                 st.rerun()
         
-        # LISTA INDIVIDUAL RESTAURADA PARA VENTAS TAMBIÉN
         st.write("---")
         st.caption(f"{t['alerts']['manual_mode']}")
         
         to_edit_sales = df_filtered.iloc[::-1]
         
-        # Si NO hay filtro y NO es "Ver Todo", mostramos solo 20 para no colgar la página
         if not filtro and not use_all and len(to_edit_sales) > 20:
              st.info("Mostrando últimos 20 para edición manual. Use el buscador para más.")
              to_edit_sales = to_edit_sales.head(20)
@@ -839,8 +819,6 @@ def render_sales_management(t, df_sales, s):
                 c_ed1, c_ed2 = st.columns(2)
                 new_kg = c_ed1.number_input("Kg", value=float(r['Kg']), key=f"k_{i}")
                 new_val = c_ed2.number_input("Valor", value=float(r['Valor_BRL']), key=f"v_{i}")
-                
-                # Agregamos edicion de nombre para que sea completo
                 new_emp = st.text_input("Empresa/Cliente", value=r['Empresa'], key=f"emp_{i}")
                 
                 c_btn1, c_btn2 = st.columns(2)
@@ -859,15 +837,12 @@ def render_sales_management(t, df_sales, s):
                                 sh_sl.update_cell(cell.row, 5, new_val*0.02)
                             success, err = safe_api_action(do_update)
                             if success: 
-                                # LOG DETALLADO
                                 diffs = []
                                 if r['Empresa'] != new_emp: diffs.append(f"Cli: {r['Empresa']}->{new_emp}")
                                 if float(r['Kg']) != float(new_kg): diffs.append(f"Kg: {r['Kg']}->{new_kg}")
                                 if float(r['Valor_BRL']) != float(new_val): diffs.append(f"$: {r['Valor_BRL']}->{new_val}")
-                                
                                 log_msg = f"Edit Venda: {r['Fecha_Registro']} | " + " | ".join(diffs)
                                 log_action(bk, "EDIT_SALE", log_msg)
-                                
                                 st.cache_data.clear()
                                 st.toast(t['msgs'][3], icon="💾")
                                 time.sleep(0.5)
@@ -948,7 +923,6 @@ def render_log(t):
         st.session_state.show_log = not st.session_state.show_log
         st.rerun()
 
-    # --- FILTRO ACTIVO ---
     if st.session_state.log_filter_override:
         st.info(f"🔎 Filtrando por: **{st.session_state.log_filter_override}**")
         if st.button("❌ Limpar Filtro"):
@@ -967,12 +941,10 @@ def render_log(t):
                     show_log["Accion"] = show_log["Accion"].replace(emoji_map)
                 show_log = show_log.rename(columns=t['col_map'])
                 
-                # APLICAR FILTRO MANUAL
                 if st.session_state.log_filter_override:
                     mask = show_log.astype(str).apply(lambda x: x.str.contains(st.session_state.log_filter_override, case=False)).any(axis=1)
                     show_log = show_log[mask]
 
-                # SELECCIÓN INTERACTIVA
                 selection = st.dataframe(
                     show_log.iloc[::-1], 
                     use_container_width=True,
@@ -980,23 +952,15 @@ def render_log(t):
                     on_select="rerun"
                 )
                 
-                # LÓGICA DE "IR AL USUARIO"
                 if selection.selection.rows:
                     idx = selection.selection.rows[0]
-                    # El índice es visual, hay que mapearlo al dataframe invertido
                     row_data = show_log.iloc[::-1].iloc[idx]
-                    
                     details = str(row_data.get(t['col_map']['Detalles'], ''))
-                    
-                    # Intentar extraer algo útil (Nombre o Producto)
-                    # Formato usual: "Editado: [Fecha] | [Empresa] | [Cambio]"
                     parts = details.split('|')
                     possible_filter = ""
                     if len(parts) > 1:
-                        # Parte 1 suele ser la Empresa o Producto
                         possible_filter = parts[1].strip().split('->')[0].replace("Cli: ", "").replace("Prod: ", "").strip()
                     else:
-                        # Si no hay pipes, intentamos con guiones
                         parts_dash = details.split('-')
                         if len(parts_dash) > 1:
                              possible_filter = parts_dash[-1].strip()
@@ -1014,7 +978,6 @@ def render_log(t):
                     opc_h = [f"{r['Fecha_Hora']} | {r['Accion']} | {r['Detalles']}" for i, r in rev_h.iterrows()]
                     sel_h = st.multiselect("Items", opc_h)
                     
-                    del_log_flag = False
                     if st.button(t['actions'][4], key="btn_h", type="primary"):
                         if sel_h:
                             with st.spinner(f"{t['alerts']['deleting']}"):
@@ -1031,30 +994,26 @@ def render_log(t):
                                 
                                 success, err = safe_api_action(do_log_del)
                                 if success: 
-                                    del_log_flag = True
+                                    st.toast(t['msgs'][1], icon="🗑️")
+                                    time.sleep(0.5)
+                                    st.rerun()
                                 else: st.error(f"Error: {err}")
-                    if del_log_flag:
-                        st.toast(t['msgs'][1], icon="🗑️")
-                        time.sleep(0.5)
-                        st.rerun()
 
                 st.write("")
                 col_danger1, col_danger2 = st.columns([3, 1])
                 check_danger = col_danger1.checkbox(t['wipe_stk_check'])
                 if check_danger:
-                    wipe_log_flag = False
                     if col_danger2.button("🔥 BORRAR LOG", type="primary"):
                         with st.spinner(f"{t['alerts']['wiping']}"):
                             def do_wipe():
                                 sh_log.clear()
                                 sh_log.append_row(["Fecha_Hora", "Accion", "Detalles"])
                             success, err = safe_api_action(do_wipe)
-                            if success: wipe_log_flag = True
+                            if success: 
+                                st.toast(t['msgs'][1], icon="🧹")
+                                time.sleep(0.5)
+                                st.rerun()
                             else: st.error(f"Error: {err}")
-                    if wipe_log_flag:
-                        st.toast(t['msgs'][1], icon="🧹")
-                        time.sleep(0.5)
-                        st.rerun()
             else:
                 st.info(t['msgs'][2])
         except Exception as e:
@@ -1073,7 +1032,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
         t["tabs"] = [t['tabs'][0], t['tabs'][1], t['tabs'][2], t['tabs'][3], t['tabs'][4]]
-        st.caption("v98.0 Smart Audit")
+        st.caption("v99.0 Robust Search")
         if st.button("🔄"):
             st.cache_data.clear()
             st.rerun()
