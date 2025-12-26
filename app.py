@@ -19,7 +19,10 @@ except ImportError:
 # 🎨 ZONA DE PERSONALIZACIÓN
 # ==========================================
 NOMBRE_EMPRESA = "Xingu CEO"
-ICONO_APP = "🍇"
+
+# 🦅 CAMBIO DE LOGO (Opción B: Imagen Real)
+# Asegúrate de haber subido "logo.png" a tu GitHub junto a este archivo.
+ICONO_APP = "logo.png" 
 
 # 🔑 LOGIN SIMPLE
 CONTRASEÑA_MAESTRA = "Julio777" 
@@ -53,7 +56,12 @@ def check_password():
     
     c1, c2, c3 = st.columns([1,2,1])
     with c2:
-        st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA}</h1>", unsafe_allow_html=True)
+        # INTENTA MOSTRAR EL LOGO EN EL LOGIN
+        try:
+            st.image(ICONO_APP, width=150) # Muestra tu logo grande
+        except:
+            st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA}</h1>", unsafe_allow_html=True)
+            
         st.write("")
         with st.form("login_form"):
             input_pass = st.text_input("Senha / Contraseña", type="password")
@@ -212,12 +220,17 @@ def main():
     if not check_password(): return
 
     with st.sidebar:
-        st.markdown(f"<h1 style='text-align: center; font-size: 50px; margin:0;'>{ICONO_APP}</h1>", unsafe_allow_html=True)
+        # INTENTA MOSTRAR EL LOGO EN LA BARRA LATERAL
+        try:
+            st.image(ICONO_APP, width=100) 
+        except:
+            st.markdown(f"<h1 style='text-align: center; font-size: 50px; margin:0;'>🍇</h1>", unsafe_allow_html=True)
+            
         st.markdown(f"<h3 style='text-align: center;'>{NOMBRE_EMPRESA}</h3>", unsafe_allow_html=True)
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         
         t = TR.get(lang, TR["Português"]) 
-        st.caption("v56.0 DB Fixed")
+        st.caption("v56.0 Logo Pro")
         if st.button(t['logout']): st.session_state.authenticated = False; st.rerun()
     
     s = RATES[lang]["s"]; r = RATES[lang]["r"]
@@ -231,7 +244,7 @@ def main():
 
     try:
         book = get_data()
-        # FIX: Usar get_worksheet(0) para agarrar la PRIMERA hoja, se llame como se llame (Hoja 1, Ventas, etc.)
+        # FIX: Usar get_worksheet(0) para agarrar la PRIMERA hoja
         sheet_sales = book.get_worksheet(0) 
         df_sales = pd.DataFrame(sheet_sales.get_all_records())
     except: 
@@ -423,9 +436,9 @@ def main():
                         except: pass
                     time.sleep(2); st.rerun()
 
-    # 3. ADMIN (TABLA VISUAL + EDITAR)
+    # 3. ADMIN
     with tab3:
-        # STOCK ADD
+        # AÑADIR STOCK
         st.header(t['stock_add_title'])
         with st.container(border=True):
             c_st1, c_st2, c_st3 = st.columns([2, 1, 1])
@@ -439,7 +452,7 @@ def main():
                     log_action(book, "STOCK_ADD", f"{prod_stock} | +{kg_stock}kg")
                     st.success(t['stock_msg']); time.sleep(1.5); st.rerun()
                 elif not sheet_stock:
-                    st.error("Error: Hoja 'Estoque' missing.")
+                    st.error("Error: Hoja 'Estoque' no creada.")
 
         st.divider()
         st.subheader("Admin Ventas")
