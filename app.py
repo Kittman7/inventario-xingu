@@ -22,7 +22,7 @@ NOMBRE_EMPRESA = "Xingu CEO"
 ICONO_APP = "🍇"
 
 # 🔑 LOGIN SIMPLE
-CONTRASEÑA_MAESTRA = "Julio777" 
+CONTRASEÑA_MAESTRA = "julio777" 
 # ==========================================
 
 st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon=ICONO_APP, layout="wide")
@@ -389,3 +389,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
