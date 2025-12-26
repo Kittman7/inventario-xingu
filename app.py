@@ -97,6 +97,7 @@ st.markdown("""
 if 'sale_key' not in st.session_state: st.session_state.sale_key = 0
 if 'stock_key' not in st.session_state: st.session_state.stock_key = 0
 if 'show_log' not in st.session_state: st.session_state.show_log = False
+if 'log_filter_override' not in st.session_state: st.session_state.log_filter_override = ""
 
 # --- LOGIN ---
 def check_password():
@@ -140,7 +141,7 @@ if PDF_AVAILABLE:
         pdf.cell(100, 10, f"{prod}", 1); pdf.cell(40, 10, f"{kg}", 1); pdf.cell(50, 10, f"R$ {val:,.2f}", 1)
         return pdf.output(dest='S').encode('latin-1')
 
-# --- TRADUCCIONES ---
+# --- TRADUCCIONES COMPLETAS ---
 MESES_PT = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto", 9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"}
 MONTHS_UI = {
     "Português": MESES_PT,
@@ -598,6 +599,33 @@ def render_stock_management(t, productos_all, df_stock_in):
             time.sleep(0.5)
             st.rerun()
 
+    # --- BOTÓN BORRAR TODO EN STOCK ---
+    with st.expander(t['wipe_stk_title']):
+        st.warning(t['wipe_stk_warn'])
+        check_wipe_stk = st.checkbox(t['wipe_stk_check'], key="chk_wipe_stk")
+        if check_wipe_stk:
+            wipe_success = False
+            if st.button(t['wipe_stk_btn'], type="primary"):
+                with st.spinner(f"{t['alerts']['wiping']}"):
+                    bk = get_book_direct()
+                    try:
+                        sh_stk = bk.worksheet("Estoque")
+                        def do_wipe_stk():
+                            sh_stk.clear()
+                            sh_stk.append_row(["Data", "Produto", "Kg", "Usuario"])
+                        success, err = safe_api_action(do_wipe_stk)
+                        if success: 
+                            log_action(bk, "WIPE_STOCK", "Tabela Estoque Zerada")
+                            st.cache_data.clear()
+                            wipe_success = True
+                        else: st.error(f"Error: {err}")
+                    except: st.error("No existe hoja Estoque")
+            
+            if wipe_success:
+                st.toast(t['msgs'][1], icon="🔥")
+                time.sleep(0.5)
+                st.rerun()
+
     st.write("")
     st.divider()
     
@@ -609,6 +637,7 @@ def render_stock_management(t, productos_all, df_stock_in):
     filtro_stock = st.text_input(t['search_stk'], key="search_stk")
     
     if not df_stock_in.empty:
+        # Lógica de visualización
         if not use_all and not filtro_stock:
             df_view = df_stock_in.tail(50)
             st.caption(f"⚡ {t['alerts']['lazy_msg']}")
@@ -622,7 +651,6 @@ def render_stock_management(t, productos_all, df_stock_in):
         st.caption(f"{t['alerts']['excel_edit_mode']}")
         df_editor = df_view.iloc[::-1].copy()
         
-        # PERMITIMOS EDITAR PRODUTO Y USUARIO
         edited_df = st.data_editor(
             df_editor,
             num_rows="fixed",
@@ -663,6 +691,7 @@ def render_stock_management(t, productos_all, df_stock_in):
             row_label = f"📦 {r.get('Produto', '?')} | {r.get('Data', '?')} | {r.get('Kg', 0)}kg"
             with st.expander(row_label):
                 c_esk1, c_esk2 = st.columns(2)
+                # Inputs para editar individualmente
                 new_stk_prod = c_esk1.text_input(t['forms'][1], value=str(r.get('Produto', '')), key=f"ed_stk_p_{i}")
                 new_stk_kg = c_esk2.number_input("Kg", value=float(r.get('Kg', 0)), step=1.0, key=f"ed_stk_k_{i}")
                 
@@ -679,7 +708,7 @@ def render_stock_management(t, productos_all, df_stock_in):
                                 sh_stk.update_cell(cell.row, 3, new_stk_kg)   
                             success, err = safe_api_action(do_stk_update)
                             if success: 
-                                log_action(bk, "EDIT_STOCK", f"Editado: {r['Data']} -> {new_stk_prod}")
+                                log_action(bk, "EDIT_STOCK", f"Editado: {r['Data']} | {r['Produto']} -> {new_stk_prod} | {r['Kg']}kg -> {new_stk_kg}kg")
                                 st.cache_data.clear()
                                 st.toast(t['msgs'][3], icon="💾")
                                 time.sleep(0.5)
@@ -707,30 +736,6 @@ def render_stock_management(t, productos_all, df_stock_in):
     else:
         st.info(t['msgs'][2])
 
-    # BOTÓN BORRAR TODO EN STOCK TAMBIÉN
-    st.write("")
-    with st.expander(t['wipe_stk_title']):
-        st.warning(t['wipe_stk_warn'])
-        check_wipe_stk = st.checkbox(t['wipe_stk_check'], key="chk_wipe_stk")
-        if check_wipe_stk:
-            if st.button(t['wipe_stk_btn'], type="primary"):
-                with st.spinner(f"{t['alerts']['wiping']}"):
-                    bk = get_book_direct()
-                    try:
-                        sh_stk = bk.worksheet("Estoque")
-                        def do_wipe_stk():
-                            sh_stk.clear()
-                            sh_stk.append_row(["Data", "Produto", "Kg", "Usuario"])
-                        success, err = safe_api_action(do_wipe_stk)
-                        if success: 
-                            log_action(bk, "WIPE_STOCK", "Tabela Estoque Zerada")
-                            st.cache_data.clear()
-                            st.toast(t['msgs'][1], icon="🔥")
-                            time.sleep(0.5)
-                            st.rerun()
-                        else: st.error(f"Error: {err}")
-                    except: st.error("No existe hoja Estoque")
-
 @st.fragment
 def render_sales_management(t, df_sales, s):
     st.title(t['admin_sales_title'])
@@ -753,7 +758,6 @@ def render_sales_management(t, df_sales, s):
         st.caption(f"{t['alerts']['excel_edit_mode']}")
         df_editor_sales = df_filtered.iloc[::-1].copy()
         
-        # PERMITIMOS EDITAR EMPRESA Y PRODUCTO
         edited_sales = st.data_editor(
             df_editor_sales,
             use_container_width=True,
@@ -789,7 +793,7 @@ def render_sales_management(t, df_sales, s):
                 time.sleep(1)
                 st.rerun()
         
-        # LISTA INDIVIDUAL RESTAURADA PARA VENTAS TAMBIÉN
+        # LISTA INDIVIDUAL
         st.write("---")
         st.caption(f"{t['alerts']['manual_mode']}")
         
@@ -819,7 +823,7 @@ def render_sales_management(t, df_sales, s):
                                 sh_sl.update_cell(cell.row, 5, new_val*0.02)
                             success, err = safe_api_action(do_update)
                             if success: 
-                                log_action(bk, "EDIT_SALE", f"Editado: {r['Fecha_Registro']} - {r['Empresa']}")
+                                log_action(bk, "EDIT_SALE", f"Editado: {r['Fecha_Registro']} | {r['Empresa']} | {r['Kg']}kg -> {new_kg}kg")
                                 st.cache_data.clear()
                                 st.toast(t['msgs'][3], icon="💾")
                                 time.sleep(0.5)
@@ -849,6 +853,7 @@ def render_sales_management(t, df_sales, s):
             st.warning(t['wipe_stk_warn'])
             check_wipe_sales = st.checkbox(t['wipe_stk_check'], key="chk_wipe_sales")
             if check_wipe_sales:
+                wipe_sales_flag = False
                 if st.button(t['wipe_sales_btn'], type="primary"):
                     with st.spinner(f"{t['alerts']['wiping']}"):
                         bk = get_book_direct()
@@ -860,10 +865,12 @@ def render_sales_management(t, df_sales, s):
                         if success: 
                             log_action(bk, "WIPE_SALES", "Tabela Vendas Zerada")
                             st.cache_data.clear()
-                            st.toast(t['msgs'][1], icon="🔥")
-                            time.sleep(0.5)
-                            st.rerun()
+                            wipe_sales_flag = True
                         else: st.error(f"Error: {err}")
+                if wipe_sales_flag:
+                    st.toast(t['msgs'][1], icon="🔥")
+                    time.sleep(0.5)
+                    st.rerun()
         
         # --- ZONA DE BACKUP ---
         st.divider()
@@ -897,6 +904,13 @@ def render_log(t):
         st.session_state.show_log = not st.session_state.show_log
         st.rerun()
 
+    # --- FILTRO ACTIVO ---
+    if st.session_state.log_filter_override:
+        st.info(f"🔎 Filtrando por: **{st.session_state.log_filter_override}**")
+        if st.button("❌ Limpar Filtro"):
+            st.session_state.log_filter_override = ""
+            st.rerun()
+
     if st.session_state.show_log:
         try:
             bk = get_book_direct()
@@ -908,7 +922,38 @@ def render_log(t):
                     emoji_map = t['val_map'].copy()
                     show_log["Accion"] = show_log["Accion"].replace(emoji_map)
                 show_log = show_log.rename(columns=t['col_map'])
-                st.dataframe(show_log.iloc[::-1], use_container_width=True)
+                
+                # APLICAR FILTRO MANUAL
+                if st.session_state.log_filter_override:
+                    mask = show_log.astype(str).apply(lambda x: x.str.contains(st.session_state.log_filter_override, case=False)).any(axis=1)
+                    show_log = show_log[mask]
+
+                # SELECCIÓN INTERACTIVA
+                selection = st.dataframe(
+                    show_log.iloc[::-1], 
+                    use_container_width=True,
+                    selection_mode="single-row",
+                    on_select="rerun"
+                )
+                
+                # LÓGICA DE "IR AL USUARIO"
+                if selection.selection.rows:
+                    idx = selection.selection.rows[0]
+                    # El índice es visual, hay que mapearlo al dataframe invertido
+                    row_data = show_log.iloc[::-1].iloc[idx]
+                    
+                    details = str(row_data.get(t['col_map']['Detalles'], ''))
+                    
+                    # Intentar extraer algo útil (Nombre o Producto)
+                    # Formato usual: "Editado: [Fecha] | [Empresa] | [Cambio]"
+                    parts = details.split('|')
+                    if len(parts) > 1:
+                        possible_filter = parts[1].strip() # La empresa o producto suele estar en la parte 2
+                        st.info(f"Seleccionado: {possible_filter}")
+                        if st.button(f"🔍 Filtrar historial por '{possible_filter}'"):
+                            st.session_state.log_filter_override = possible_filter
+                            st.rerun()
+
                 st.divider()
                 st.markdown("### 🗑️")
                 with st.expander(t['msgs'][4]):
@@ -916,6 +961,7 @@ def render_log(t):
                     opc_h = [f"{r['Fecha_Hora']} | {r['Accion']} | {r['Detalles']}" for i, r in rev_h.iterrows()]
                     sel_h = st.multiselect("Items", opc_h)
                     
+                    del_log_flag = False
                     if st.button(t['actions'][4], key="btn_h", type="primary"):
                         if sel_h:
                             with st.spinner(f"{t['alerts']['deleting']}"):
@@ -932,26 +978,30 @@ def render_log(t):
                                 
                                 success, err = safe_api_action(do_log_del)
                                 if success: 
-                                    st.toast(t['msgs'][1], icon="🗑️")
-                                    time.sleep(0.5)
-                                    st.rerun()
+                                    del_log_flag = True
                                 else: st.error(f"Error: {err}")
+                    if del_log_flag:
+                        st.toast(t['msgs'][1], icon="🗑️")
+                        time.sleep(0.5)
+                        st.rerun()
 
                 st.write("")
                 col_danger1, col_danger2 = st.columns([3, 1])
                 check_danger = col_danger1.checkbox(t['wipe_stk_check'])
                 if check_danger:
+                    wipe_log_flag = False
                     if col_danger2.button("🔥 BORRAR LOG", type="primary"):
                         with st.spinner(f"{t['alerts']['wiping']}"):
                             def do_wipe():
                                 sh_log.clear()
                                 sh_log.append_row(["Fecha_Hora", "Accion", "Detalles"])
                             success, err = safe_api_action(do_wipe)
-                            if success: 
-                                st.toast(t['msgs'][1], icon="🧹")
-                                time.sleep(0.5)
-                                st.rerun()
+                            if success: wipe_log_flag = True
                             else: st.error(f"Error: {err}")
+                    if wipe_log_flag:
+                        st.toast(t['msgs'][1], icon="🧹")
+                        time.sleep(0.5)
+                        st.rerun()
             else:
                 st.info(t['msgs'][2])
         except Exception as e:
@@ -970,7 +1020,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
         t["tabs"] = [t['tabs'][0], t['tabs'][1], t['tabs'][2], t['tabs'][3], t['tabs'][4]]
-        st.caption("v97.0 Audit Full")
+        st.caption("v98.0 Smart Audit")
         if st.button("🔄"):
             st.cache_data.clear()
             st.rerun()
