@@ -94,8 +94,8 @@ MONTHS_UI = {
 # --- DICCIONARIO ---
 TR = {
     "Português": {
-        "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nova Venda", "🛠️ Admin", "📜 Log"],
-        "headers": ["Dashboard", "Registrar Venda", "Gestão", "Auditoria"],
+        "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nova Venda", "🛠️ Admin (Stock)", "📜 Log"],
+        "headers": ["Dashboard", "Registrar Venda", "Gestão de Estoque", "Auditoria"],
         "metrics": ["Faturamento", "Volume Vendido", "Comissão", "Ticket Médio", "Melhor Cliente"],
         "charts": ["Tendência", "Mix Produtos", "Por Empresa"],
         "stock_add_title": "📦 Adicionar Estoque",
@@ -117,11 +117,11 @@ TR = {
         "filter": "📅 Filtrar por Data",
         "xls_head": ["Data", "Mês", "Empresa", "Produto", "Kg", "Valor (R$)", "Comissão (R$)"],
         "xls_tot": "TOTAL GERAL:",
-        "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edição", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"},
+        "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edição", "BORRAR": "🗑️ Apagado", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"},
         "col_map": {"Fecha_Hora": "📅 Data", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"}
     },
     "Español": {
-        "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nueva Venta", "🛠️ Admin", "📜 Log"],
+        "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nueva Venta", "🛠️ Admin (Stock)", "📜 Log"],
         "headers": ["Dashboard", "Registrar Venta", "Gestión", "Auditoría"],
         "metrics": ["Facturación", "Volumen Vendido", "Comisión", "Ticket Medio", "Top Cliente"],
         "charts": ["Tendencia", "Mix Productos", "Por Empresa"],
@@ -433,7 +433,6 @@ def main():
 
     # 3. ADMIN (TABLA VISUAL + EDITAR)
     with tab3:
-        # AÑADIR STOCK
         st.header(t['stock_add_title'])
         with st.container(border=True):
             c_st1, c_st2, c_st3 = st.columns([2, 1, 1])
