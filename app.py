@@ -235,7 +235,7 @@ def get_goal(book, key):
     return 0.0
 
 # ==========================================
-# 🧩 FRAGMENTOS (PÁGINAS)
+# 🧩 FRAGMENTOS
 # ==========================================
 
 @st.fragment
@@ -260,21 +260,26 @@ def render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, la
             
             st.divider()
             
-            # --- FILTRO VISUAL STOCK ---
+            # --- FILTRO VISUAL STOCK (ESTRICTO) ---
             st.subheader(t['stock_alert'])
             all_prods_display = sorted(list(stock_real.keys()))
             selected_view = st.multiselect("👁️ Ver solo estos productos:", all_prods_display)
             
             if stock_real:
-                items_to_show = {k: v for k, v in stock_real.items() if k in selected_view} if selected_view else stock_real
+                # Si hay selección, filtramos ESTRICTAMENTE
+                if selected_view:
+                    items_to_show = {k: v for k, v in stock_real.items() if k in selected_view}
+                else:
+                    # Si no hay selección, mostramos solo los activos (!=0 o en stock)
+                    items_to_show = {k: v for k, v in stock_real.items() if v != 0 or k in prods_stock}
+
                 for p, kg_left in sorted(items_to_show.items(), key=lambda item: item[1], reverse=True):
-                    if kg_left != 0 or p in selected_view or p in prods_stock:
-                        c_s1, c_s2 = st.columns([3, 1])
-                        pct = max(0.0, min(kg_left / 1000.0, 1.0))
-                        c_s1.progress(pct, text=f"📦 **{p}**: {kg_left:,.1f} kg")
-                        if kg_left < 0: c_s2.error(f"⚠️ ({kg_left})")
-                        elif kg_left < 50: c_s2.warning("⚠️")
-                        else: c_s2.success("✅")
+                    c_s1, c_s2 = st.columns([3, 1])
+                    pct = max(0.0, min(kg_left / 1000.0, 1.0))
+                    c_s1.progress(pct, text=f"📦 **{p}**: {kg_left:,.1f} kg")
+                    if kg_left < 0: c_s2.error(f"⚠️ ({kg_left})")
+                    elif kg_left < 50: c_s2.warning("⚠️")
+                    else: c_s2.success("✅")
             
             st.divider()
             st.subheader(t['table_title'])
@@ -393,12 +398,25 @@ def render_stock_management(t, productos_all, df_stock_in):
 
     st.write("")
     st.subheader("Historial de Entradas")
+    
+    # BUSCADOR DE STOCK (NUEVO)
+    filtro_stock = st.text_input("🔍 Buscar en historial de stock:", key="search_stk")
+    
     if not df_stock_in.empty:
-        st.dataframe(df_stock_in.iloc[::-1], use_container_width=True, hide_index=True)
+        # Filtrar stock
+        if filtro_stock:
+            df_stk_view = df_stock_in[df_stock_in.astype(str).apply(lambda x: x.str.contains(filtro_stock, case=False)).any(axis=1)]
+        else:
+            df_stk_view = df_stock_in
+            
+        st.dataframe(df_stk_view.iloc[::-1], use_container_width=True, hide_index=True)
         st.write("---")
         st.caption("Editar o Borrar entrada específica:")
-        df_stk_edit = df_stock_in.tail(10).iloc[::-1]
-        for i, r in df_stk_edit.iterrows():
+        
+        # Iterar solo sobre lo filtrado (últimos 10 si no hay filtro)
+        to_edit = df_stk_view.iloc[::-1] if filtro_stock else df_stk_view.tail(10).iloc[::-1]
+        
+        for i, r in to_edit.iterrows():
             row_label = f"📦 {r.get('Produto', '?')} | {r.get('Data', '?')} | {r.get('Kg', 0)}kg"
             with st.expander(row_label):
                 c_esk1, c_esk2 = st.columns(2)
@@ -438,17 +456,13 @@ def render_sales_management(t, df_sales, s):
     filtro = st.text_input(t['actions'][2], key="admin_search") 
     
     if not df_sales.empty:
-        # LÓGICA DE FILTRADO (SOLO 5 O TODAS SI BUSCA)
         if filtro:
-            # Si hay filtro, busca en todo y muestra todo lo que coincida
             df_filtered = df_sales[df_sales.astype(str).apply(lambda x: x.str.contains(filtro, case=False)).any(axis=1)]
             st.info(f"Mostrando {len(df_filtered)} resultados para '{filtro}'")
         else:
-            # Si no hay filtro, muestra solo las ultimas 5
             df_filtered = df_sales.tail(5)
             st.caption("Mostrando las 5 ventas más recientes (Usa el buscador para ver más)")
 
-        # Tabla Visual
         df_admin_show = df_filtered[['Fecha_Registro', 'Empresa', 'Producto', 'Kg', 'Valor_BRL']].copy()
         cols_admin = {'Fecha_Registro': t['col_map']['Fecha_Hora'], 'Empresa': t['dash_cols']['emp'], 'Producto': t['dash_cols']['prod'], 'Kg': t['dash_cols']['kg'], 'Valor_BRL': t['dash_cols']['val']}
         st.dataframe(df_admin_show.rename(columns=cols_admin).iloc[::-1], use_container_width=True, hide_index=True, column_config={t['dash_cols']['val']: st.column_config.NumberColumn(format=f"{s} %.2f"), t['dash_cols']['kg']: st.column_config.NumberColumn(format="%.1f kg")})
@@ -456,7 +470,6 @@ def render_sales_management(t, df_sales, s):
         st.write("")
         st.caption("🛠️ Editar / Borrar Ventas (Mostradas arriba):")
         
-        # Iterar sobre las filtradas (reversed para ver recientes primero)
         for i, r in df_filtered.iloc[::-1].iterrows():
             with st.expander(f"💰 {r['Empresa']} | {r['Producto']} | {r['Fecha_Registro']}"):
                 c_ed1, c_ed2 = st.columns(2)
@@ -484,29 +497,7 @@ def render_sales_management(t, df_sales, s):
                     success, err = safe_api_action(do_del)
                     if success: st.cache_data.clear(); st.success(t['msgs'][1]); time.sleep(1); st.rerun()
                     else: st.error(f"Error: {err}")
-        
-        st.write("")
-        with st.expander(t['bulk_label']):
-            df_rev = df_sales.iloc[::-1].reset_index()
-            opc = [f"{r['Empresa']} | {r['Producto']} | {r['Fecha_Registro']}" for i, r in df_rev.iterrows()]
-            sels = st.multiselect(t['msgs'][4], opc)
-            if st.button(t['actions'][4], type="primary"):
-                if sels:
-                    dates = [x.split(" | ")[-1] for x in sels]
-                    bk = get_book_direct()
-                    sh_sl = bk.get_worksheet(0)
-                    all_recs = sh_sl.get_all_records()
-                    rows_to_del = []
-                    for i, r in enumerate(all_recs):
-                        if str(r['Fecha_Registro']) in dates: rows_to_del.append(i + 2)
-                    rows_to_del.sort(reverse=True)
-                    def do_bulk_del():
-                        for rw in rows_to_del: sh_sl.delete_rows(rw)
-                    success, err = safe_api_action(do_bulk_del)
-                    if success: log_action(bk, "BORRADO_MASIVO", f"{len(rows_to_del)}"); st.cache_data.clear(); st.success(t['msgs'][1]); time.sleep(1); st.rerun()
-                    else: st.error(f"Error: {err}")
 
-        # BORRADO TOTAL VENTAS
         st.write("")
         with st.expander("🔥 Borrar TODAS las Ventas (Peligro)"):
             st.warning("Esto borrará todas las ventas registradas. ¡Irreversible!")
@@ -517,7 +508,6 @@ def render_sales_management(t, df_sales, s):
                     sh_sl = bk.get_worksheet(0)
                     def do_wipe_sales():
                         sh_sl.clear()
-                        # Restaurar Headers originales
                         sh_sl.append_row(["Empresa", "Producto", "Kg", "Valor_BRL", "Comissao_BRL", "Fecha_Registro", "Tipo"])
                     success, err = safe_api_action(do_wipe_sales)
                     if success: st.cache_data.clear(); st.success("¡Ventas vaciadas!"); time.sleep(1); st.rerun()
@@ -594,12 +584,10 @@ def main():
         except: st.markdown(f"<h1 style='text-align: center; font-size: 50px; margin:0;'>🍇</h1>", unsafe_allow_html=True)
         st.markdown(f"<h3 style='text-align: center;'>{NOMBRE_EMPRESA}</h3>", unsafe_allow_html=True)
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
-        
-        # 5 PESTAÑAS AHORA
         t = TR.get(lang, TR["Português"]) 
+        # TABS ACTUALIZADOS (5)
         t["tabs"] = ["📊 Dashboard", "➕ Nova Venda", "📦 Stock", "💰 Admin Ventas", "📜 Log"]
-        
-        st.caption("v72.0 Estructura Pro")
+        st.caption("v73.0 Precisión Total")
         if st.button("🔄 Forzar Actualización"):
             st.cache_data.clear()
             st.rerun()
@@ -676,13 +664,12 @@ def main():
                 ws.write(lr, 3, t['xls_tot'], fmt_total); ws.write(lr, 4, data_final['Kg'].sum(), fmt_total); ws.write(lr, 5, data_final['Valor_BRL'].sum(), fmt_total); ws.write(lr, 6, data_final['Comissao_BRL'].sum(), fmt_total)
             st.download_button(t['dl_excel'], data=buffer, file_name=f"Reporte_{datetime.now().strftime('%Y-%m-%d')}.xlsx", mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
-    # --- TABS (AHORA SON 5) ---
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(t['tabs']) # Ajustado para 5 pestañas
-
+    # TABS (5)
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(t['tabs'])
     with tab1: render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, lang)
     with tab2: render_new_sale(t, empresas, productos_all, stock_real, df_sales, s)
-    with tab3: render_stock_management(t, productos_all, df_stock_in) # SOLO STOCK
-    with tab4: render_sales_management(t, df_sales, s) # SOLO VENTAS
+    with tab3: render_stock_management(t, productos_all, df_stock_in)
+    with tab4: render_sales_management(t, df_sales, s)
     with tab5: render_log(t)
 
 if __name__ == "__main__":
