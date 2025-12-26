@@ -9,7 +9,7 @@ import io
 import xlsxwriter
 import urllib.parse
 
-# INTENTO DE IMPORTAR FPDF (Para que no falle si falta)
+# INTENTO DE IMPORTAR FPDF (Para evitar errores si falta)
 try:
     from fpdf import FPDF
     PDF_AVAILABLE = True
@@ -103,8 +103,7 @@ if PDF_AVAILABLE:
         pdf.cell(0, 10, txt="Obrigado!", ln=True, align='C')
         return pdf.output(dest='S').encode('latin-1')
 
-# --- DICCIONARIO DE IDIOMAS (REVISADO) ---
-# Importante: Todas las listas deben tener el mismo tamaño y claves
+# --- DICCIONARIO DE IDIOMAS (CORREGIDO Y VERIFICADO) ---
 TR = {
     "Português": {
         "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nova Venda", "🛠️ Admin", "📜 Log"],
@@ -113,7 +112,7 @@ TR = {
         "charts": ["Tendência", "Mix Produtos", "Por Empresa"],
         "table_title": "Detalhes",
         "forms": ["Cliente", "Produto", "Kg", "Valor (R$)", "✅ Confirmar"],
-        "actions": ["Salvar", "DELETAR", "Buscar...", "✨ Novo...", "🗑️ Apagar Seleção"], # Índice 3 es "Novo"
+        "actions": ["Salvar", "DELETAR", "Buscar...", "✨ Novo...", "🗑️ Apagar Seleção"],
         "bulk": "Gestão em Massa",
         "clean": "Limpar Histórico",
         "dl_excel": "📗 Baixar Excel",
@@ -123,7 +122,7 @@ TR = {
         "msgs": ["Sucesso!", "Apagado!", "Sem dados", "Atualizado!"],
         "pdf": "📄 Baixar Recibo",
         "stock_t": "📦 Estoque",
-        "new_labels": ["Nome Cliente:", "Nome Produto:"], # CLAVE QUE FALTABA O FALLABA
+        "new_labels": ["Nome Cliente:", "Nome Produto:"], # AQUÍ ESTÁ LA CLAVE QUE FALTABA
         "dash_cols": {"val": "Valor", "com": "Comissão", "kg": "Kg"},
         "install": "📲 Instalar: Menu -> Adicionar à Tela de Início"
     },
@@ -144,7 +143,7 @@ TR = {
         "msgs": ["¡Éxito!", "¡Borrado!", "Sin datos", "¡Actualizado!"],
         "pdf": "📄 Bajar Recibo",
         "stock_t": "📦 Stock",
-        "new_labels": ["Nombre Cliente:", "Nombre Producto:"],
+        "new_labels": ["Nombre Cliente:", "Nombre Producto:"], # AQUÍ TAMBIÉN
         "dash_cols": {"val": "Valor", "com": "Comisión", "kg": "Kg"},
         "install": "📲 Instalar: Menú -> Agregar a Pantalla de Inicio"
     },
@@ -165,7 +164,7 @@ TR = {
         "msgs": ["Success!", "Deleted!", "No data", "Updated!"],
         "pdf": "📄 Download Receipt",
         "stock_t": "📦 Stock",
-        "new_labels": ["Client Name:", "Product Name:"],
+        "new_labels": ["Client Name:", "Product Name:"], # Y AQUÍ
         "dash_cols": {"val": "Value", "com": "Comm", "kg": "Kg"},
         "install": "📲 Install: Menu -> Add to Home Screen"
     }
@@ -208,7 +207,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         
         # --- FIX PARA DICCIONARIO ---
-        # Si por alguna razón falla el idioma, usa Portugués por defecto
+        # Si por alguna razón falla el idioma, usa Portugués por defecto para no romper la app
         t = TR.get(lang, TR["Português"]) 
         
         st.info(t["install"])
@@ -244,7 +243,7 @@ def main():
             log_action(book, "META_UPDATE", f"{periodo_clave}|{meta}")
             st.success("OK!"); time.sleep(1); st.rerun()
         
-        val_mes = df[df['Fecha_Registro'].str.contains(periodo_clave)]['Valor_BRL'].sum() * r if not df.empty else 0
+        val_mes = df[df['Fecha_Registro'].str.contains(periodo_clave, na=False)]['Valor_BRL'].sum() * r if not df.empty else 0
         if meta > 0:
             st.progress(min(val_mes/meta, 1.0))
             st.caption(f"{val_mes/meta*100:.1f}% ({s} {val_mes:,.0f} / {s} {meta:,.0f})")
@@ -277,6 +276,7 @@ def main():
             st.divider()
             st.subheader(t['table_title'])
             df_show = df.copy()
+            # Mostramos las columnas correctas
             st.dataframe(df_show[['Empresa', 'Producto', 'Kg', 'Valor_BRL']].iloc[::-1], use_container_width=True, hide_index=True)
 
     # 2. VENDER
@@ -285,12 +285,11 @@ def main():
         with st.container(border=True):
             c1, c2 = st.columns(2)
             
-            # --- AQUÍ ESTABA EL ERROR, AHORA CORREGIDO ---
-            # Usamos índices seguros
-            opcion_nuevo = t['actions'][3] # "✨ Novo..."
+            # --- CORRECCIÓN: Usamos indices seguros para "Novo" ---
+            opcion_nuevo = t['actions'][3] # Corresponde a "✨ Novo..."
             
             sel_emp = c1.selectbox(t['forms'][0], [opcion_nuevo] + empresas)
-            # Verificamos si es "Nuevo" para mostrar el campo de texto
+            # Aquí es donde fallaba antes: ahora t['new_labels'] existe
             emp = c1.text_input(t['new_labels'][0]) if sel_emp == opcion_nuevo else sel_emp
             
             sel_prod = c2.selectbox(t['forms'][1], [opcion_nuevo] + productos)
