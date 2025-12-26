@@ -266,13 +266,11 @@ def log_action(book, action, detail):
         book.worksheet("Historial").append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), action, f"{detail} ({u})"])
     except: pass
 
-# --- NUEVO SISTEMA DE CONFIGURACIÓN PERSISTENTE ---
+# --- CONFIGURACIÓN PERSISTENTE ---
 def get_config(book):
-    """Lee la hoja 'Config' para recuperar Meta y Filtros."""
     try:
         sh = book.worksheet("Config")
     except:
-        # Si no existe, se crea
         sh = book.add_worksheet("Config", 100, 2)
         sh.append_row(["Key", "Value"])
     
@@ -283,7 +281,6 @@ def get_config(book):
     return sh, cfg
 
 def save_conf(book, key, val):
-    """Guarda un valor en la hoja Config."""
     sh, cfg = get_config(book)
     try:
         cell = sh.find(key)
@@ -317,30 +314,25 @@ def render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, la
             
             st.divider()
             
-            # --- FILTRO VISUAL STOCK CON MEMORIA ---
             st.subheader(t['stock_alert'])
             all_prods_display = sorted(list(stock_real.keys()))
             
-            # Recuperar filtro guardado si existe
             default_selection = []
             if saved_filter:
                 default_selection = [p for p in saved_filter.split(',') if p in all_prods_display]
 
-            # Multiselect con lo guardado
             selected_view = st.multiselect(t['filter_viz'], all_prods_display, default=default_selection)
             
-            # BOTÓN PARA GUARDAR VISTA
             if st.button(t['save_view']):
                 bk = get_book_direct()
                 val_to_save = ",".join(selected_view)
                 save_conf(bk, "stock_view_pref", val_to_save)
-                st.success("✅ Vista Guardada")
-                time.sleep(1) # Feedback visual
+                st.success("✅")
+                time.sleep(1)
             
             if stock_real:
                 items_to_show = {k: v for k, v in stock_real.items() if k in selected_view} if selected_view else stock_real
                 for p, kg_left in sorted(items_to_show.items(), key=lambda item: item[1], reverse=True):
-                    # Lógica estricta de visualización
                     show_it = False
                     if selected_view: show_it = True 
                     elif kg_left != 0 or p in prods_stock: show_it = True
@@ -633,7 +625,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
         t["tabs"] = [t['tabs'][0], t['tabs'][1], t['tabs'][2], t['tabs'][3], t['tabs'][4]]
-        st.caption("v77.0 Eternal Memory")
+        st.caption("v78.0 Minimalist Excel")
         if st.button("🔄"):
             st.cache_data.clear()
             st.rerun()
@@ -641,19 +633,19 @@ def main():
     
     s = RATES[lang]["s"]; r = RATES[lang]["r"]
 
-    # CARGA DE DATOS + CONFIGURACION
+    # CARGA DATOS
     df_sales, df_stock_in = load_cached_data()
     if df_sales is None:
         st.error("⏳ Google Error 429. Wait 1 min.")
         st.stop()
     
-    # LEER CONFIGURACIÓN (META Y FILTRO)
-    bk_conf = get_book_direct() # Acceso directo a config para leer
+    # CARGA CONFIG
+    bk_conf = get_book_direct() 
     _, cfg = get_config(bk_conf)
-    
     saved_meta = float(cfg.get('meta_goal', 0.0))
     saved_filter = cfg.get('stock_view_pref', "")
 
+    # PROCESAMIENTO
     if not df_sales.empty:
         for c in ['Valor_BRL', 'Kg', 'Comissao_BRL']:
             if c in df_sales.columns: df_sales[c] = pd.to_numeric(df_sales[c], errors='coerce').fillna(0)
@@ -678,20 +670,16 @@ def main():
         total_out = df_sales[df_sales['Producto'] == p]['Kg'].sum() if not df_sales.empty else 0
         stock_real[p] = total_in - total_out
 
+    # SIDEBAR
     ahora = datetime.now(); periodo_clave = ahora.strftime("%Y-%m")
     with st.sidebar:
         st.write(f"**{t['goal_lbl']} {MESES_UI_SIDEBAR[ahora.month]}**")
-        
-        # META DESDE CONFIG (PERSISTENTE)
         meta = st.number_input("Meta", value=saved_meta, step=1000.0, label_visibility="collapsed")
-        
         if st.button(t['goal_btn']):
             bk = get_book_direct()
-            # GUARDAR EN CONFIG HOJA
             save_conf(bk, "meta_goal", meta)
             st.success("OK!")
             time.sleep(0.5); st.rerun()
-            
         val_mes = df_sales[df_sales['Fecha_Registro'].str.contains(periodo_clave, na=False)]['Valor_BRL'].sum() * r if not df_sales.empty else 0
         if meta > 0:
             st.progress(min(val_mes/meta, 1.0))
@@ -700,29 +688,55 @@ def main():
         if not df_sales.empty:
             try:
                 buffer = io.BytesIO()
+                # --- EXCEL MINIMALISTA ---
                 with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
                     df_ex = df_sales.copy()
                     df_ex['Fecha_Clean'] = df_ex['Fecha_DT'].dt.strftime('%d/%m/%Y %H:%M')
                     data_final = df_ex[['Fecha_Clean', 'Mes_Lang', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']].copy()
                     sheet_name = 'Reporte'
-                    data_final.to_excel(writer, index=False, sheet_name=sheet_name, startrow=1, header=False)
+                    
+                    # Escribir solo datos desde fila 5 para dejar espacio al KPI
+                    data_final.to_excel(writer, index=False, sheet_name=sheet_name, startrow=5, header=False)
+                    
                     workbook = writer.book; ws = writer.sheets[sheet_name]
-                    fmt_head = workbook.add_format({'bold': True, 'fg_color': '#2C3E50', 'font_color': 'white', 'border': 1, 'align': 'center'})
-                    fmt_money = workbook.add_format({'num_format': 'R$ #,##0.00', 'border': 1})
-                    fmt_num = workbook.add_format({'num_format': '0.0', 'border': 1, 'align': 'center'})
-                    fmt_base = workbook.add_format({'border': 1})
-                    fmt_total = workbook.add_format({'bold': True, 'bg_color': '#D3D3D3', 'num_format': 'R$ #,##0.00', 'border': 1})
+                    ws.hide_gridlines(2) # Ocultar Gridlines
+                    
+                    # FORMATOS MINIMALISTAS
+                    fmt_kpi_label = workbook.add_format({'font_name': 'Calibri', 'font_size': 10, 'font_color': '#718096'})
+                    fmt_kpi_num = workbook.add_format({'font_name': 'Calibri', 'font_size': 14, 'bold': True, 'font_color': '#2B6CB0'})
+                    fmt_head = workbook.add_format({'bold': True, 'bg_color': '#F7FAFC', 'font_color': '#4A5568', 'bottom': 1, 'bottom_color': '#E2E8F0', 'align': 'center'})
+                    fmt_data = workbook.add_format({'font_name': 'Calibri', 'align': 'center'})
+                    fmt_money = workbook.add_format({'num_format': 'R$ #,##0.00', 'font_name': 'Calibri'})
+                    fmt_num = workbook.add_format({'num_format': '0.0', 'font_name': 'Calibri', 'align': 'center'})
+                    fmt_total = workbook.add_format({'bold': True, 'top': 1, 'top_color': '#CBD5E0', 'font_color': '#2D3748'})
+                    
+                    # KPIS HEADER
+                    ws.write(1, 1, "Vendas Totais", fmt_kpi_label)
+                    ws.write(2, 1, f"R$ {data_final['Valor_BRL'].sum():,.2f}", fmt_kpi_num)
+                    ws.write(1, 3, "Volume (Kg)", fmt_kpi_label)
+                    ws.write(2, 3, f"{data_final['Kg'].sum():,.1f} Kg", fmt_kpi_num)
+                    ws.write(1, 5, "Comissao", fmt_kpi_label)
+                    ws.write(2, 5, f"R$ {data_final['Comissao_BRL'].sum():,.2f}", fmt_kpi_num)
+
+                    # HEADERS TABLA
                     xls_headers = t.get('xls_head', ["Fecha", "Mes", "Empresa", "Producto", "Kg", "Valor", "Comisión"])
-                    xls_total_lbl = t.get('xls_tot', "TOTAL:")
-                    for col_num, h in enumerate(xls_headers): ws.write(0, col_num, h, fmt_head)
-                    ws.set_column('A:A', 18, fmt_base); ws.set_column('B:B', 12, fmt_base); ws.set_column('C:D', 22, fmt_base)
+                    for col_num, h in enumerate(xls_headers): ws.write(4, col_num, h, fmt_head)
+                    
+                    # COLUMNS WIDTH & FORMAT
+                    ws.set_column('A:A', 18, fmt_data); ws.set_column('B:B', 12, fmt_data); ws.set_column('C:D', 22, fmt_data)
                     ws.set_column('E:E', 12, fmt_num); ws.set_column('F:G', 18, fmt_money)
-                    lr = len(data_final) + 1
-                    ws.write(lr, 3, xls_total_lbl, fmt_total); ws.write(lr, 4, data_final['Kg'].sum(), fmt_total); ws.write(lr, 5, data_final['Valor_BRL'].sum(), fmt_total); ws.write(lr, 6, data_final['Comissao_BRL'].sum(), fmt_total)
-                st.download_button(t['dl_excel'], data=buffer, file_name=f"Reporte_{datetime.now().strftime('%Y-%m-%d')}.xlsx", mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+                    
+                    # TOTAL FINAL
+                    lr = len(data_final) + 5
+                    ws.write(lr, 3, t.get('xls_tot', "TOTAL:"), fmt_total)
+                    ws.write(lr, 4, data_final['Kg'].sum(), fmt_total)
+                    ws.write(lr, 5, data_final['Valor_BRL'].sum(), fmt_total)
+                    ws.write(lr, 6, data_final['Comissao_BRL'].sum(), fmt_total)
+
+                st.download_button(t['dl_excel'], data=buffer, file_name=f"Reporte_Minimal_{datetime.now().strftime('%Y-%m-%d')}.xlsx", mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             except Exception as ex: st.warning(f"⚠️ ({ex})")
 
-    # TABS (PASAMOS EL FILTRO GUARDADO AL DASHBOARD)
+    # TABS
     tab1, tab2, tab3, tab4, tab5 = st.tabs(t['tabs'])
     with tab1: render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, lang, saved_filter)
     with tab2: render_new_sale(t, empresas, productos_all, stock_real, df_sales, s)
