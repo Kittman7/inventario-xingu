@@ -37,13 +37,14 @@ st.markdown("""
         width: 100%; border-radius: 8px; height: 3em; font-weight: 700; border: none; transition: 0.3s;
     }
     .stButton>button:hover { transform: scale(1.02); }
+    h2 { border-bottom: 2px solid #444; padding-bottom: 10px; }
     </style>
 """, unsafe_allow_html=True)
 
 # --- GESTIÓN DE ESTADO ---
 if 'sale_key' not in st.session_state: st.session_state.sale_key = 0
 if 'stock_key' not in st.session_state: st.session_state.stock_key = 0
-if 'show_log' not in st.session_state: st.session_state.show_log = False # MEMORIA DEL LOG
+if 'show_log' not in st.session_state: st.session_state.show_log = False
 
 # --- LOGIN ---
 def check_password():
@@ -94,7 +95,7 @@ MONTHS_UI = {
 }
 TR = {
     "Português": {
-        "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nova Venda", "🛠️ Admin (Stock)", "📜 Log"],
+        "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nova Venda", "🛠️ Admin Total", "📜 Log"],
         "headers": ["Dashboard", "Registrar Venda", "Gestão de Estoque", "Auditoria"],
         "metrics": ["Faturamento", "Volume Vendido", "Comissão", "Ticket Médio", "Melhor Cliente"],
         "charts": ["Tendência", "Mix Produtos", "Por Empresa"],
@@ -121,7 +122,7 @@ TR = {
         "col_map": {"Fecha_Hora": "📅 Data", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"}
     },
     "Español": {
-        "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nueva Venta", "🛠️ Admin (Stock)", "📜 Log"],
+        "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nueva Venta", "🛠️ Admin Total", "📜 Log"],
         "headers": ["Dashboard", "Registrar Venta", "Gestión", "Auditoría"],
         "metrics": ["Facturación", "Volumen Vendido", "Comisión", "Ticket Medio", "Top Cliente"],
         "charts": ["Tendencia", "Mix Productos", "Por Empresa"],
@@ -148,7 +149,7 @@ TR = {
         "col_map": {"Fecha_Hora": "📅 Fecha", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"}
     },
     "English": {
-        "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ New Sale", "🛠️ Admin", "📜 Log"],
+        "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ New Sale", "🛠️ Admin Total", "📜 Log"],
         "headers": ["Dashboard", "New Sale", "Stock Mgmt", "Log"],
         "metrics": ["Revenue", "Volume Sold", "Commission", "Avg Ticket", "Top Client"],
         "charts": ["Trend", "Mix", "By Company"],
@@ -178,7 +179,7 @@ TR = {
 RATES = { "Português": {"s": "R$", "r": 1.0}, "Español": {"s": "$", "r": 165.0}, "English": {"s": "USD", "r": 0.18} }
 MESES_UI_SIDEBAR = {1: "Jan", 2: "Feb", 3: "Mar", 4: "Abr", 5: "Mai", 6: "Jun", 7: "Jul", 8: "Ago", 9: "Set", 10: "Out", 11: "Nov", 12: "Dez"}
 
-# --- CONEXIÓN CACHEADA ---
+# --- CONEXIÓN ---
 @st.cache_resource(ttl=3600) 
 def get_connection():
     scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
@@ -186,7 +187,6 @@ def get_connection():
     client = gspread.authorize(creds)
     return client
 
-# --- DATOS CACHEADOS ---
 @st.cache_data(ttl=900)
 def load_cached_data():
     client = get_connection()
@@ -235,7 +235,7 @@ def get_goal(book, key):
     return 0.0
 
 # ==========================================
-# 🧩 FRAGMENTOS OPTIMIZADOS
+# 🧩 FRAGMENTOS
 # ==========================================
 
 @st.fragment
@@ -294,7 +294,6 @@ def render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, la
 def render_new_sale(t, empresas, productos_all, stock_real, df_sales, s):
     st.header(t['headers'][1])
     key_suffix = str(st.session_state.sale_key)
-    
     with st.container(border=True):
         c1, c2 = st.columns(2)
         op_new = t['actions'][3]
@@ -338,14 +337,19 @@ def render_new_sale(t, empresas, productos_all, stock_real, df_sales, s):
         })
 
 @st.fragment
-def render_admin(t, productos_all, df_sales, s):
-    st.header(t['stock_add_title'])
+def render_admin(t, productos_all, df_sales, df_stock_in, s):
+    # --- SECCIÓN 1: GESTIÓN DE STOCK ---
+    st.markdown("## 📦 Gestión de Stock")
+    
+    # 1.1 FORMULARIO DE AÑADIR
     stk_suffix = str(st.session_state.stock_key)
     with st.container(border=True):
+        st.caption("Añadir nueva entrada:")
         c_st1, c_st2, c_st3 = st.columns([2, 1, 1])
         prod_stock = c_st1.selectbox("Produto", ["✨ Novo..."] + productos_all, key=f"s_prod_{stk_suffix}")
         if prod_stock == "✨ Novo...": prod_stock = c_st1.text_input("Nome", key=f"s_prod_txt_{stk_suffix}")
         kg_stock = c_st2.number_input("Kg (+)", step=10.0, key=f"s_kg_{stk_suffix}")
+        
         if c_st3.button(t['stock_btn'], type="primary"):
             bk = get_book_direct()
             try:
@@ -365,25 +369,76 @@ def render_admin(t, productos_all, df_sales, s):
                 else: st.error(f"Error: {err}")
             except Exception as e: st.error(f"Error grave: {e}")
 
+    # 1.2 TABLA Y EDICIÓN DE STOCK
+    st.write("")
+    with st.expander("🛠️ Ver / Editar Entradas Pasadas"):
+        if not df_stock_in.empty:
+            # Mostrar tabla simple
+            st.dataframe(df_stock_in.iloc[::-1], use_container_width=True, hide_index=True)
+            
+            st.write("---")
+            st.caption("Editar o Borrar entrada específica:")
+            # Iterar últimas 10 entradas para editar
+            df_stk_edit = df_stock_in.tail(10).iloc[::-1]
+            for i, r in df_stk_edit.iterrows():
+                # Clave única combinando producto y fecha
+                row_label = f"📦 {r.get('Produto', '?')} | {r.get('Data', '?')} | {r.get('Kg', 0)}kg"
+                with st.expander(row_label):
+                    c_esk1, c_esk2 = st.columns(2)
+                    # Campos de edición
+                    new_stk_prod = c_esk1.text_input("Producto", value=str(r.get('Produto', '')), key=f"ed_stk_p_{i}")
+                    new_stk_kg = c_esk2.number_input("Kg", value=float(r.get('Kg', 0)), step=1.0, key=f"ed_stk_k_{i}")
+                    
+                    c_btn_s1, c_btn_s2 = st.columns(2)
+                    if c_btn_s1.button("💾 Guardar Cambios", key=f"sav_stk_{i}"):
+                        bk = get_book_direct()
+                        sh_stk = bk.worksheet("Estoque")
+                        # Buscar celda por fecha (asumiendo fecha unica o casi unica)
+                        try:
+                            cell = sh_stk.find(str(r['Data']))
+                            def do_stk_update():
+                                sh_stk.update_cell(cell.row, 2, new_stk_prod) # Col 2 = Prod
+                                sh_stk.update_cell(cell.row, 3, new_stk_kg)   # Col 3 = Kg
+                            success, err = safe_api_action(do_stk_update)
+                            if success: st.cache_data.clear(); st.success("¡Stock actualizado!"); time.sleep(1); st.rerun()
+                            else: st.error(f"Error: {err}")
+                        except: st.error("No encontré la fila exacta.")
+
+                    if c_btn_s2.button("🗑️ Borrar Entrada", key=f"del_stk_{i}", type="secondary"):
+                        bk = get_book_direct()
+                        sh_stk = bk.worksheet("Estoque")
+                        try:
+                            cell = sh_stk.find(str(r['Data']))
+                            def do_stk_del(): sh_stk.delete_rows(cell.row)
+                            success, err = safe_api_action(do_stk_del)
+                            if success: st.cache_data.clear(); st.success("¡Borrado!"); time.sleep(1); st.rerun()
+                            else: st.error(f"Error: {err}")
+                        except: st.error("Error al borrar.")
+        else:
+            st.info("No hay historial de stock.")
+
     st.divider()
-    st.subheader("Admin Ventas")
+
+    # --- SECCIÓN 2: GESTIÓN DE VENTAS ---
+    st.markdown("## 💰 Admin Ventas")
     filtro = st.text_input(t['actions'][2], key="admin_search") 
     if not df_sales.empty:
-        st.caption("Vista General:")
+        # Tabla Visual
         df_admin_show = df_sales[['Fecha_Registro', 'Empresa', 'Producto', 'Kg', 'Valor_BRL']].copy()
         cols_admin = {'Fecha_Registro': t['col_map']['Fecha_Hora'], 'Empresa': t['dash_cols']['emp'], 'Producto': t['dash_cols']['prod'], 'Kg': t['dash_cols']['kg'], 'Valor_BRL': t['dash_cols']['val']}
         st.dataframe(df_admin_show.rename(columns=cols_admin).iloc[::-1], use_container_width=True, hide_index=True, column_config={t['dash_cols']['val']: st.column_config.NumberColumn(format=f"{s} %.2f"), t['dash_cols']['kg']: st.column_config.NumberColumn(format="%.1f kg")})
         
-        st.markdown("---")
-        st.caption("🛠️ Editar / Borrar (Individual):")
+        st.write("")
+        st.caption("🛠️ Editar / Borrar Ventas (Individual):")
         df_s = df_sales[df_sales.astype(str).apply(lambda x: x.str.contains(filtro, case=False)).any(axis=1)] if filtro else df_sales.tail(10).iloc[::-1]
         for i, r in df_s.iterrows():
-            with st.expander(f"{r['Empresa']} | {r['Producto']} | {r['Fecha_Registro']}"):
+            with st.expander(f"💰 {r['Empresa']} | {r['Producto']} | {r['Fecha_Registro']}"):
                 c_ed1, c_ed2 = st.columns(2)
                 new_kg = c_ed1.number_input("Kg", value=float(r['Kg']), key=f"k_{i}")
                 new_val = c_ed2.number_input("Valor", value=float(r['Valor_BRL']), key=f"v_{i}")
                 c_btn1, c_btn2 = st.columns(2)
-                if c_btn1.button("💾 Guardar", key=f"save_{i}"):
+                
+                if c_btn1.button("💾 Guardar Venta", key=f"save_{i}"):
                     bk = get_book_direct()
                     sh_sl = bk.get_worksheet(0)
                     cell = sh_sl.find(str(r['Fecha_Registro']))
@@ -394,7 +449,8 @@ def render_admin(t, productos_all, df_sales, s):
                     success, err = safe_api_action(do_update)
                     if success: st.cache_data.clear(); st.success("Editado!"); time.sleep(1); st.rerun()
                     else: st.error(f"Error: {err}")
-                if c_btn2.button(t['actions'][1], key=f"del_{i}", type="secondary"):
+                    
+                if c_btn2.button("🗑️ Borrar Venta", key=f"del_{i}", type="secondary"):
                     bk = get_book_direct()
                     sh_sl = bk.get_worksheet(0)
                     cell = sh_sl.find(str(r['Fecha_Registro']))
@@ -403,7 +459,7 @@ def render_admin(t, productos_all, df_sales, s):
                     if success: st.cache_data.clear(); st.success(t['msgs'][1]); time.sleep(1); st.rerun()
                     else: st.error(f"Error: {err}")
         
-        st.divider()
+        st.write("")
         with st.expander(t['bulk_label']):
             df_rev = df_sales.iloc[::-1].reset_index()
             opc = [f"{r['Empresa']} | {r['Producto']} | {r['Fecha_Registro']}" for i, r in df_rev.iterrows()]
@@ -427,8 +483,8 @@ def render_admin(t, productos_all, df_sales, s):
 @st.fragment
 def render_log(t):
     st.title(t['headers'][3])
-    
-    # BOTÓN MAESTRO PARA CARGAR/OCULTAR
+    # ... (Log code stays similar) ...
+    # (Para ahorrar espacio aquí, el log es el mismo de v68)
     col_btn, col_info = st.columns([1, 2])
     if col_btn.button("🔄 Cargar/Ocultar Historial", type="secondary"):
         st.session_state.show_log = not st.session_state.show_log
@@ -451,7 +507,6 @@ def render_log(t):
                 st.divider()
                 st.markdown("### 🗑️ Zona de Borrado")
                 
-                # 1. BORRADO SELECTIVO
                 with st.expander("Seleccionar items para borrar"):
                     rev_h = h_dt.iloc[::-1].reset_index()
                     opc_h = [f"{r['Fecha_Hora']} | {r['Accion']} | {r['Detalles']}" for i, r in rev_h.iterrows()]
@@ -471,7 +526,6 @@ def render_log(t):
                             if success: st.success(t['msgs'][1]); time.sleep(1); st.rerun()
                             else: st.error(f"Error: {err}")
 
-                # 2. BORRADO TOTAL (NUEVO)
                 st.write("")
                 col_danger1, col_danger2 = st.columns([3, 1])
                 check_danger = col_danger1.checkbox("⚠️ Habilitar borrado completo (Irreversible)")
@@ -479,17 +533,16 @@ def render_log(t):
                     if col_danger2.button("🔥 BORRAR TODO", type="primary"):
                         def do_wipe():
                             sh_log.clear()
-                            sh_log.append_row(["Fecha_Hora", "Accion", "Detalles"]) # Restaurar Headers
+                            sh_log.append_row(["Fecha_Hora", "Accion", "Detalles"])
                         success, err = safe_api_action(do_wipe)
                         if success: st.success("¡Historial vaciado!"); time.sleep(1); st.rerun()
                         else: st.error(f"Error: {err}")
-
             else:
                 st.info("El historial está limpio.")
         except Exception as e:
-            st.error(f"Error leyendo historial: {e}")
+            st.error(f"Error: {e}")
     else:
-        st.info("El historial está oculto para mayor velocidad. Dale al botón para verlo.")
+        st.info("El historial está oculto para mayor velocidad.")
 
 # --- APP MAIN ---
 def main():
@@ -501,7 +554,7 @@ def main():
         st.markdown(f"<h3 style='text-align: center;'>{NOMBRE_EMPRESA}</h3>", unsafe_allow_html=True)
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
-        st.caption("v68.0 Log Persistente")
+        st.caption("v69.0 Control Total Stock")
         if st.button("🔄 Forzar Actualización"):
             st.cache_data.clear()
             st.rerun()
@@ -538,7 +591,6 @@ def main():
         total_out = df_sales[df_sales['Producto'] == p]['Kg'].sum() if not df_sales.empty else 0
         stock_real[p] = total_in - total_out
 
-    # SIDEBAR EXCEL
     ahora = datetime.now(); periodo_clave = ahora.strftime("%Y-%m")
     with st.sidebar:
         st.write(f"**{t['goal_lbl']} {MESES_UI_SIDEBAR[ahora.month]}**")
@@ -583,7 +635,7 @@ def main():
     tab1, tab2, tab3, tab4 = st.tabs(t['tabs'])
     with tab1: render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, lang)
     with tab2: render_new_sale(t, empresas, productos_all, stock_real, df_sales, s)
-    with tab3: render_admin(t, productos_all, df_sales, s)
+    with tab3: render_admin(t, productos_all, df_sales, df_stock_in, s)
     with tab4: render_log(t)
 
 if __name__ == "__main__":
