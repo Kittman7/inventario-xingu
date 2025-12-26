@@ -20,12 +20,11 @@ except ImportError:
 # 🎨 ZONA DE PERSONALIZACIÓN
 # ==========================================
 NOMBRE_EMPRESA = "Xingu CEO"
-ICONO_ARCHIVO = "logo.png" # <--- DEBES SUBIR TU IMAGEN CON ESTE NOMBRE EXACTO
+ICONO_ARCHIVO = "logo.png" 
 CONTRASEÑA_MAESTRA = "Julio777" 
 # ==========================================
 
 # --- CONFIGURACIÓN DE PÁGINA E ICONO ---
-# Intenta cargar logo.png. Si no existe, usa una uva 🍇 para evitar errores.
 try:
     img_icon = Image.open(ICONO_ARCHIVO)
     st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon=img_icon, layout="wide")
@@ -376,7 +375,8 @@ def render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, la
                 df_tr['Venta'] = df_tr['Venta'] * r
                 fig_area = px.area(df_tr, x='Fecha', y='Venta', title=t['charts'][0], markers=True)
                 fig_area.update_layout(plot_bgcolor="rgba(0,0,0,0)", xaxis_showgrid=False)
-                fig_area.update_traces(line_color='#FF4B4B', fill_color='rgba(255, 75, 75, 0.2)')
+                # CORRECCIÓN AQUÍ: fillcolor (sin guion bajo)
+                fig_area.update_traces(line_color='#FF4B4B', fillcolor='rgba(255, 75, 75, 0.2)')
                 st.plotly_chart(fig_area, use_container_width=True)
             with c_chart2:
                 fig_donut = px.pie(df_fil, names='Producto', values='Kg', hole=0.6, title=t['charts'][1])
@@ -500,7 +500,7 @@ def render_stock_management(t, productos_all, df_stock_in):
                 c_btn_s1, c_btn_s2 = st.columns(2)
                 if c_btn_s1.button(t['save_changes'], key=f"sav_stk_{i}"):
                     bk = get_book_direct()
-                    sh_stk = bk.worksheet("Estoque")
+                    sh_sl = bk.worksheet("Estoque")
                     try:
                         cell = sh_stk.find(str(r['Data']))
                         def do_stk_update():
@@ -647,7 +647,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
         t["tabs"] = [t['tabs'][0], t['tabs'][1], t['tabs'][2], t['tabs'][3], t['tabs'][4]]
-        st.caption("v81.0 Final")
+        st.caption("v82.0 Fix Final")
         if st.button("🔄"):
             st.cache_data.clear()
             st.rerun()
