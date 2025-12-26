@@ -19,44 +19,71 @@ ICONO_APP = "🍇"
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon=ICONO_APP, layout="wide")
 
-# --- ESTILO CSS ---
+# --- ESTILO CSS PRO ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+    
     div[data-testid="stMetric"] {
         background-color: #1E1E1E;
         border-radius: 10px;
         padding: 15px;
         border: 1px solid #333;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
     }
+    
+    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
+    .stTabs [data-baseweb="tab"] {
+        height: 50px;
+        background-color: #0E1117;
+        border-radius: 5px;
+        padding: 10px;
+        font-weight: bold;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #262730;
+        border-bottom: 3px solid #FF4B4B;
+        color: #FF4B4B;
+    }
+    
     .stButton>button {
         width: 100%;
         border-radius: 8px;
         height: 3em;
-        font-weight: bold;
+        font-weight: 700;
+        border: none;
+        transition: 0.3s;
+    }
+    .stButton>button:hover {
+        transform: scale(1.02);
     }
     </style>
 """, unsafe_allow_html=True)
 
-# --- VERIFICAR CONEXIÓN (DIAGNÓSTICO) ---
-def get_data():
-    # 1. Verificar si existen las llaves
-    if "google_credentials" not in st.secrets:
-        st.error("🚨 ERROR CRÍTICO: Faltan las llaves de Google.")
-        st.info("Ve a 'Settings' -> 'Secrets' en Streamlit y pega las credenciales de nuevo.")
-        st.stop()
+# --- SEGURIDAD (CON FIX DE ESPACIOS) ---
+def check_password():
+    if "password_correct" not in st.session_state:
+        st.session_state.password_correct = False
+    if st.session_state.password_correct:
+        return True
     
-    # 2. Intentar conectar
-    try:
-        scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["google_credentials"], scope)
-        client = gspread.authorize(creds)
-        book = client.open("Inventario_Xingu_DB")
-        return book
-    except Exception as e:
-        st.error(f"🚨 Error conectando con la Hoja de Cálculo: {e}")
-        st.stop()
+    c1, c2, c3 = st.columns([1,2,1])
+    with c2:
+        st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA} Cloud</h1>", unsafe_allow_html=True)
+        st.write("")
+        password = st.text_input("Senha / Contraseña", type="password")
+        if st.button("Entrar", type="primary"):
+            try:
+                pass_limpia = password.strip() # Elimina espacios fantasma
+                if pass_limpia == st.secrets["passwords"]["admin_password"]:
+                    st.session_state.password_correct = True
+                    st.rerun()
+                else:
+                    st.error("🚫 Incorrecto / Incorreto")
+            except:
+                st.error("⚠️ Error: Configura [passwords] en Secrets.")
+    return False
 
 # --- MAPA DE MESES ---
 MESES_PT = {
@@ -150,32 +177,47 @@ RATES = {
     "English":   {"s": "USD", "r": 0.18}
 }
 
+# --- CONEXIÓN ---
+def get_data():
+    scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["google_credentials"], scope)
+    client = gspread.authorize(creds)
+    book = client.open("Inventario_Xingu_DB")
+    return book
+
 def log_action(book, action, detail):
     try:
         book.worksheet("Historial").append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), action, detail])
     except: pass
 
+# --- FUNCIÓN DE META MEJORADA (LEE POR POSICIÓN, NO POR NOMBRE) ---
 def get_monthly_goal_from_db(book, current_period_key):
     try:
         sheet_log = book.worksheet("Historial")
-        logs = sheet_log.get_all_records()
-        df_log = pd.DataFrame(logs)
-        if not df_log.empty:
-            meta_logs = df_log[df_log['Accion'] == 'META_UPDATE']
-            for i, row in meta_logs.iloc[::-1].iterrows():
-                detalle = str(row['Detalles'])
-                if "|" in detalle:
-                    periodo, valor = detalle.split("|")
-                    if periodo == current_period_key:
-                        return float(valor)
+        # Usamos get_all_values para ignorar encabezados rotos
+        rows = sheet_log.get_all_values()
+        
+        # Iteramos de atrás hacia adelante (lo más reciente primero)
+        # rows[1:] ignora la fila 0 (headers)
+        for row in reversed(rows[1:]): 
+            if len(row) >= 3:
+                # Columna 1 (B) es Acción, Columna 2 (C) es Detalles
+                accion = str(row[1])
+                detalle = str(row[2])
+                
+                if accion == 'META_UPDATE':
+                    if "|" in detalle:
+                        periodo, valor = detalle.split("|")
+                        if periodo == current_period_key:
+                            return float(valor)
     except: pass
     return 0.0
 
 # --- APP PRINCIPAL ---
 def main():
-    # SIN LOGIN - ACCESO DIRECTO
-    book = get_data()
-    
+    if not check_password():
+        return
+
     with st.sidebar:
         st.markdown(f"<h1 style='text-align: center; font-size: 60px; margin-bottom: 0;'>{ICONO_APP}</h1>", unsafe_allow_html=True)
         st.markdown(f"<h3 style='text-align: center; margin-top: 0;'>{NOMBRE_EMPRESA}</h3>", unsafe_allow_html=True)
@@ -186,7 +228,7 @@ def main():
             st.info(TR[lang]["install_guide"])
 
         st.markdown("---")
-        st.caption("v43.0 Pro Libre")
+        st.caption("v38.0 Goal Fixed")
     
     t = TR[lang]
     s = RATES[lang]["s"]
@@ -219,7 +261,7 @@ def main():
     mes_actual_nombre = mes_ui_dict[ahora.month]
     periodo_clave = ahora.strftime("%Y-%m")
 
-    # --- SIDEBAR ---
+    # --- SIDEBAR: META PERSISTENTE ---
     with st.sidebar:
         st.subheader(f"{t['goal_text']} ({mes_actual_nombre})")
         db_goal = get_monthly_goal_from_db(book, periodo_clave)
@@ -304,6 +346,11 @@ def main():
                 mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 type="primary"
             )
+        
+        st.write("")
+        if st.button(t['logout_label'], type="secondary"):
+            st.session_state.password_correct = False
+            st.rerun()
 
     tab_dash, tab_add, tab_admin, tab_log = st.tabs(t['tabs'])
 
