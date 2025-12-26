@@ -42,7 +42,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- LOGIN ---
+# --- LOGIN SIMPLE ---
 def check_password():
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
@@ -91,12 +91,11 @@ MONTHS_UI = {
     "English": {1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June", 7: "July", 8: "August", 9: "September", 10: "October", 11: "November", 12: "December"}
 }
 
-# --- DICCIONARIO CORREGIDO (HEADERS RESTAURADOS) ---
+# --- DICCIONARIO COMPLETO (RESTAURADO) ---
 TR = {
     "Português": {
         "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nova Venda", "🛠️ Admin (Stock)", "📜 Log"],
-        # ESTA LÍNEA ES LA QUE FALTABA:
-        "headers": ["Dashboard", "Registrar Venda", "Gestão de Estoque", "Auditoria"], 
+        "headers": ["Dashboard", "Registrar Venda", "Gestão de Estoque", "Auditoria"],
         "metrics": ["Faturamento", "Volume Vendido", "Comissão", "Ticket Médio", "Melhor Cliente"],
         "charts": ["Tendência", "Mix Produtos", "Por Empresa"],
         "stock_add_title": "📦 Adicionar Estoque (Entradas)",
@@ -105,15 +104,17 @@ TR = {
         "table_title": "Detalhes",
         "forms": ["Cliente", "Produto", "Kg", "Valor (R$)", "✅ Confirmar Venda"],
         "actions": ["Salvar", "DELETAR", "Buscar...", "✨ Novo...", "🗑️ Apagar Seleção"],
-        "bulk_label": "Gestão em Massa",
+        "bulk_label": "Gestão em Massa (Apagar Vários)",
         "clean_hist_label": "Limpeza de Histórico",
         "dl_excel": "📗 Baixar Relatório (Pro)",
         "logout": "🔒 Sair",
+        "goal_lbl": "🎯 Meta de", "goal_btn": "💾 Salvar Meta",
         "new_labels": ["Nome Cliente:", "Nome Produto:"],
-        "dash_cols": {"val": "Valor", "com": "Comissão", "kg": "Kg"},
+        "dash_cols": {"val": "Valor", "com": "Comissão", "kg": "Kg", "emp": "Empresa", "prod": "Produto", "mes": "Mês"},
         "msgs": ["Sucesso!", "Apagado!", "Sem dados", "Atualizado!", "Seleccione items"],
         "stock_msg": "Estoque Adicionado!",
         "install": "📲 Instalar: Menu -> Adicionar à Tela de Início",
+        "filter": "📅 Filtrar por Data",
         "xls_head": ["Data", "Mês", "Empresa", "Produto", "Kg", "Valor (R$)", "Comissão (R$)"],
         "xls_tot": "TOTAL GERAL:",
         "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edição", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"},
@@ -130,15 +131,17 @@ TR = {
         "table_title": "Detalles",
         "forms": ["Cliente", "Producto", "Kg", "Valor ($)", "✅ Confirmar Venta"],
         "actions": ["Guardar", "BORRAR", "Buscar...", "✨ Nuevo...", "🗑️ Borrar Selección"],
-        "bulk_label": "Gestión Masiva",
+        "bulk_label": "Gestión Masiva (Borrar Varios)",
         "clean_hist_label": "Limpieza de Historial",
         "dl_excel": "📗 Bajar Reporte (Pro)",
         "logout": "🔒 Salir",
+        "goal_lbl": "🎯 Meta de", "goal_btn": "💾 Salvar Meta",
         "new_labels": ["Nombre Cliente:", "Nombre Producto:"],
-        "dash_cols": {"val": "Valor", "com": "Comisión", "kg": "Kg"},
+        "dash_cols": {"val": "Valor", "com": "Comisión", "kg": "Kg", "emp": "Empresa", "prod": "Producto", "mes": "Mes"},
         "msgs": ["¡Éxito!", "¡Borrado!", "Sin datos", "¡Actualizado!", "Seleccione items"],
         "stock_msg": "¡Stock Añadido!",
         "install": "📲 Instalar: Menú -> Agregar a Pantalla de Inicio",
+        "filter": "📅 Filtrar por Fecha",
         "xls_head": ["Fecha", "Mes", "Empresa", "Producto", "Kg", "Valor ($)", "Comisión ($)"],
         "xls_tot": "TOTAL GENERAL:",
         "val_map": {"NEW": "🆕 Nuevo", "VENTA": "💰 Venta", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Masa", "CREAR": "✨ Crear", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"},
@@ -159,11 +162,13 @@ TR = {
         "clean_hist_label": "Clear History",
         "dl_excel": "📗 Download Report (Pro)",
         "logout": "🔒 Logout",
+        "goal_lbl": "🎯 Goal for", "goal_btn": "💾 Save Goal",
         "new_labels": ["Client Name:", "Product Name:"],
-        "dash_cols": {"val": "Value", "com": "Comm", "kg": "Kg"},
+        "dash_cols": {"val": "Value", "com": "Comm", "kg": "Kg", "emp": "Company", "prod": "Product", "mes": "Month"},
         "msgs": ["Success!", "Deleted!", "No data", "Updated!", "Select items"],
         "stock_msg": "Stock Added!",
         "install": "📲 Install: Menu -> Add to Home Screen",
+        "filter": "📅 Filter by Date",
         "xls_head": ["Date", "Month", "Company", "Product", "Kg", "Value", "Commission"],
         "xls_tot": "GRAND TOTAL:",
         "val_map": {"NEW": "🆕 New", "VENTA": "💰 Sale", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Deleted", "BORRADO_MASIVO": "🔥 Bulk", "CREAR": "✨ Create", "HIST_DEL": "🧹 Clean", "META_UPDATE": "🎯 Goal"},
@@ -171,6 +176,7 @@ TR = {
     }
 }
 RATES = { "Português": {"s": "R$", "r": 1.0}, "Español": {"s": "$", "r": 165.0}, "English": {"s": "USD", "r": 0.18} }
+MESES_UI_SIDEBAR = {1: "Jan", 2: "Feb", 3: "Mar", 4: "Abr", 5: "Mai", 6: "Jun", 7: "Jul", 8: "Ago", 9: "Set", 10: "Out", 11: "Nov", 12: "Dez"}
 
 # --- DATA ---
 @st.cache_resource(ttl=600) 
@@ -191,6 +197,16 @@ def log_action(book, action, detail):
         book.worksheet("Historial").append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), action, f"{detail} ({u})"])
     except: pass
 
+def get_goal(book, key):
+    try:
+        rows = book.worksheet("Historial").get_all_values()
+        for row in reversed(rows[1:]):
+            if len(row) >= 3 and row[1] == 'META_UPDATE' and "|" in str(row[2]):
+                p, v = str(row[2]).split("|")
+                if p == key: return float(v)
+    except: pass
+    return 0.0
+
 # --- APP ---
 def main():
     if not check_password(): return
@@ -200,10 +216,10 @@ def main():
         st.markdown(f"<h3 style='text-align: center;'>{NOMBRE_EMPRESA}</h3>", unsafe_allow_html=True)
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         
-        # --- FIX PARA DICCIONARIO ---
+        # FIX DE IDIOMA
         t = TR.get(lang, TR["Português"]) 
         
-        st.caption("v52.0 Fixed")
+        st.caption("v53.0 Restaurada Total")
         if st.button(t['logout']): st.session_state.authenticated = False; st.rerun()
     
     s = RATES[lang]["s"]; r = RATES[lang]["r"]
@@ -212,12 +228,12 @@ def main():
         book = get_data()
         sheet_sales = book.sheet1
         
-        # INTENTAR CARGAR LA HOJA DE STOCK
+        # CARGAR STOCK (SI EXISTE)
         try:
             sheet_stock = book.worksheet("Estoque")
             df_stock_in = pd.DataFrame(sheet_stock.get_all_records())
         except:
-            st.error("⚠️ Faltan datos: Crea una hoja llamada 'Estoque' con columnas: Data, Produto, Kg, Usuario")
+            st.error("⚠️ Crea hoja 'Estoque' (Data, Produto, Kg, Usuario)")
             df_stock_in = pd.DataFrame(columns=["Data", "Produto", "Kg", "Usuario"]) 
             sheet_stock = None
 
@@ -225,7 +241,7 @@ def main():
 
     except: st.error("DB Error"); st.stop()
 
-    # --- PROCESAMIENTO DE DATOS ---
+    # --- PROCESAMIENTO ---
     # 1. Ventas
     if not df_sales.empty:
         for c in ['Valor_BRL', 'Kg', 'Comissao_BRL']:
@@ -236,98 +252,136 @@ def main():
         empresas, prods_sales = [], []
         df_sales = pd.DataFrame(columns=['Producto', 'Kg', 'Valor_BRL', 'Fecha_Registro'])
 
-    # 2. Stock (Entradas)
+    # 2. Stock
     if not df_stock_in.empty:
         df_stock_in['Kg'] = pd.to_numeric(df_stock_in['Kg'], errors='coerce').fillna(0)
         prods_stock = list(set(df_stock_in['Produto'].astype(str)))
     else:
         prods_stock = []
 
-    # Lista unificada de productos
     productos_all = sorted(list(set(["AÇAI MÉDIO", "AÇAI POP", "CUPUAÇU"] + prods_sales + prods_stock)))
 
-    # --- CALCULO DE STOCK REAL ---
+    # 3. Calculo Stock
     stock_real = {}
     for p in productos_all:
         total_in = df_stock_in[df_stock_in['Produto'] == p]['Kg'].sum() if not df_stock_in.empty else 0
         total_out = df_sales[df_sales['Producto'] == p]['Kg'].sum() if not df_sales.empty else 0
         stock_real[p] = total_in - total_out
 
-    # --- SIDEBAR EXCEL PRO ---
+    # --- SIDEBAR: META & EXCEL ---
+    ahora = datetime.now(); periodo_clave = ahora.strftime("%Y-%m")
     with st.sidebar:
+        st.write(f"**{t['goal_lbl']} {MESES_UI_SIDEBAR[ahora.month]}**")
+        db_goal = get_goal(book, periodo_clave)
+        meta = st.number_input("Meta", value=db_goal, step=1000.0, label_visibility="collapsed")
+        if st.button(t['goal_btn']):
+            log_action(book, "META_UPDATE", f"{periodo_clave}|{meta}")
+            st.success("OK!"); time.sleep(1); st.rerun()
+        
+        val_mes = df_sales[df_sales['Fecha_Registro'].str.contains(periodo_clave, na=False)]['Valor_BRL'].sum() * r if not df_sales.empty else 0
+        if meta > 0:
+            st.progress(min(val_mes/meta, 1.0))
+            st.caption(f"{val_mes/meta*100:.1f}% ({s} {val_mes:,.0f} / {s} {meta:,.0f})")
         st.divider()
+        
         if not df_sales.empty:
             buffer = io.BytesIO()
             with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
                 df_ex = df_sales.copy()
                 df_ex['Fecha_DT'] = pd.to_datetime(df_ex['Fecha_Registro'], errors='coerce')
-                # Mapea mes según idioma
                 df_ex['Mes_Lang'] = df_ex['Fecha_DT'].dt.month.map(MONTHS_UI[lang])
                 df_ex['Fecha_Clean'] = df_ex['Fecha_DT'].dt.strftime('%d/%m/%Y %H:%M')
                 
                 data_final = df_ex[['Fecha_Clean', 'Mes_Lang', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']].copy()
-                
                 sheet_name = 'Reporte'
                 data_final.to_excel(writer, index=False, sheet_name=sheet_name, startrow=1, header=False)
                 
                 workbook = writer.book
                 ws = writer.sheets[sheet_name]
-                
                 fmt_head = workbook.add_format({'bold': True, 'fg_color': '#2C3E50', 'font_color': 'white', 'border': 1, 'align': 'center'})
                 fmt_money = workbook.add_format({'num_format': 'R$ #,##0.00', 'border': 1})
                 fmt_num = workbook.add_format({'num_format': '0.0', 'border': 1, 'align': 'center'})
                 fmt_base = workbook.add_format({'border': 1})
                 fmt_total = workbook.add_format({'bold': True, 'bg_color': '#D3D3D3', 'num_format': 'R$ #,##0.00', 'border': 1})
                 
-                for col_num, h in enumerate(t['xls_head']):
-                    ws.write(0, col_num, h, fmt_head)
+                for col_num, h in enumerate(t['xls_head']): ws.write(0, col_num, h, fmt_head)
+                ws.set_column('A:A', 18, fmt_base); ws.set_column('B:B', 12, fmt_base); ws.set_column('C:D', 22, fmt_base)
+                ws.set_column('E:E', 12, fmt_num); ws.set_column('F:G', 18, fmt_money)
                 
-                ws.set_column('A:A', 18, fmt_base)
-                ws.set_column('B:B', 12, fmt_base)
-                ws.set_column('C:D', 22, fmt_base)
-                ws.set_column('E:E', 12, fmt_num)
-                ws.set_column('F:G', 18, fmt_money)
-                
-                last_row = len(data_final) + 1
-                ws.write(last_row, 3, t['xls_tot'], fmt_total)
-                ws.write(last_row, 4, data_final['Kg'].sum(), fmt_total)
-                ws.write(last_row, 5, data_final['Valor_BRL'].sum(), fmt_total)
-                ws.write(last_row, 6, data_final['Comissao_BRL'].sum(), fmt_total)
+                lr = len(data_final) + 1
+                ws.write(lr, 3, t['xls_tot'], fmt_total)
+                ws.write(lr, 4, data_final['Kg'].sum(), fmt_total)
+                ws.write(lr, 5, data_final['Valor_BRL'].sum(), fmt_total)
+                ws.write(lr, 6, data_final['Comissao_BRL'].sum(), fmt_total)
 
-            st.download_button(
-                label=t['dl_excel'],
-                data=buffer, 
-                file_name=f"Reporte_Xingu_{datetime.now().strftime('%Y-%m-%d')}.xlsx",
-                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            )
+            st.download_button(t['dl_excel'], data=buffer, file_name=f"Reporte_{datetime.now().strftime('%Y-%m-%d')}.xlsx", mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
     tab1, tab2, tab3, tab4 = st.tabs(t['tabs'])
 
-    # 1. DASHBOARD (STOCK REAL)
+    # 1. DASHBOARD (COMPLETO DE NUEVO)
     with tab1:
-        st.title(t['headers'][0]) # AHORA SÍ FUNCIONARÁ
-        
+        st.title(t['headers'][0])
         if not df_sales.empty:
-            k1, k2, k3 = st.columns(3)
-            k1.metric(t['metrics'][0], f"{s} {(df_sales['Valor_BRL'].sum() * r):,.0f}")
-            k2.metric(t['metrics'][1], f"{df_sales['Kg'].sum():,.0f} kg")
-            k3.metric(t['metrics'][2], f"{s} {(df_sales['Valor_BRL'].sum()*0.02*r):,.0f}")
-        
-        st.divider()
-        
-        st.subheader(t['stock_alert'])
-        if stock_real:
-            for p, kg_left in sorted(stock_real.items(), key=lambda item: item[1], reverse=True):
-                if kg_left != 0 or p in prods_stock or p in prods_sales:
-                    col_s1, col_s2 = st.columns([3, 1])
-                    pct = max(0.0, min(kg_left / 1000.0, 1.0))
-                    col_s1.progress(pct, text=f"📦 **{p}**: {kg_left:,.1f} kg Restantes")
-                    
-                    if kg_left < 0: col_s2.error(f"⚠️ Negativo ({kg_left}kg)")
-                    elif kg_left < 50: col_s2.warning("⚠️ Poco")
-                    else: col_s2.success("✅ OK")
-        else:
-            st.info("Sin datos de stock.")
+            # Filtro Fecha
+            with st.expander(t.get("filter", "Filter Date"), expanded=False):
+                col_f1, col_f2 = st.columns(2)
+                df_sales['Fecha_DT'] = pd.to_datetime(df_sales['Fecha_Registro'], errors='coerce')
+                d_min = df_sales['Fecha_DT'].min().date()
+                d_max = df_sales['Fecha_DT'].max().date()
+                d1 = col_f1.date_input("Start", d_min)
+                d2 = col_f2.date_input("End", d_max)
+            
+            mask = (df_sales['Fecha_DT'].dt.date >= d1) & (df_sales['Fecha_DT'].dt.date <= d2)
+            df_fil = df_sales.loc[mask]
+
+            if df_fil.empty: st.warning("No Data in Range")
+            else:
+                # KPIs
+                k1, k2, k3 = st.columns(3)
+                k1.metric(t['metrics'][0], f"{s} {(df_fil['Valor_BRL'].sum() * r):,.0f}")
+                k2.metric(t['metrics'][1], f"{df_fil['Kg'].sum():,.0f} kg")
+                k3.metric(t['metrics'][2], f"{s} {(df_fil['Valor_BRL'].sum()*0.02*r):,.0f}")
+                
+                st.divider()
+                
+                # Stock Bars
+                st.subheader(t['stock_alert'])
+                if stock_real:
+                    for p, kg_left in sorted(stock_real.items(), key=lambda item: item[1], reverse=True):
+                        if kg_left != 0 or p in prods_stock or p in prods_sales:
+                            c_s1, c_s2 = st.columns([3, 1])
+                            pct = max(0.0, min(kg_left / 1000.0, 1.0))
+                            c_s1.progress(pct, text=f"📦 **{p}**: {kg_left:,.1f} kg")
+                            if kg_left < 0: c_s2.error(f"⚠️ ({kg_left})")
+                            elif kg_left < 50: c_s2.warning("⚠️")
+                            else: c_s2.success("✅")
+                
+                st.divider()
+                
+                # GRÁFICOS RESTAURADOS
+                c_izq, c_der = st.columns([2, 1])
+                with c_izq:
+                    df_tr = df_fil.groupby(df_fil['Fecha_DT'].dt.date)['Valor_BRL'].sum().reset_index()
+                    df_tr.columns = ['Fecha', 'Venta']
+                    df_tr['Venta'] = df_tr['Venta'] * r
+                    fig = px.line(df_tr, x='Fecha', y='Venta', markers=True, title=t['charts'][0])
+                    fig.update_traces(line_color='#FF4B4B')
+                    st.plotly_chart(fig, use_container_width=True)
+                with c_der:
+                    fig2 = px.pie(df_fil, names='Producto', values='Kg', hole=0.5, title=t['charts'][1])
+                    fig2.update_layout(showlegend=False)
+                    st.plotly_chart(fig2, use_container_width=True)
+
+                # TABLA RESTAURADA
+                st.subheader(t['table_title'])
+                st.dataframe(
+                    df_fil[['Fecha_Registro', 'Empresa', 'Producto', 'Kg', 'Valor_BRL']].iloc[::-1],
+                    use_container_width=True, hide_index=True,
+                    column_config={
+                        "Valor_BRL": st.column_config.NumberColumn(t['dash_cols']['val'], format=f"{s} %.2f"),
+                        "Kg": st.column_config.NumberColumn(t['dash_cols']['kg'], format="%.1f kg")
+                    }
+                )
 
     # 2. VENDER
     with tab2:
@@ -342,7 +396,7 @@ def main():
             kg = c1.number_input(t['forms'][2], step=10.0)
             val = c2.number_input(t['forms'][3], step=100.0)
             
-            if prod in stock_real: st.caption(f"Stock disponible: {stock_real[prod]:.1f} kg")
+            if prod in stock_real: st.caption(f"Stock: {stock_real[prod]:.1f} kg")
 
             st.markdown("<br>", unsafe_allow_html=True)
             if st.button(t['forms'][4], type="primary"):
@@ -351,7 +405,6 @@ def main():
                     sheet_sales.append_row(row)
                     log_action(book, "VENTA", f"{emp} | {kg}kg | {prod}")
                     st.success(t['msgs'][0])
-                    
                     if PDF_AVAILABLE:
                         try:
                             pdf_data = create_pdf(emp, prod, kg, val, st.session_state.username)
@@ -359,13 +412,13 @@ def main():
                         except: pass
                     time.sleep(2); st.rerun()
 
-    # 3. ADMIN & STOCK
+    # 3. ADMIN (CON STOCK Y BORRADO RESTAURADO)
     with tab3:
         st.header(t['stock_add_title'])
         with st.container(border=True):
             c_st1, c_st2, c_st3 = st.columns([2, 1, 1])
             prod_stock = c_st1.selectbox("Produto / Product", ["✨ Novo..."] + productos_all, key="stock_prod")
-            if prod_stock == "✨ Novo...": prod_stock = c_st1.text_input("Nome do Produto", key="stock_prod_new")
+            if prod_stock == "✨ Novo...": prod_stock = c_st1.text_input("Nome", key="stock_prod_new")
             kg_stock = c_st2.number_input("Kg (+)", step=10.0, key="stock_kg")
             
             if c_st3.button(t['stock_btn'], type="primary"):
@@ -373,14 +426,14 @@ def main():
                     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     sheet_stock.append_row([now, prod_stock, kg_stock, st.session_state.username])
                     log_action(book, "STOCK_ADD", f"{prod_stock} | +{kg_stock}kg")
-                    st.success(t['stock_msg'])
-                    time.sleep(1.5); st.rerun()
-                else: st.error("Error: Hoja 'Estoque' no existe.")
+                    st.success(t['stock_msg']); time.sleep(1.5); st.rerun()
+                else: st.error("Error: 'Estoque' sheet missing.")
 
         st.divider()
-        st.subheader("Gestión de Ventas")
+        st.subheader("Admin Ventas")
         filtro = st.text_input(t['actions'][2], key="admin_search") 
         if not df_sales.empty:
+            # Edición Individual
             df_s = df_sales[df_sales.astype(str).apply(lambda x: x.str.contains(filtro, case=False)).any(axis=1)] if filtro else df_sales.tail(5).iloc[::-1]
             for i, r in df_s.iterrows():
                 with st.expander(f"{r['Empresa']} | {r['Producto']}"):
@@ -388,8 +441,26 @@ def main():
                         cell = sheet_sales.find(str(r['Fecha_Registro']))
                         sheet_sales.delete_rows(cell.row)
                         st.success(t['msgs'][1]); time.sleep(1); st.rerun()
+            
+            st.divider()
+            # Borrado Masivo (RESTAURADO)
+            with st.expander(t['bulk_label']):
+                df_rev = df_sales.iloc[::-1].reset_index()
+                opc = [f"{r['Empresa']} | {r['Producto']} | {r['Fecha_Registro']}" for i, r in df_rev.iterrows()]
+                sels = st.multiselect(t['msgs'][4], opc)
+                if st.button(t['actions'][4], type="primary"):
+                    if sels:
+                        dates = [x.split(" | ")[-1] for x in sels]
+                        rows_to_del = []
+                        all_recs = sheet_sales.get_all_records()
+                        for i, r in enumerate(all_recs):
+                            if str(r['Fecha_Registro']) in dates: rows_to_del.append(i + 2)
+                        rows_to_del.sort(reverse=True)
+                        for rw in rows_to_del: sheet_sales.delete_rows(rw)
+                        log_action(book, "BORRADO_MASIVO", f"{len(rows_to_del)}")
+                        st.success(t['msgs'][1]); time.sleep(1); st.rerun()
 
-    # 4. LOG
+    # 4. LOG (RESTAURADO)
     with tab4:
         st.title(t['headers'][3])
         try:
@@ -398,9 +469,28 @@ def main():
             if not h_dt.empty:
                 show_log = h_dt.copy()
                 if "Accion" in show_log.columns:
-                    show_log["Accion"] = show_log["Accion"].replace(t['val_map'])
+                    emoji_map = t['val_map'].copy()
+                    show_log["Accion"] = show_log["Accion"].replace(emoji_map)
                 show_log = show_log.rename(columns=t['col_map'])
                 st.dataframe(show_log.iloc[::-1], use_container_width=True)
+                
+                st.divider()
+                # Limpieza Historial (RESTAURADO)
+                with st.expander(t['clean_hist_label']):
+                    rev_h = h_dt.iloc[::-1].reset_index()
+                    opc_h = [f"{r['Fecha_Hora']} | {r['Accion']} | {r['Detalles']}" for i, r in rev_h.iterrows()]
+                    sel_h = st.multiselect(t['msgs'][4], opc_h)
+                    if st.button(t['actions'][4], key="btn_h", type="primary"):
+                        if sel_h:
+                            dts_h = [x.split(" | ")[0] for x in sel_h]
+                            all_vals = sh_log.get_all_values()
+                            dels = []
+                            for i, row in enumerate(all_vals):
+                                if i==0: continue
+                                if row[0] in dts_h: dels.append(i+1)
+                            dels.sort(reverse=True)
+                            for d in dels: sh_log.delete_rows(d)
+                            st.success(t['msgs'][1]); time.sleep(1); st.rerun()
         except: st.write("Log vacío")
 
 if __name__ == "__main__":
