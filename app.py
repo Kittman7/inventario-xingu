@@ -8,6 +8,7 @@ import time
 import io
 import xlsxwriter
 from PIL import Image
+import base64
 
 # INTENTO DE IMPORTAR FPDF
 try:
@@ -24,12 +25,52 @@ ICONO_ARCHIVO = "logo.png"
 CONTRASEÑA_MAESTRA = "Julio777" 
 # ==========================================
 
-# --- CONFIGURACIÓN DE PÁGINA E ICONO ---
+# --- CONFIGURACIÓN BÁSICA ---
 try:
     img_icon = Image.open(ICONO_ARCHIVO)
     st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon=img_icon, layout="wide")
 except:
     st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon="🍇", layout="wide")
+
+# --- 🚀 FUERZA BRUTA PARA EL ICONO DEL CELULAR ---
+# Este bloque inyecta código HTML para obligar a iOS y Android a usar tu logo
+def inject_mobile_icon():
+    try:
+        with open(ICONO_ARCHIVO, "rb") as image_file:
+            # Convertir imagen a texto base64
+            encoded_string = base64.b64encode(image_file.read()).decode()
+        
+        # Crear el código HTML para inyectar en la cabecera
+        icon_html = f"""
+        <style>
+            /* Esto es invisible pero configura el navegador */
+        </style>
+        <script>
+            var link = document.querySelector("link[rel~='icon']");
+            if (!link) {{
+                link = document.createElement('link');
+                link.rel = 'icon';
+                document.getElementsByTagName('head')[0].appendChild(link);
+            }}
+            link.href = 'data:image/png;base64,{encoded_string}';
+        </script>
+        """
+        # Inyectar también etiquetas Apple Touch Icon para iPhone
+        st.markdown(
+            f"""
+            <head>
+                <link rel="apple-touch-icon" href="data:image/png;base64,{encoded_string}">
+                <link rel="shortcut icon" href="data:image/png;base64,{encoded_string}">
+            </head>
+            """,
+            unsafe_allow_html=True
+        )
+    except Exception as e:
+        # Si falla (ej. no hay logo.png), no rompe la app, solo sigue normal
+        pass
+
+# Ejecutar la inyección
+inject_mobile_icon()
 
 # --- ESTILOS CSS (DASHBOARD PRO) ---
 st.markdown("""
@@ -37,7 +78,6 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     
-    /* ESTILO TARJETAS KPI */
     div[data-testid="stMetric"] {
         background-color: #262730;
         border: 1px solid #464b5f;
@@ -50,8 +90,6 @@ st.markdown("""
         transform: translateY(-2px);
         border-color: #ff4b4b;
     }
-    
-    /* BOTONES */
     .stButton>button {
         width: 100%; border-radius: 8px; height: 3em; font-weight: 700; border: none; transition: 0.3s;
     }
@@ -375,7 +413,6 @@ def render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, la
                 df_tr['Venta'] = df_tr['Venta'] * r
                 fig_area = px.area(df_tr, x='Fecha', y='Venta', title=t['charts'][0], markers=True)
                 fig_area.update_layout(plot_bgcolor="rgba(0,0,0,0)", xaxis_showgrid=False)
-                # CORRECCIÓN AQUÍ: fillcolor (sin guion bajo)
                 fig_area.update_traces(line_color='#FF4B4B', fillcolor='rgba(255, 75, 75, 0.2)')
                 st.plotly_chart(fig_area, use_container_width=True)
             with c_chart2:
@@ -512,7 +549,7 @@ def render_stock_management(t, productos_all, df_stock_in):
                     except: st.error("No encontré la fila.")
                 if c_btn_s2.button(t['del_entry'], key=f"del_stk_{i}", type="secondary"):
                     bk = get_book_direct()
-                    sh_stk = bk.worksheet("Estoque")
+                    sh_sl = bk.worksheet("Estoque")
                     try:
                         cell = sh_stk.find(str(r['Data']))
                         def do_stk_del(): sh_stk.delete_rows(cell.row)
@@ -647,7 +684,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
         t["tabs"] = [t['tabs'][0], t['tabs'][1], t['tabs'][2], t['tabs'][3], t['tabs'][4]]
-        st.caption("v82.0 Fix Final")
+        st.caption("v83.0 IconForce")
         if st.button("🔄"):
             st.cache_data.clear()
             st.rerun()
