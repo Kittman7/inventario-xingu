@@ -181,7 +181,7 @@ def get_connection():
     client = gspread.authorize(creds)
     return client
 
-# --- DATOS CACHEADOS (AUTO-CREACIÓN) ---
+# --- DATOS CACHEADOS ---
 @st.cache_data(ttl=600)
 def load_cached_data():
     client = get_connection()
@@ -189,15 +189,11 @@ def load_cached_data():
         book = client.open("Inventario_Xingu_DB")
         sheet_sales = book.get_worksheet(0)
         df_sales = pd.DataFrame(sheet_sales.get_all_records())
-        
-        # INTENTO DE CARGAR STOCK O CREAR SI NO EXISTE
         try:
             sheet_stock = book.worksheet("Estoque")
             df_stock = pd.DataFrame(sheet_stock.get_all_records())
         except:
-            # SI FALLA, RETORNA VACÍO (PERO NO ROMPE)
             df_stock = pd.DataFrame(columns=["Data", "Produto", "Kg", "Usuario"])
-            
         return df_sales, df_stock
     except Exception as e:
         return None, None
@@ -206,7 +202,6 @@ def get_book_direct():
     client = get_connection()
     return client.open("Inventario_Xingu_DB")
 
-# ACCIÓN SEGURA
 def safe_api_action(action_func, *args):
     last_error = None
     for attempt in range(1, 4): 
@@ -234,7 +229,217 @@ def get_goal(book, key):
     except: pass
     return 0.0
 
-# --- APP ---
+# ==========================================
+# 🧩 FRAGMENTOS (ISLAS DE CÓDIGO)
+# ==========================================
+
+@st.fragment
+def render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, lang):
+    st.title(t['headers'][0])
+    if not df_sales.empty:
+        with st.expander(t.get("filter", "Filter Date"), expanded=False):
+            col_f1, col_f2 = st.columns(2)
+            d_min = df_sales['Fecha_DT'].min().date()
+            d_max = df_sales['Fecha_DT'].max().date()
+            d1 = col_f1.date_input("Start", d_min)
+            d2 = col_f2.date_input("End", d_max)
+        mask = (df_sales['Fecha_DT'].dt.date >= d1) & (df_sales['Fecha_DT'].dt.date <= d2)
+        df_fil = df_sales.loc[mask]
+
+        if df_fil.empty: st.warning("No Data")
+        else:
+            k1, k2, k3 = st.columns(3)
+            k1.metric(t['metrics'][0], f"{s} {(df_fil['Valor_BRL'].sum() * r):,.0f}")
+            k2.metric(t['metrics'][1], f"{df_fil['Kg'].sum():,.0f} kg")
+            k3.metric(t['metrics'][2], f"{s} {(df_fil['Valor_BRL'].sum()*0.02*r):,.0f}")
+            
+            st.divider()
+            st.subheader(t['stock_alert'])
+            if stock_real:
+                for p, kg_left in sorted(stock_real.items(), key=lambda item: item[1], reverse=True):
+                    if kg_left != 0 or p in prods_stock or p in prods_sales:
+                        c_s1, c_s2 = st.columns([3, 1])
+                        pct = max(0.0, min(kg_left / 1000.0, 1.0))
+                        c_s1.progress(pct, text=f"📦 **{p}**: {kg_left:,.1f} kg")
+                        if kg_left < 0: c_s2.error(f"⚠️ ({kg_left})")
+                        elif kg_left < 50: c_s2.warning("⚠️")
+                        else: c_s2.success("✅")
+            
+            st.divider()
+            st.subheader(t['table_title'])
+            df_show = df_fil[['Fecha_Registro', 'Mes_Lang', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']].copy()
+            cols_view = {'Fecha_Registro': t['col_map']['Fecha_Hora'], 'Mes_Lang': t['dash_cols']['mes'], 'Empresa': t['dash_cols']['emp'], 'Producto': t['dash_cols']['prod'], 'Kg': t['dash_cols']['kg'], 'Valor_BRL': t['dash_cols']['val'], 'Comissao_BRL': t['dash_cols']['com']}
+            st.dataframe(df_show.rename(columns=cols_view).iloc[::-1], use_container_width=True, hide_index=True, column_config={t['dash_cols']['val']: st.column_config.NumberColumn(format=f"{s} %.2f"), t['dash_cols']['com']: st.column_config.NumberColumn(format=f"{s} %.2f"), t['dash_cols']['kg']: st.column_config.NumberColumn(format="%.1f kg")})
+            
+            st.divider()
+            c_izq, c_der = st.columns([2, 1])
+            with c_izq:
+                df_tr = df_fil.groupby(df_fil['Fecha_DT'].dt.date)['Valor_BRL'].sum().reset_index()
+                df_tr.columns = ['Fecha', 'Venta']
+                df_tr['Venta'] = df_tr['Venta'] * r
+                fig = px.line(df_tr, x='Fecha', y='Venta', markers=True, title=t['charts'][0])
+                fig.update_traces(line_color='#FF4B4B')
+                st.plotly_chart(fig, use_container_width=True)
+            with c_der:
+                fig2 = px.pie(df_fil, names='Producto', values='Kg', hole=0.5, title=t['charts'][1])
+                fig2.update_layout(showlegend=False)
+                st.plotly_chart(fig2, use_container_width=True)
+
+@st.fragment
+def render_new_sale(t, empresas, productos_all, stock_real):
+    st.header(t['headers'][1])
+    with st.container(border=True):
+        c1, c2 = st.columns(2)
+        op_new = t['actions'][3]
+        sel_emp = c1.selectbox(t['forms'][0], [op_new] + empresas)
+        emp = c1.text_input(t['new_labels'][0]) if sel_emp == op_new else sel_emp
+        sel_prod = c2.selectbox(t['forms'][1], [op_new] + productos_all)
+        prod = c2.text_input(t['new_labels'][1]) if sel_prod == op_new else sel_prod
+        kg = c1.number_input(t['forms'][2], step=10.0)
+        val = c2.number_input(t['forms'][3], step=100.0)
+        if prod in stock_real: st.caption(f"Stock: {stock_real[prod]:.1f} kg")
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button(t['forms'][4], type="primary"):
+            if emp and prod:
+                bk = get_book_direct() # Connect
+                sheet = bk.get_worksheet(0)
+                row = [emp, prod, kg, val, val*0.02, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Auto"]
+                def do_write(): sheet.append_row(row)
+                success, error = safe_api_action(do_write)
+                if success:
+                    log_action(bk, "VENTA", f"{emp} | {kg}kg | {prod}")
+                    st.cache_data.clear() 
+                    st.success(t['msgs'][0])
+                    if PDF_AVAILABLE:
+                        try:
+                            pdf_data = create_pdf(emp, prod, kg, val, st.session_state.username)
+                            st.download_button(t['pdf'], data=pdf_data, file_name=f"Recibo.pdf", mime="application/pdf")
+                        except: pass
+                    time.sleep(1.5); st.rerun()
+                else: st.error(f"Error al guardar: {error}")
+
+@st.fragment
+def render_admin(t, productos_all, df_sales, s):
+    st.header(t['stock_add_title'])
+    with st.container(border=True):
+        c_st1, c_st2, c_st3 = st.columns([2, 1, 1])
+        prod_stock = c_st1.selectbox("Produto", ["✨ Novo..."] + productos_all, key="stock_prod")
+        if prod_stock == "✨ Novo...": prod_stock = c_st1.text_input("Nome", key="stock_prod_new")
+        kg_stock = c_st2.number_input("Kg (+)", step=10.0, key="stock_kg")
+        if c_st3.button(t['stock_btn'], type="primary"):
+            bk = get_book_direct()
+            try:
+                try: sh_stk = bk.worksheet("Estoque")
+                except: 
+                    sh_stk = bk.add_worksheet(title="Estoque", rows=1000, cols=10)
+                    sh_stk.append_row(["Data", "Produto", "Kg", "Usuario"])
+                now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                def do_stock(): sh_stk.append_row([now, prod_stock, kg_stock, st.session_state.username])
+                success, err = safe_api_action(do_stock)
+                if success:
+                    log_action(bk, "STOCK_ADD", f"{prod_stock} | +{kg_stock}kg")
+                    st.cache_data.clear()
+                    st.success(t['stock_msg']); time.sleep(1.5); st.rerun()
+                else: st.error(f"Error: {err}")
+            except Exception as e: st.error(f"Error grave: {e}")
+
+    st.divider()
+    st.subheader("Admin Ventas")
+    filtro = st.text_input(t['actions'][2], key="admin_search") 
+    if not df_sales.empty:
+        st.caption("Vista General:")
+        df_admin_show = df_sales[['Fecha_Registro', 'Empresa', 'Producto', 'Kg', 'Valor_BRL']].copy()
+        cols_admin = {'Fecha_Registro': t['col_map']['Fecha_Hora'], 'Empresa': t['dash_cols']['emp'], 'Producto': t['dash_cols']['prod'], 'Kg': t['dash_cols']['kg'], 'Valor_BRL': t['dash_cols']['val']}
+        st.dataframe(df_admin_show.rename(columns=cols_admin).iloc[::-1], use_container_width=True, hide_index=True, column_config={t['dash_cols']['val']: st.column_config.NumberColumn(format=f"{s} %.2f"), t['dash_cols']['kg']: st.column_config.NumberColumn(format="%.1f kg")})
+        
+        st.markdown("---")
+        st.caption("🛠️ Editar / Borrar (Individual):")
+        df_s = df_sales[df_sales.astype(str).apply(lambda x: x.str.contains(filtro, case=False)).any(axis=1)] if filtro else df_sales.tail(10).iloc[::-1]
+        for i, r in df_s.iterrows():
+            with st.expander(f"{r['Empresa']} | {r['Producto']} | {r['Fecha_Registro']}"):
+                c_ed1, c_ed2 = st.columns(2)
+                new_kg = c_ed1.number_input("Kg", value=float(r['Kg']), key=f"k_{i}")
+                new_val = c_ed2.number_input("Valor", value=float(r['Valor_BRL']), key=f"v_{i}")
+                c_btn1, c_btn2 = st.columns(2)
+                
+                if c_btn1.button("💾 Guardar", key=f"save_{i}"):
+                    bk = get_book_direct()
+                    sh_sl = bk.get_worksheet(0)
+                    cell = sh_sl.find(str(r['Fecha_Registro']))
+                    def do_update():
+                        sh_sl.update_cell(cell.row, 3, new_kg)
+                        sh_sl.update_cell(cell.row, 4, new_val)
+                        sh_sl.update_cell(cell.row, 5, new_val*0.02)
+                    success, err = safe_api_action(do_update)
+                    if success: st.cache_data.clear(); st.success("Editado!"); time.sleep(1); st.rerun()
+                    else: st.error(f"Error: {err}")
+                    
+                if c_btn2.button(t['actions'][1], key=f"del_{i}", type="secondary"):
+                    bk = get_book_direct()
+                    sh_sl = bk.get_worksheet(0)
+                    cell = sh_sl.find(str(r['Fecha_Registro']))
+                    def do_del(): sh_sl.delete_rows(cell.row)
+                    success, err = safe_api_action(do_del)
+                    if success: st.cache_data.clear(); st.success(t['msgs'][1]); time.sleep(1); st.rerun()
+                    else: st.error(f"Error: {err}")
+        
+        st.divider()
+        with st.expander(t['bulk_label']):
+            df_rev = df_sales.iloc[::-1].reset_index()
+            opc = [f"{r['Empresa']} | {r['Producto']} | {r['Fecha_Registro']}" for i, r in df_rev.iterrows()]
+            sels = st.multiselect(t['msgs'][4], opc)
+            if st.button(t['actions'][4], type="primary"):
+                if sels:
+                    dates = [x.split(" | ")[-1] for x in sels]
+                    bk = get_book_direct()
+                    sh_sl = bk.get_worksheet(0)
+                    all_recs = sh_sl.get_all_records()
+                    rows_to_del = []
+                    for i, r in enumerate(all_recs):
+                        if str(r['Fecha_Registro']) in dates: rows_to_del.append(i + 2)
+                    rows_to_del.sort(reverse=True)
+                    def do_bulk_del():
+                        for rw in rows_to_del: sh_sl.delete_rows(rw)
+                    success, err = safe_api_action(do_bulk_del)
+                    if success: log_action(bk, "BORRADO_MASIVO", f"{len(rows_to_del)}"); st.cache_data.clear(); st.success(t['msgs'][1]); time.sleep(1); st.rerun()
+                    else: st.error(f"Error: {err}")
+
+@st.fragment
+def render_log(t):
+    st.title(t['headers'][3])
+    try:
+        bk = get_book_direct()
+        sh_log = bk.worksheet("Historial")
+        h_dt = pd.DataFrame(sh_log.get_all_records())
+        if not h_dt.empty:
+            show_log = h_dt.copy()
+            if "Accion" in show_log.columns:
+                emoji_map = t['val_map'].copy()
+                show_log["Accion"] = show_log["Accion"].replace(emoji_map)
+            show_log = show_log.rename(columns=t['col_map'])
+            st.dataframe(show_log.iloc[::-1], use_container_width=True)
+            st.divider()
+            with st.expander(t['clean_hist_label']):
+                rev_h = h_dt.iloc[::-1].reset_index()
+                opc_h = [f"{r['Fecha_Hora']} | {r['Accion']} | {r['Detalles']}" for i, r in rev_h.iterrows()]
+                sel_h = st.multiselect(t['msgs'][4], opc_h)
+                if st.button(t['actions'][4], key="btn_h", type="primary"):
+                    if sel_h:
+                        dts_h = [x.split(" | ")[0] for x in sel_h]
+                        all_vals = sh_log.get_all_values()
+                        dels = []
+                        for i, row in enumerate(all_vals):
+                            if i==0: continue
+                            if row[0] in dts_h: dels.append(i+1)
+                        dels.sort(reverse=True)
+                        def do_log_del():
+                            for d in dels: sh_log.delete_rows(d)
+                        success, err = safe_api_action(do_log_del)
+                        if success: st.success(t['msgs'][1]); time.sleep(1); st.rerun()
+                        else: st.error(f"Error: {err}")
+    except: st.write("Log vacío")
+
+# --- APP MAIN ---
 def main():
     if not check_password(): return
 
@@ -245,7 +450,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         
         t = TR.get(lang, TR["Português"]) 
-        st.caption("v63.0 Auto-Constructor")
+        st.caption("v64.0 Fluent")
         
         if st.button("🔄 Forzar Actualización"):
             st.cache_data.clear()
@@ -255,7 +460,6 @@ def main():
     
     s = RATES[lang]["s"]; r = RATES[lang]["r"]
 
-    # --- DATA ---
     df_sales, df_stock_in = load_cached_data()
     
     if df_sales is None:
@@ -263,7 +467,6 @@ def main():
         st.info("Espera 1 min y dale al botón 'Forzar Actualización'.")
         st.stop()
 
-    # --- PROCESAMIENTO ---
     if not df_sales.empty:
         for c in ['Valor_BRL', 'Kg', 'Comissao_BRL']:
             if c in df_sales.columns: df_sales[c] = pd.to_numeric(df_sales[c], errors='coerce').fillna(0)
@@ -282,14 +485,13 @@ def main():
 
     productos_all = sorted(list(set(["AÇAI MÉDIO", "AÇAI POP", "CUPUAÇU"] + prods_sales + prods_stock)))
 
-    # Stock Calc
     stock_real = {}
     for p in productos_all:
         total_in = df_stock_in[df_stock_in['Produto'] == p]['Kg'].sum() if not df_stock_in.empty else 0
         total_out = df_sales[df_sales['Producto'] == p]['Kg'].sum() if not df_sales.empty else 0
         stock_real[p] = total_in - total_out
 
-    # --- SIDEBAR META ---
+    # SIDEBAR EXCEL
     ahora = datetime.now(); periodo_clave = ahora.strftime("%Y-%m")
     with st.sidebar:
         st.write(f"**{t['goal_lbl']} {MESES_UI_SIDEBAR[ahora.month]}**")
@@ -298,21 +500,17 @@ def main():
                 b_meta = get_book_direct()
                 st.session_state.meta_cache = get_goal(b_meta, periodo_clave)
             except: st.session_state.meta_cache = 0.0
-            
         meta = st.number_input("Meta", value=st.session_state.meta_cache, step=1000.0, label_visibility="collapsed")
-        
         if st.button(t['goal_btn']):
             bk = get_book_direct()
             log_action(bk, "META_UPDATE", f"{periodo_clave}|{meta}")
             st.session_state.meta_cache = meta
             st.success("OK!")
-        
         val_mes = df_sales[df_sales['Fecha_Registro'].str.contains(periodo_clave, na=False)]['Valor_BRL'].sum() * r if not df_sales.empty else 0
         if meta > 0:
             st.progress(min(val_mes/meta, 1.0))
             st.caption(f"{val_mes/meta*100:.1f}% ({s} {val_mes:,.0f} / {s} {meta:,.0f})")
         st.divider()
-        
         if not df_sales.empty:
             buffer = io.BytesIO()
             with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
@@ -334,221 +532,17 @@ def main():
                 ws.write(lr, 3, t['xls_tot'], fmt_total); ws.write(lr, 4, data_final['Kg'].sum(), fmt_total); ws.write(lr, 5, data_final['Valor_BRL'].sum(), fmt_total); ws.write(lr, 6, data_final['Comissao_BRL'].sum(), fmt_total)
             st.download_button(t['dl_excel'], data=buffer, file_name=f"Reporte_{datetime.now().strftime('%Y-%m-%d')}.xlsx", mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
+    # TABS CON FRAGMENTOS
     tab1, tab2, tab3, tab4 = st.tabs(t['tabs'])
 
-    # 1. DASHBOARD
     with tab1:
-        st.title(t['headers'][0])
-        if not df_sales.empty:
-            with st.expander(t.get("filter", "Filter Date"), expanded=False):
-                col_f1, col_f2 = st.columns(2)
-                d_min = df_sales['Fecha_DT'].min().date()
-                d_max = df_sales['Fecha_DT'].max().date()
-                d1 = col_f1.date_input("Start", d_min)
-                d2 = col_f2.date_input("End", d_max)
-            mask = (df_sales['Fecha_DT'].dt.date >= d1) & (df_sales['Fecha_DT'].dt.date <= d2)
-            df_fil = df_sales.loc[mask]
-
-            if df_fil.empty: st.warning("No Data")
-            else:
-                k1, k2, k3 = st.columns(3)
-                k1.metric(t['metrics'][0], f"{s} {(df_fil['Valor_BRL'].sum() * r):,.0f}")
-                k2.metric(t['metrics'][1], f"{df_fil['Kg'].sum():,.0f} kg")
-                k3.metric(t['metrics'][2], f"{s} {(df_fil['Valor_BRL'].sum()*0.02*r):,.0f}")
-                
-                st.divider()
-                st.subheader(t['stock_alert'])
-                if stock_real:
-                    for p, kg_left in sorted(stock_real.items(), key=lambda item: item[1], reverse=True):
-                        if kg_left != 0 or p in prods_stock or p in prods_sales:
-                            c_s1, c_s2 = st.columns([3, 1])
-                            pct = max(0.0, min(kg_left / 1000.0, 1.0))
-                            c_s1.progress(pct, text=f"📦 **{p}**: {kg_left:,.1f} kg")
-                            if kg_left < 0: c_s2.error(f"⚠️ ({kg_left})")
-                            elif kg_left < 50: c_s2.warning("⚠️")
-                            else: c_s2.success("✅")
-                
-                st.divider()
-                st.subheader(t['table_title'])
-                df_show = df_fil[['Fecha_Registro', 'Mes_Lang', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']].copy()
-                cols_view = {'Fecha_Registro': t['col_map']['Fecha_Hora'], 'Mes_Lang': t['dash_cols']['mes'], 'Empresa': t['dash_cols']['emp'], 'Producto': t['dash_cols']['prod'], 'Kg': t['dash_cols']['kg'], 'Valor_BRL': t['dash_cols']['val'], 'Comissao_BRL': t['dash_cols']['com']}
-                st.dataframe(df_show.rename(columns=cols_view).iloc[::-1], use_container_width=True, hide_index=True, column_config={t['dash_cols']['val']: st.column_config.NumberColumn(format=f"{s} %.2f"), t['dash_cols']['com']: st.column_config.NumberColumn(format=f"{s} %.2f"), t['dash_cols']['kg']: st.column_config.NumberColumn(format="%.1f kg")})
-                
-                st.divider()
-                c_izq, c_der = st.columns([2, 1])
-                with c_izq:
-                    df_tr = df_fil.groupby(df_fil['Fecha_DT'].dt.date)['Valor_BRL'].sum().reset_index()
-                    df_tr.columns = ['Fecha', 'Venta']
-                    df_tr['Venta'] = df_tr['Venta'] * r
-                    fig = px.line(df_tr, x='Fecha', y='Venta', markers=True, title=t['charts'][0])
-                    fig.update_traces(line_color='#FF4B4B')
-                    st.plotly_chart(fig, use_container_width=True)
-                with c_der:
-                    fig2 = px.pie(df_fil, names='Producto', values='Kg', hole=0.5, title=t['charts'][1])
-                    fig2.update_layout(showlegend=False)
-                    st.plotly_chart(fig2, use_container_width=True)
-
-    # 2. VENDER
+        render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, lang)
     with tab2:
-        st.header(t['headers'][1])
-        with st.container(border=True):
-            c1, c2 = st.columns(2)
-            op_new = t['actions'][3]
-            sel_emp = c1.selectbox(t['forms'][0], [op_new] + empresas)
-            emp = c1.text_input(t['new_labels'][0]) if sel_emp == op_new else sel_emp
-            sel_prod = c2.selectbox(t['forms'][1], [op_new] + productos_all)
-            prod = c2.text_input(t['new_labels'][1]) if sel_prod == op_new else sel_prod
-            kg = c1.number_input(t['forms'][2], step=10.0)
-            val = c2.number_input(t['forms'][3], step=100.0)
-            if prod in stock_real: st.caption(f"Stock: {stock_real[prod]:.1f} kg")
-            st.markdown("<br>", unsafe_allow_html=True)
-            if st.button(t['forms'][4], type="primary"):
-                if emp and prod:
-                    bk = get_book_direct() # Connect
-                    sheet = bk.get_worksheet(0)
-                    row = [emp, prod, kg, val, val*0.02, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Auto"]
-                    
-                    def do_write(): sheet.append_row(row)
-                    success, error = safe_api_action(do_write)
-                    
-                    if success:
-                        log_action(bk, "VENTA", f"{emp} | {kg}kg | {prod}")
-                        st.cache_data.clear() 
-                        st.success(t['msgs'][0])
-                        if PDF_AVAILABLE:
-                            try:
-                                pdf_data = create_pdf(emp, prod, kg, val, st.session_state.username)
-                                st.download_button(t['pdf'], data=pdf_data, file_name=f"Recibo.pdf", mime="application/pdf")
-                            except: pass
-                        time.sleep(2); st.rerun()
-                    else:
-                        st.error(f"Error al guardar: {error}")
-
-    # 3. ADMIN
+        render_new_sale(t, empresas, productos_all, stock_real)
     with tab3:
-        st.header(t['stock_add_title'])
-        with st.container(border=True):
-            c_st1, c_st2, c_st3 = st.columns([2, 1, 1])
-            prod_stock = c_st1.selectbox("Produto", ["✨ Novo..."] + productos_all, key="stock_prod")
-            if prod_stock == "✨ Novo...": prod_stock = c_st1.text_input("Nome", key="stock_prod_new")
-            kg_stock = c_st2.number_input("Kg (+)", step=10.0, key="stock_kg")
-            if c_st3.button(t['stock_btn'], type="primary"):
-                bk = get_book_direct()
-                try:
-                    # AUTO-CREACIÓN DE HOJA SI NO EXISTE
-                    try:
-                        sh_stk = bk.worksheet("Estoque")
-                    except:
-                        sh_stk = bk.add_worksheet(title="Estoque", rows=1000, cols=10)
-                        sh_stk.append_row(["Data", "Produto", "Kg", "Usuario"])
-                    
-                    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    
-                    def do_stock(): sh_stk.append_row([now, prod_stock, kg_stock, st.session_state.username])
-                    success, err = safe_api_action(do_stock)
-                    
-                    if success:
-                        log_action(bk, "STOCK_ADD", f"{prod_stock} | +{kg_stock}kg")
-                        st.cache_data.clear()
-                        st.success(t['stock_msg']); time.sleep(1.5); st.rerun()
-                    else: st.error(f"Error al guardar: {err}")
-                except Exception as e: st.error(f"Error grave: {e}")
-
-        st.divider()
-        st.subheader("Admin Ventas")
-        filtro = st.text_input(t['actions'][2], key="admin_search") 
-        if not df_sales.empty:
-            st.caption("Vista General:")
-            df_admin_show = df_sales[['Fecha_Registro', 'Empresa', 'Producto', 'Kg', 'Valor_BRL']].copy()
-            cols_admin = {'Fecha_Registro': t['col_map']['Fecha_Hora'], 'Empresa': t['dash_cols']['emp'], 'Producto': t['dash_cols']['prod'], 'Kg': t['dash_cols']['kg'], 'Valor_BRL': t['dash_cols']['val']}
-            st.dataframe(df_admin_show.rename(columns=cols_admin).iloc[::-1], use_container_width=True, hide_index=True, column_config={t['dash_cols']['val']: st.column_config.NumberColumn(format=f"{s} %.2f"), t['dash_cols']['kg']: st.column_config.NumberColumn(format="%.1f kg")})
-            
-            st.markdown("---")
-            st.caption("🛠️ Editar / Borrar (Individual):")
-            df_s = df_sales[df_sales.astype(str).apply(lambda x: x.str.contains(filtro, case=False)).any(axis=1)] if filtro else df_sales.tail(10).iloc[::-1]
-            for i, r in df_s.iterrows():
-                with st.expander(f"{r['Empresa']} | {r['Producto']} | {r['Fecha_Registro']}"):
-                    c_ed1, c_ed2 = st.columns(2)
-                    new_kg = c_ed1.number_input("Kg", value=float(r['Kg']), key=f"k_{i}")
-                    new_val = c_ed2.number_input("Valor", value=float(r['Valor_BRL']), key=f"v_{i}")
-                    c_btn1, c_btn2 = st.columns(2)
-                    
-                    if c_btn1.button("💾 Guardar", key=f"save_{i}"):
-                        bk = get_book_direct()
-                        sh_sl = bk.get_worksheet(0)
-                        cell = sh_sl.find(str(r['Fecha_Registro']))
-                        def do_update():
-                            sh_sl.update_cell(cell.row, 3, new_kg)
-                            sh_sl.update_cell(cell.row, 4, new_val)
-                            sh_sl.update_cell(cell.row, 5, new_val*0.02)
-                        success, err = safe_api_action(do_update)
-                        if success: st.cache_data.clear(); st.success("Editado!"); time.sleep(1); st.rerun()
-                        else: st.error(f"Error: {err}")
-                        
-                    if c_btn2.button(t['actions'][1], key=f"del_{i}", type="secondary"):
-                        bk = get_book_direct()
-                        sh_sl = bk.get_worksheet(0)
-                        cell = sh_sl.find(str(r['Fecha_Registro']))
-                        def do_del(): sh_sl.delete_rows(cell.row)
-                        success, err = safe_api_action(do_del)
-                        if success: st.cache_data.clear(); st.success(t['msgs'][1]); time.sleep(1); st.rerun()
-                        else: st.error(f"Error: {err}")
-            
-            st.divider()
-            with st.expander(t['bulk_label']):
-                df_rev = df_sales.iloc[::-1].reset_index()
-                opc = [f"{r['Empresa']} | {r['Producto']} | {r['Fecha_Registro']}" for i, r in df_rev.iterrows()]
-                sels = st.multiselect(t['msgs'][4], opc)
-                if st.button(t['actions'][4], type="primary"):
-                    if sels:
-                        dates = [x.split(" | ")[-1] for x in sels]
-                        bk = get_book_direct()
-                        sh_sl = bk.get_worksheet(0)
-                        all_recs = sh_sl.get_all_records()
-                        rows_to_del = []
-                        for i, r in enumerate(all_recs):
-                            if str(r['Fecha_Registro']) in dates: rows_to_del.append(i + 2)
-                        rows_to_del.sort(reverse=True)
-                        def do_bulk_del():
-                            for rw in rows_to_del: sh_sl.delete_rows(rw)
-                        success, err = safe_api_action(do_bulk_del)
-                        if success: log_action(bk, "BORRADO_MASIVO", f"{len(rows_to_del)}"); st.cache_data.clear(); st.success(t['msgs'][1]); time.sleep(1); st.rerun()
-                        else: st.error(f"Error: {err}")
-
-    # 4. LOG
+        render_admin(t, productos_all, df_sales, s)
     with tab4:
-        st.title(t['headers'][3])
-        try:
-            bk = get_book_direct()
-            sh_log = bk.worksheet("Historial")
-            h_dt = pd.DataFrame(sh_log.get_all_records())
-            if not h_dt.empty:
-                show_log = h_dt.copy()
-                if "Accion" in show_log.columns:
-                    emoji_map = t['val_map'].copy()
-                    show_log["Accion"] = show_log["Accion"].replace(emoji_map)
-                show_log = show_log.rename(columns=t['col_map'])
-                st.dataframe(show_log.iloc[::-1], use_container_width=True)
-                st.divider()
-                with st.expander(t['clean_hist_label']):
-                    rev_h = h_dt.iloc[::-1].reset_index()
-                    opc_h = [f"{r['Fecha_Hora']} | {r['Accion']} | {r['Detalles']}" for i, r in rev_h.iterrows()]
-                    sel_h = st.multiselect(t['msgs'][4], opc_h)
-                    if st.button(t['actions'][4], key="btn_h", type="primary"):
-                        if sel_h:
-                            dts_h = [x.split(" | ")[0] for x in sel_h]
-                            all_vals = sh_log.get_all_values()
-                            dels = []
-                            for i, row in enumerate(all_vals):
-                                if i==0: continue
-                                if row[0] in dts_h: dels.append(i+1)
-                            dels.sort(reverse=True)
-                            def do_log_del():
-                                for d in dels: sh_log.delete_rows(d)
-                            success, err = safe_api_action(do_log_del)
-                            if success: st.success(t['msgs'][1]); time.sleep(1); st.rerun()
-                            else: st.error(f"Error: {err}")
-        except: st.write("Log vacío")
+        render_log(t)
 
 if __name__ == "__main__":
     main()
