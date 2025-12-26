@@ -7,8 +7,6 @@ from oauth2client.service_account import ServiceAccountCredentials
 import time
 import io
 import xlsxwriter
-from PIL import Image
-import base64
 
 # INTENTO DE IMPORTAR FPDF
 try:
@@ -21,74 +19,19 @@ except ImportError:
 # 🎨 ZONA DE PERSONALIZACIÓN
 # ==========================================
 NOMBRE_EMPRESA = "Xingu CEO"
-ICONO_ARCHIVO = "logo.png" 
+ICONO_APP = "logo.png"
 CONTRASEÑA_MAESTRA = "Julio777" 
 # ==========================================
 
-# --- CONFIGURACIÓN BÁSICA ---
-try:
-    img_icon = Image.open(ICONO_ARCHIVO)
-    st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon=img_icon, layout="wide")
-except:
-    st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon="🍇", layout="wide")
+st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon=ICONO_APP, layout="wide")
 
-# --- 🚀 FUERZA BRUTA PARA EL ICONO DEL CELULAR ---
-# Este bloque inyecta código HTML para obligar a iOS y Android a usar tu logo
-def inject_mobile_icon():
-    try:
-        with open(ICONO_ARCHIVO, "rb") as image_file:
-            # Convertir imagen a texto base64
-            encoded_string = base64.b64encode(image_file.read()).decode()
-        
-        # Crear el código HTML para inyectar en la cabecera
-        icon_html = f"""
-        <style>
-            /* Esto es invisible pero configura el navegador */
-        </style>
-        <script>
-            var link = document.querySelector("link[rel~='icon']");
-            if (!link) {{
-                link = document.createElement('link');
-                link.rel = 'icon';
-                document.getElementsByTagName('head')[0].appendChild(link);
-            }}
-            link.href = 'data:image/png;base64,{encoded_string}';
-        </script>
-        """
-        # Inyectar también etiquetas Apple Touch Icon para iPhone
-        st.markdown(
-            f"""
-            <head>
-                <link rel="apple-touch-icon" href="data:image/png;base64,{encoded_string}">
-                <link rel="shortcut icon" href="data:image/png;base64,{encoded_string}">
-            </head>
-            """,
-            unsafe_allow_html=True
-        )
-    except Exception as e:
-        # Si falla (ej. no hay logo.png), no rompe la app, solo sigue normal
-        pass
-
-# Ejecutar la inyección
-inject_mobile_icon()
-
-# --- ESTILOS CSS (DASHBOARD PRO) ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    
     div[data-testid="stMetric"] {
-        background-color: #262730;
-        border: 1px solid #464b5f;
-        padding: 15px 20px;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        transition: transform 0.2s;
-    }
-    div[data-testid="stMetric"]:hover {
-        transform: translateY(-2px);
-        border-color: #ff4b4b;
+        background-color: #1E1E1E; border-radius: 10px; padding: 15px;
+        border: 1px solid #333; box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
     }
     .stButton>button {
         width: 100%; border-radius: 8px; height: 3em; font-weight: 700; border: none; transition: 0.3s;
@@ -114,7 +57,7 @@ def check_password():
     
     c1, c2, c3 = st.columns([1,2,1])
     with c2:
-        try: st.image(ICONO_ARCHIVO, width=150)
+        try: st.image(ICONO_APP, width=150)
         except: st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA}</h1>", unsafe_allow_html=True)
         st.write("")
         with st.form("login_form"):
@@ -143,7 +86,7 @@ if PDF_AVAILABLE:
         pdf.cell(100, 10, f"{prod}", 1); pdf.cell(40, 10, f"{kg}", 1); pdf.cell(50, 10, f"R$ {val:,.2f}", 1)
         return pdf.output(dest='S').encode('latin-1')
 
-# --- TRADUCCIONES ---
+# --- DICCIONARIO ---
 MESES_PT = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto", 9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"}
 MONTHS_UI = {
     "Português": MESES_PT,
@@ -164,7 +107,7 @@ TR = {
         "actions": ["Salvar", "DELETAR", "Buscar...", "✨ Novo...", "🗑️ Apagar Seleção"],
         "bulk_label": "Gestão em Massa (Apagar Vários)",
         "clean_hist_label": "Limpeza de Histórico",
-        "dl_excel": "📗 Baixar Relatório (Excel Dashboard)",
+        "dl_excel": "📗 Baixar Relatório (Pro)",
         "logout": "🔒 Sair",
         "goal_lbl": "🎯 Meta de", "goal_btn": "💾 Salvar Meta",
         "new_labels": ["Nome Cliente:", "Nome Produto:"],
@@ -194,18 +137,18 @@ TR = {
     },
     "Español": {
         "tabs": [f"📊 Dashboard", "➕ Nueva Venta", "📦 Stock", "💰 Admin Ventas", "📜 Log"],
-        "headers": ["Dashboard Ejecutivo", "Registrar Venta", "Gestión", "Auditoría"],
-        "metrics": ["Facturación Total", "Volumen (Kg)", "Comisión", "Ticket Medio", "Top Cliente"],
-        "charts": ["Tendencia de Ventas", "Mix de Productos", "Top Empresas"],
+        "headers": ["Dashboard", "Registrar Venta", "Gestión", "Auditoría"],
+        "metrics": ["Facturación", "Volumen Vendido", "Comisión", "Ticket Medio", "Top Cliente"],
+        "charts": ["Tendencia", "Mix Productos", "Por Empresa"],
         "stock_add_title": "📦 Añadir Stock (Entradas)",
         "stock_btn": "➕ Sumar",
         "stock_alert": "Stock Actual (Entradas - Ventas)",
-        "table_title": "Detalle de Ventas",
+        "table_title": "Detalles",
         "forms": ["Cliente", "Producto", "Kg", "Valor ($)", "✅ Confirmar Venta"],
         "actions": ["Guardar", "BORRAR", "Buscar...", "✨ Nuevo...", "🗑️ Borrar Selección"],
         "bulk_label": "Gestión Masiva (Borrar Varios)",
         "clean_hist_label": "Limpieza de Historial",
-        "dl_excel": "📗 Bajar Reporte (Excel Dashboard)",
+        "dl_excel": "📗 Bajar Reporte (Pro)",
         "logout": "🔒 Salir",
         "goal_lbl": "🎯 Meta de", "goal_btn": "💾 Salvar Meta",
         "new_labels": ["Nombre Cliente:", "Nombre Producto:"],
@@ -235,18 +178,18 @@ TR = {
     },
     "English": {
         "tabs": [f"📊 Dashboard", "➕ New Sale", "📦 Stock", "💰 Admin Sales", "📜 Log"],
-        "headers": ["Executive Dashboard", "New Sale", "Stock Mgmt", "Log"],
-        "metrics": ["Total Revenue", "Volume (Kg)", "Commission", "Avg Ticket", "Top Client"],
-        "charts": ["Sales Trend", "Product Mix", "Top Companies"],
+        "headers": ["Dashboard", "New Sale", "Stock Mgmt", "Log"],
+        "metrics": ["Revenue", "Volume Sold", "Commission", "Avg Ticket", "Top Client"],
+        "charts": ["Trend", "Mix", "By Company"],
         "stock_add_title": "📦 Add Stock (Inputs)",
         "stock_btn": "➕ Add",
         "stock_alert": "Current Stock (Inputs - Sales)",
-        "table_title": "Sales Details",
+        "table_title": "Details",
         "forms": ["Client", "Product", "Kg", "Value", "✅ Confirm Sale"],
         "actions": ["Save", "DELETE", "Search...", "✨ New...", "🗑️ Delete Selection"],
         "bulk_label": "Bulk Management",
         "clean_hist_label": "Clear History",
-        "dl_excel": "📗 Download Report (Excel Dashboard)",
+        "dl_excel": "📗 Download Report (Pro)",
         "logout": "🔒 Logout",
         "goal_lbl": "🎯 Goal for", "goal_btn": "💾 Save Goal",
         "new_labels": ["Client Name:", "Product Name:"],
@@ -323,12 +266,16 @@ def log_action(book, action, detail):
         book.worksheet("Historial").append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), action, f"{detail} ({u})"])
     except: pass
 
+# --- NUEVO SISTEMA DE CONFIGURACIÓN PERSISTENTE ---
 def get_config(book):
+    """Lee la hoja 'Config' para recuperar Meta y Filtros."""
     try:
         sh = book.worksheet("Config")
     except:
+        # Si no existe, se crea
         sh = book.add_worksheet("Config", 100, 2)
         sh.append_row(["Key", "Value"])
+    
     records = sh.get_all_values()
     cfg = {}
     for r in records[1:]:
@@ -336,6 +283,7 @@ def get_config(book):
     return sh, cfg
 
 def save_conf(book, key, val):
+    """Guarda un valor en la hoja Config."""
     sh, cfg = get_config(book)
     try:
         cell = sh.find(key)
@@ -362,36 +310,37 @@ def render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, la
 
         if df_fil.empty: st.warning(t['msgs'][2])
         else:
-            total_val = df_fil['Valor_BRL'].sum() * r
-            total_kg = df_fil['Kg'].sum()
-            total_com = total_val * 0.02
-            
             k1, k2, k3 = st.columns(3)
-            k1.metric(t['metrics'][0], f"{s} {total_val:,.0f}", delta=None) 
-            k2.metric(t['metrics'][1], f"{total_kg:,.0f} kg", delta=None) 
-            k3.metric(t['metrics'][2], f"{s} {total_com:,.0f}", delta=None) 
+            k1.metric(t['metrics'][0], f"{s} {(df_fil['Valor_BRL'].sum() * r):,.0f}")
+            k2.metric(t['metrics'][1], f"{df_fil['Kg'].sum():,.0f} kg")
+            k3.metric(t['metrics'][2], f"{s} {(df_fil['Valor_BRL'].sum()*0.02*r):,.0f}")
             
             st.divider()
             
+            # --- FILTRO VISUAL STOCK CON MEMORIA ---
             st.subheader(t['stock_alert'])
             all_prods_display = sorted(list(stock_real.keys()))
             
+            # Recuperar filtro guardado si existe
             default_selection = []
             if saved_filter:
                 default_selection = [p for p in saved_filter.split(',') if p in all_prods_display]
 
+            # Multiselect con lo guardado
             selected_view = st.multiselect(t['filter_viz'], all_prods_display, default=default_selection)
             
+            # BOTÓN PARA GUARDAR VISTA
             if st.button(t['save_view']):
                 bk = get_book_direct()
                 val_to_save = ",".join(selected_view)
                 save_conf(bk, "stock_view_pref", val_to_save)
-                st.success("✅")
-                time.sleep(1)
+                st.success("✅ Vista Guardada")
+                time.sleep(1) # Feedback visual
             
             if stock_real:
                 items_to_show = {k: v for k, v in stock_real.items() if k in selected_view} if selected_view else stock_real
                 for p, kg_left in sorted(items_to_show.items(), key=lambda item: item[1], reverse=True):
+                    # Lógica estricta de visualización
                     show_it = False
                     if selected_view: show_it = True 
                     elif kg_left != 0 or p in prods_stock: show_it = True
@@ -405,24 +354,24 @@ def render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, la
                         else: c_s2.success("✅")
             
             st.divider()
-            
-            c_chart1, c_chart2 = st.columns(2)
-            with c_chart1:
-                df_tr = df_fil.groupby(df_fil['Fecha_DT'].dt.date)['Valor_BRL'].sum().reset_index()
-                df_tr.columns = ['Fecha', 'Venta']
-                df_tr['Venta'] = df_tr['Venta'] * r
-                fig_area = px.area(df_tr, x='Fecha', y='Venta', title=t['charts'][0], markers=True)
-                fig_area.update_layout(plot_bgcolor="rgba(0,0,0,0)", xaxis_showgrid=False)
-                fig_area.update_traces(line_color='#FF4B4B', fillcolor='rgba(255, 75, 75, 0.2)')
-                st.plotly_chart(fig_area, use_container_width=True)
-            with c_chart2:
-                fig_donut = px.pie(df_fil, names='Producto', values='Kg', hole=0.6, title=t['charts'][1])
-                st.plotly_chart(fig_donut, use_container_width=True)
-
             st.subheader(t['table_title'])
             df_show = df_fil[['Fecha_Registro', 'Mes_Lang', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']].copy()
             cols_view = {'Fecha_Registro': t['col_map']['Fecha_Hora'], 'Mes_Lang': t['dash_cols']['mes'], 'Empresa': t['dash_cols']['emp'], 'Producto': t['dash_cols']['prod'], 'Kg': t['dash_cols']['kg'], 'Valor_BRL': t['dash_cols']['val'], 'Comissao_BRL': t['dash_cols']['com']}
             st.dataframe(df_show.rename(columns=cols_view).iloc[::-1], use_container_width=True, hide_index=True, column_config={t['dash_cols']['val']: st.column_config.NumberColumn(format=f"{s} %.2f"), t['dash_cols']['com']: st.column_config.NumberColumn(format=f"{s} %.2f"), t['dash_cols']['kg']: st.column_config.NumberColumn(format="%.1f kg")})
+            
+            st.divider()
+            c_izq, c_der = st.columns([2, 1])
+            with c_izq:
+                df_tr = df_fil.groupby(df_fil['Fecha_DT'].dt.date)['Valor_BRL'].sum().reset_index()
+                df_tr.columns = ['Fecha', 'Venta']
+                df_tr['Venta'] = df_tr['Venta'] * r
+                fig = px.line(df_tr, x='Fecha', y='Venta', markers=True, title=t['charts'][0])
+                fig.update_traces(line_color='#FF4B4B')
+                st.plotly_chart(fig, use_container_width=True)
+            with c_der:
+                fig2 = px.pie(df_fil, names='Producto', values='Kg', hole=0.5, title=t['charts'][1])
+                fig2.update_layout(showlegend=False)
+                st.plotly_chart(fig2, use_container_width=True)
 
 @st.fragment
 def render_new_sale(t, empresas, productos_all, stock_real, df_sales, s):
@@ -537,7 +486,7 @@ def render_stock_management(t, productos_all, df_stock_in):
                 c_btn_s1, c_btn_s2 = st.columns(2)
                 if c_btn_s1.button(t['save_changes'], key=f"sav_stk_{i}"):
                     bk = get_book_direct()
-                    sh_sl = bk.worksheet("Estoque")
+                    sh_stk = bk.worksheet("Estoque")
                     try:
                         cell = sh_stk.find(str(r['Data']))
                         def do_stk_update():
@@ -549,7 +498,7 @@ def render_stock_management(t, productos_all, df_stock_in):
                     except: st.error("No encontré la fila.")
                 if c_btn_s2.button(t['del_entry'], key=f"del_stk_{i}", type="secondary"):
                     bk = get_book_direct()
-                    sh_sl = bk.worksheet("Estoque")
+                    sh_stk = bk.worksheet("Estoque")
                     try:
                         cell = sh_stk.find(str(r['Data']))
                         def do_stk_del(): sh_stk.delete_rows(cell.row)
@@ -684,7 +633,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
         t["tabs"] = [t['tabs'][0], t['tabs'][1], t['tabs'][2], t['tabs'][3], t['tabs'][4]]
-        st.caption("v83.0 IconForce")
+        st.caption("v77.0 Eternal Memory")
         if st.button("🔄"):
             st.cache_data.clear()
             st.rerun()
@@ -692,19 +641,19 @@ def main():
     
     s = RATES[lang]["s"]; r = RATES[lang]["r"]
 
-    # CARGA DATOS
+    # CARGA DE DATOS + CONFIGURACION
     df_sales, df_stock_in = load_cached_data()
     if df_sales is None:
         st.error("⏳ Google Error 429. Wait 1 min.")
         st.stop()
     
-    # CARGA CONFIG
-    bk_conf = get_book_direct() 
+    # LEER CONFIGURACIÓN (META Y FILTRO)
+    bk_conf = get_book_direct() # Acceso directo a config para leer
     _, cfg = get_config(bk_conf)
+    
     saved_meta = float(cfg.get('meta_goal', 0.0))
     saved_filter = cfg.get('stock_view_pref', "")
 
-    # PROCESAMIENTO
     if not df_sales.empty:
         for c in ['Valor_BRL', 'Kg', 'Comissao_BRL']:
             if c in df_sales.columns: df_sales[c] = pd.to_numeric(df_sales[c], errors='coerce').fillna(0)
@@ -729,16 +678,20 @@ def main():
         total_out = df_sales[df_sales['Producto'] == p]['Kg'].sum() if not df_sales.empty else 0
         stock_real[p] = total_in - total_out
 
-    # SIDEBAR
     ahora = datetime.now(); periodo_clave = ahora.strftime("%Y-%m")
     with st.sidebar:
         st.write(f"**{t['goal_lbl']} {MESES_UI_SIDEBAR[ahora.month]}**")
+        
+        # META DESDE CONFIG (PERSISTENTE)
         meta = st.number_input("Meta", value=saved_meta, step=1000.0, label_visibility="collapsed")
+        
         if st.button(t['goal_btn']):
             bk = get_book_direct()
+            # GUARDAR EN CONFIG HOJA
             save_conf(bk, "meta_goal", meta)
             st.success("OK!")
             time.sleep(0.5); st.rerun()
+            
         val_mes = df_sales[df_sales['Fecha_Registro'].str.contains(periodo_clave, na=False)]['Valor_BRL'].sum() * r if not df_sales.empty else 0
         if meta > 0:
             st.progress(min(val_mes/meta, 1.0))
@@ -752,52 +705,24 @@ def main():
                     df_ex['Fecha_Clean'] = df_ex['Fecha_DT'].dt.strftime('%d/%m/%Y %H:%M')
                     data_final = df_ex[['Fecha_Clean', 'Mes_Lang', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']].copy()
                     sheet_name = 'Reporte'
-                    
-                    data_final.to_excel(writer, index=False, sheet_name=sheet_name, startrow=5, header=False)
+                    data_final.to_excel(writer, index=False, sheet_name=sheet_name, startrow=1, header=False)
                     workbook = writer.book; ws = writer.sheets[sheet_name]
-                    ws.hide_gridlines(2)
-                    
-                    fmt_kpi_label = workbook.add_format({'font_name': 'Calibri', 'font_size': 10, 'font_color': '#718096'})
-                    fmt_kpi_num = workbook.add_format({'font_name': 'Calibri', 'font_size': 14, 'bold': True, 'font_color': '#2B6CB0'})
-                    fmt_head = workbook.add_format({'bold': True, 'bg_color': '#F7FAFC', 'font_color': '#4A5568', 'bottom': 1, 'bottom_color': '#E2E8F0', 'align': 'center'})
-                    fmt_data = workbook.add_format({'font_name': 'Calibri', 'align': 'center'})
-                    fmt_money = workbook.add_format({'num_format': 'R$ #,##0.00', 'font_name': 'Calibri'})
-                    fmt_num = workbook.add_format({'num_format': '0.0', 'font_name': 'Calibri', 'align': 'center'})
-                    fmt_total = workbook.add_format({'bold': True, 'top': 1, 'top_color': '#CBD5E0', 'font_color': '#2D3748'})
-                    
-                    ws.write(1, 1, "Vendas Totais", fmt_kpi_label)
-                    ws.write(2, 1, f"R$ {data_final['Valor_BRL'].sum():,.2f}", fmt_kpi_num)
-                    ws.write(1, 3, "Volume (Kg)", fmt_kpi_label)
-                    ws.write(2, 3, f"{data_final['Kg'].sum():,.1f} Kg", fmt_kpi_num)
-                    ws.write(1, 5, "Comissao", fmt_kpi_label)
-                    ws.write(2, 5, f"R$ {data_final['Comissao_BRL'].sum():,.2f}", fmt_kpi_num)
-
+                    fmt_head = workbook.add_format({'bold': True, 'fg_color': '#2C3E50', 'font_color': 'white', 'border': 1, 'align': 'center'})
+                    fmt_money = workbook.add_format({'num_format': 'R$ #,##0.00', 'border': 1})
+                    fmt_num = workbook.add_format({'num_format': '0.0', 'border': 1, 'align': 'center'})
+                    fmt_base = workbook.add_format({'border': 1})
+                    fmt_total = workbook.add_format({'bold': True, 'bg_color': '#D3D3D3', 'num_format': 'R$ #,##0.00', 'border': 1})
                     xls_headers = t.get('xls_head', ["Fecha", "Mes", "Empresa", "Producto", "Kg", "Valor", "Comisión"])
-                    for col_num, h in enumerate(xls_headers): ws.write(4, col_num, h, fmt_head)
-                    
-                    ws.set_column('A:A', 18, fmt_data); ws.set_column('B:B', 12, fmt_data); ws.set_column('C:D', 22, fmt_data)
+                    xls_total_lbl = t.get('xls_tot', "TOTAL:")
+                    for col_num, h in enumerate(xls_headers): ws.write(0, col_num, h, fmt_head)
+                    ws.set_column('A:A', 18, fmt_base); ws.set_column('B:B', 12, fmt_base); ws.set_column('C:D', 22, fmt_base)
                     ws.set_column('E:E', 12, fmt_num); ws.set_column('F:G', 18, fmt_money)
-                    
-                    lr = len(data_final) + 5
-                    ws.write(lr, 3, t.get('xls_tot', "TOTAL:"), fmt_total)
-                    ws.write(lr, 4, data_final['Kg'].sum(), fmt_total)
-                    ws.write(lr, 5, data_final['Valor_BRL'].sum(), fmt_total)
-                    ws.write(lr, 6, data_final['Comissao_BRL'].sum(), fmt_total)
-
-                    chart = workbook.add_chart({'type': 'column'})
-                    chart.add_series({
-                        'name':       'Vendas por Produto',
-                        'categories': [sheet_name, 5, 3, lr-1, 3],
-                        'values':     [sheet_name, 5, 5, lr-1, 5],
-                    })
-                    chart.set_title({'name': 'Vendas vs Produto'})
-                    chart.set_style(10)
-                    ws.insert_chart('H2', chart)
-
-                st.download_button(t['dl_excel'], data=buffer, file_name=f"Reporte_Dashboard_{datetime.now().strftime('%Y-%m-%d')}.xlsx", mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+                    lr = len(data_final) + 1
+                    ws.write(lr, 3, xls_total_lbl, fmt_total); ws.write(lr, 4, data_final['Kg'].sum(), fmt_total); ws.write(lr, 5, data_final['Valor_BRL'].sum(), fmt_total); ws.write(lr, 6, data_final['Comissao_BRL'].sum(), fmt_total)
+                st.download_button(t['dl_excel'], data=buffer, file_name=f"Reporte_{datetime.now().strftime('%Y-%m-%d')}.xlsx", mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             except Exception as ex: st.warning(f"⚠️ ({ex})")
 
-    # TABS
+    # TABS (PASAMOS EL FILTRO GUARDADO AL DASHBOARD)
     tab1, tab2, tab3, tab4, tab5 = st.tabs(t['tabs'])
     with tab1: render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, lang, saved_filter)
     with tab2: render_new_sale(t, empresas, productos_all, stock_real, df_sales, s)
