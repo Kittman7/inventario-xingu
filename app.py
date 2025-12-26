@@ -173,7 +173,7 @@ TR = {
 RATES = { "Português": {"s": "R$", "r": 1.0}, "Español": {"s": "$", "r": 165.0}, "English": {"s": "USD", "r": 0.18} }
 MESES_UI_SIDEBAR = {1: "Jan", 2: "Feb", 3: "Mar", 4: "Abr", 5: "Mai", 6: "Jun", 7: "Jul", 8: "Ago", 9: "Set", 10: "Out", 11: "Nov", 12: "Dez"}
 
-# --- CONEXIÓN Y FUNCIONES SEGURAS (RETRY LOGIC) ---
+# --- CONEXIÓN CACHEADA ---
 @st.cache_resource(ttl=3600) 
 def get_connection():
     scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
@@ -181,7 +181,7 @@ def get_connection():
     client = gspread.authorize(creds)
     return client
 
-# Función de carga con caché (Lectura)
+# --- DATOS CACHEADOS (AUTO-CREACIÓN) ---
 @st.cache_data(ttl=600)
 def load_cached_data():
     client = get_connection()
@@ -189,29 +189,33 @@ def load_cached_data():
         book = client.open("Inventario_Xingu_DB")
         sheet_sales = book.get_worksheet(0)
         df_sales = pd.DataFrame(sheet_sales.get_all_records())
+        
+        # INTENTO DE CARGAR STOCK O CREAR SI NO EXISTE
         try:
             sheet_stock = book.worksheet("Estoque")
             df_stock = pd.DataFrame(sheet_stock.get_all_records())
         except:
+            # SI FALLA, RETORNA VACÍO (PERO NO ROMPE)
             df_stock = pd.DataFrame(columns=["Data", "Produto", "Kg", "Usuario"])
+            
         return df_sales, df_stock
-    except: return None, None
+    except Exception as e:
+        return None, None
 
 def get_book_direct():
     client = get_connection()
     return client.open("Inventario_Xingu_DB")
 
-# Acción Segura (Re-intentos automáticos)
+# ACCIÓN SEGURA
 def safe_api_action(action_func, *args):
-    """Intenta ejecutar una acción de escritura 3 veces si falla."""
     last_error = None
-    for attempt in range(1, 4): # 1, 2, 3 intentos
+    for attempt in range(1, 4): 
         try:
             action_func(*args)
-            return True, None # Éxito
+            return True, None 
         except Exception as e:
             last_error = e
-            time.sleep(2) # Espera 2 segundos antes de reintentar
+            time.sleep(2) 
     return False, last_error
 
 def log_action(book, action, detail):
@@ -241,7 +245,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         
         t = TR.get(lang, TR["Português"]) 
-        st.caption("v62.0 Escritura Blindada")
+        st.caption("v63.0 Auto-Constructor")
         
         if st.button("🔄 Forzar Actualización"):
             st.cache_data.clear()
@@ -256,7 +260,7 @@ def main():
     
     if df_sales is None:
         st.error("⏳ Google está ocupado (Error 429).")
-        st.info("Espera 1 min y dale al botón 'Forzar Actualización' del menú.")
+        st.info("Espera 1 min y dale al botón 'Forzar Actualización'.")
         st.stop()
 
     # --- PROCESAMIENTO ---
@@ -404,13 +408,12 @@ def main():
                     sheet = bk.get_worksheet(0)
                     row = [emp, prod, kg, val, val*0.02, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Auto"]
                     
-                    # ACTION WITH RETRY
                     def do_write(): sheet.append_row(row)
                     success, error = safe_api_action(do_write)
                     
                     if success:
                         log_action(bk, "VENTA", f"{emp} | {kg}kg | {prod}")
-                        st.cache_data.clear() # Limpiar cache para ver cambios
+                        st.cache_data.clear() 
                         st.success(t['msgs'][0])
                         if PDF_AVAILABLE:
                             try:
@@ -432,7 +435,13 @@ def main():
             if c_st3.button(t['stock_btn'], type="primary"):
                 bk = get_book_direct()
                 try:
-                    sh_stk = bk.worksheet("Estoque")
+                    # AUTO-CREACIÓN DE HOJA SI NO EXISTE
+                    try:
+                        sh_stk = bk.worksheet("Estoque")
+                    except:
+                        sh_stk = bk.add_worksheet(title="Estoque", rows=1000, cols=10)
+                        sh_stk.append_row(["Data", "Produto", "Kg", "Usuario"])
+                    
                     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     
                     def do_stock(): sh_stk.append_row([now, prod_stock, kg_stock, st.session_state.username])
@@ -443,7 +452,7 @@ def main():
                         st.cache_data.clear()
                         st.success(t['stock_msg']); time.sleep(1.5); st.rerun()
                     else: st.error(f"Error al guardar: {err}")
-                except: st.error("Error: Hoja 'Estoque' missing.")
+                except Exception as e: st.error(f"Error grave: {e}")
 
         st.divider()
         st.subheader("Admin Ventas")
@@ -468,29 +477,21 @@ def main():
                         bk = get_book_direct()
                         sh_sl = bk.get_worksheet(0)
                         cell = sh_sl.find(str(r['Fecha_Registro']))
-                        
                         def do_update():
                             sh_sl.update_cell(cell.row, 3, new_kg)
                             sh_sl.update_cell(cell.row, 4, new_val)
                             sh_sl.update_cell(cell.row, 5, new_val*0.02)
-                        
                         success, err = safe_api_action(do_update)
-                        if success:
-                            st.cache_data.clear()
-                            st.success("Editado!"); time.sleep(1); st.rerun()
+                        if success: st.cache_data.clear(); st.success("Editado!"); time.sleep(1); st.rerun()
                         else: st.error(f"Error: {err}")
                         
                     if c_btn2.button(t['actions'][1], key=f"del_{i}", type="secondary"):
                         bk = get_book_direct()
                         sh_sl = bk.get_worksheet(0)
                         cell = sh_sl.find(str(r['Fecha_Registro']))
-                        
                         def do_del(): sh_sl.delete_rows(cell.row)
                         success, err = safe_api_action(do_del)
-                        
-                        if success:
-                            st.cache_data.clear()
-                            st.success(t['msgs'][1]); time.sleep(1); st.rerun()
+                        if success: st.cache_data.clear(); st.success(t['msgs'][1]); time.sleep(1); st.rerun()
                         else: st.error(f"Error: {err}")
             
             st.divider()
@@ -508,15 +509,10 @@ def main():
                         for i, r in enumerate(all_recs):
                             if str(r['Fecha_Registro']) in dates: rows_to_del.append(i + 2)
                         rows_to_del.sort(reverse=True)
-                        
                         def do_bulk_del():
                             for rw in rows_to_del: sh_sl.delete_rows(rw)
-                        
                         success, err = safe_api_action(do_bulk_del)
-                        if success:
-                            log_action(bk, "BORRADO_MASIVO", f"{len(rows_to_del)}")
-                            st.cache_data.clear()
-                            st.success(t['msgs'][1]); time.sleep(1); st.rerun()
+                        if success: log_action(bk, "BORRADO_MASIVO", f"{len(rows_to_del)}"); st.cache_data.clear(); st.success(t['msgs'][1]); time.sleep(1); st.rerun()
                         else: st.error(f"Error: {err}")
 
     # 4. LOG
@@ -547,13 +543,10 @@ def main():
                                 if i==0: continue
                                 if row[0] in dts_h: dels.append(i+1)
                             dels.sort(reverse=True)
-                            
                             def do_log_del():
                                 for d in dels: sh_log.delete_rows(d)
-                            
                             success, err = safe_api_action(do_log_del)
-                            if success:
-                                st.success(t['msgs'][1]); time.sleep(1); st.rerun()
+                            if success: st.success(t['msgs'][1]); time.sleep(1); st.rerun()
                             else: st.error(f"Error: {err}")
         except: st.write("Log vacío")
 
