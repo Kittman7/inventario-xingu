@@ -98,9 +98,9 @@ TR = {
         "headers": ["Dashboard", "Registrar Venda", "Gestão de Estoque", "Auditoria"],
         "metrics": ["Faturamento", "Volume Vendido", "Comissão", "Ticket Médio", "Melhor Cliente"],
         "charts": ["Tendência", "Mix Produtos", "Por Empresa"],
-        "stock_add_title": "📦 Adicionar Estoque",
-        "stock_btn": "➕ Adicionar",
-        "stock_alert": "Estoque Atual",
+        "stock_add_title": "📦 Adicionar Estoque (Entradas)",
+        "stock_btn": "➕ Adicionar ao Estoque",
+        "stock_alert": "Estoque Atual (Entradas - Vendas)",
         "table_title": "Detalhes",
         "forms": ["Cliente", "Produto", "Kg", "Valor (R$)", "✅ Confirmar Venda"],
         "actions": ["Salvar", "DELETAR", "Buscar...", "✨ Novo...", "🗑️ Apagar Seleção"],
@@ -217,12 +217,12 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         
         t = TR.get(lang, TR["Português"]) 
-        st.caption("v55.0 Final Design")
+        st.caption("v56.0 DB Fixed")
         if st.button(t['logout']): st.session_state.authenticated = False; st.rerun()
     
     s = RATES[lang]["s"]; r = RATES[lang]["r"]
 
-    # --- DATA LOADING (CON PROTECCIÓN MEJORADA) ---
+    # --- DATA LOADING (CON FIX DE CONEXIÓN) ---
     df_sales = pd.DataFrame()
     df_stock_in = pd.DataFrame()
     book = None
@@ -231,18 +231,18 @@ def main():
 
     try:
         book = get_data()
-        sheet_sales = book.sheet1 # Intenta abrir la hoja 1 por defecto
+        # FIX: Usar get_worksheet(0) para agarrar la PRIMERA hoja, se llame como se llame (Hoja 1, Ventas, etc.)
+        sheet_sales = book.get_worksheet(0) 
         df_sales = pd.DataFrame(sheet_sales.get_all_records())
     except: 
-        # Si falla, intentamos reconectar o mostrar error amable
-        st.error("Error conectando con Google Sheets. Revisa que el archivo 'Inventario_Xingu_DB' exista y tenga la hoja 1.")
+        st.error("Error conectando. Revisa que 'Inventario_Xingu_DB' exista en tu Drive.")
         st.stop()
 
     try:
         sheet_stock = book.worksheet("Estoque")
         df_stock_in = pd.DataFrame(sheet_stock.get_all_records())
     except:
-        # No paramos la app si falta stock, solo avisamos
+        st.warning("Aviso: Crea hoja 'Estoque' (Data, Produto, Kg, Usuario) para usar el inventario.")
         df_stock_in = pd.DataFrame(columns=["Data", "Produto", "Kg", "Usuario"]) 
 
     # --- PROCESAMIENTO ---
@@ -324,7 +324,7 @@ def main():
 
     tab1, tab2, tab3, tab4 = st.tabs(t['tabs'])
 
-    # 1. DASHBOARD (ORDEN CAMBIADO)
+    # 1. DASHBOARD
     with tab1:
         st.title(t['headers'][0])
         if not df_sales.empty:
@@ -361,19 +361,11 @@ def main():
 
                 # --- TABLA DETALLES (ARRIBA) ---
                 st.subheader(t['table_title'])
-                
-                # Preparamos tabla visual (Con Mes y Comisión)
                 df_show = df_fil[['Fecha_Registro', 'Mes_Lang', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']].copy()
-                
-                # Renombrar para visualización
                 cols_view = {
-                    'Fecha_Registro': t['col_map']['Fecha_Hora'],
-                    'Mes_Lang': t['dash_cols']['mes'],
-                    'Empresa': t['dash_cols']['emp'],
-                    'Producto': t['dash_cols']['prod'],
-                    'Kg': t['dash_cols']['kg'],
-                    'Valor_BRL': t['dash_cols']['val'],
-                    'Comissao_BRL': t['dash_cols']['com']
+                    'Fecha_Registro': t['col_map']['Fecha_Hora'], 'Mes_Lang': t['dash_cols']['mes'],
+                    'Empresa': t['dash_cols']['emp'], 'Producto': t['dash_cols']['prod'],
+                    'Kg': t['dash_cols']['kg'], 'Valor_BRL': t['dash_cols']['val'], 'Comissao_BRL': t['dash_cols']['com']
                 }
                 
                 st.dataframe(
@@ -433,6 +425,7 @@ def main():
 
     # 3. ADMIN (TABLA VISUAL + EDITAR)
     with tab3:
+        # STOCK ADD
         st.header(t['stock_add_title'])
         with st.container(border=True):
             c_st1, c_st2, c_st3 = st.columns([2, 1, 1])
@@ -446,7 +439,7 @@ def main():
                     log_action(book, "STOCK_ADD", f"{prod_stock} | +{kg_stock}kg")
                     st.success(t['stock_msg']); time.sleep(1.5); st.rerun()
                 elif not sheet_stock:
-                    st.error("Error: Hoja 'Estoque' no creada en Google Sheets.")
+                    st.error("Error: Hoja 'Estoque' missing.")
 
         st.divider()
         st.subheader("Admin Ventas")
@@ -456,19 +449,11 @@ def main():
             # 1. TABLA GENERAL (COMO HISTORIAL)
             st.caption("Vista General:")
             
-            # Preparamos tabla visual para Admin
             df_admin_show = df_sales[['Fecha_Registro', 'Empresa', 'Producto', 'Kg', 'Valor_BRL']].copy()
-            # Renombramos para que se vea bonito
-            cols_admin = {
-                'Fecha_Registro': t['col_map']['Fecha_Hora'],
-                'Empresa': t['dash_cols']['emp'],
-                'Producto': t['dash_cols']['prod'],
-                'Kg': t['dash_cols']['kg'],
-                'Valor_BRL': t['dash_cols']['val']
-            }
+            cols_admin = {'Fecha_Registro': t['col_map']['Fecha_Hora'], 'Empresa': t['dash_cols']['emp'],
+                'Producto': t['dash_cols']['prod'], 'Kg': t['dash_cols']['kg'], 'Valor_BRL': t['dash_cols']['val']}
             
-            st.dataframe(
-                df_admin_show.rename(columns=cols_admin).iloc[::-1], 
+            st.dataframe(df_admin_show.rename(columns=cols_admin).iloc[::-1], 
                 use_container_width=True, hide_index=True,
                 column_config={
                     t['dash_cols']['val']: st.column_config.NumberColumn(format=f"{s} %.2f"),
