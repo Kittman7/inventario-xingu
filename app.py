@@ -8,7 +8,7 @@ import time
 import io
 import xlsxwriter
 
-# INTENTO DE IMPORTAR FPDF (Para que no falle si falta)
+# INTENTO DE IMPORTAR FPDF
 try:
     from fpdf import FPDF
     PDF_AVAILABLE = True
@@ -21,7 +21,7 @@ except ImportError:
 NOMBRE_EMPRESA = "Xingu CEO"
 ICONO_APP = "🍇"
 
-# USUARIOS (Usuario: Contraseña)
+# USUARIOS
 USUARIOS = {
     "julio": "777",
     "vendedor": "1234",
@@ -86,7 +86,7 @@ if PDF_AVAILABLE:
         pdf.cell(100, 10, f"{prod}", 1); pdf.cell(40, 10, f"{kg}", 1); pdf.cell(50, 10, f"R$ {val:,.2f}", 1)
         return pdf.output(dest='S').encode('latin-1')
 
-# --- DICCIONARIO COMPLETO ---
+# --- DICCIONARIO COMPLETO (CON EMOJIS DE LOG) ---
 TR = {
     "Português": {
         "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nova Venda", "🛠️ Admin", "📜 Log"],
@@ -107,7 +107,10 @@ TR = {
         "new_labels": ["Nome Cliente:", "Nome Produto:"],
         "dash_cols": {"val": "Valor", "com": "Comissão", "kg": "Kg"},
         "install": "📲 Instalar: Menu -> Adicionar à Tela de Início",
-        "filter": "📅 Filtrar por Data"
+        "filter": "📅 Filtrar por Data",
+        # MAPA DE COLUMNAS Y VALORES PARA LOG
+        "col_map": {"Fecha_Hora": "📅 Data", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"},
+        "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "EDITAR": "✏️ Edição", "BORRAR": "🗑️ Apagado", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"}
     },
     "Español": {
         "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nueva Venta", "🛠️ Admin", "📜 Log"],
@@ -128,7 +131,10 @@ TR = {
         "new_labels": ["Nombre Cliente:", "Nombre Producto:"],
         "dash_cols": {"val": "Valor", "com": "Comisión", "kg": "Kg"},
         "install": "📲 Instalar: Menú -> Agregar a Pantalla de Inicio",
-        "filter": "📅 Filtrar por Fecha"
+        "filter": "📅 Filtrar por Fecha",
+        # MAPA DE COLUMNAS Y VALORES PARA LOG
+        "col_map": {"Fecha_Hora": "📅 Fecha", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"},
+        "val_map": {"NEW": "🆕 Nuevo", "VENTA": "💰 Venta", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Masa", "CREAR": "✨ Crear", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"}
     },
     "English": {
         "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ New Sale", "🛠️ Admin", "📜 Log"],
@@ -149,7 +155,10 @@ TR = {
         "new_labels": ["Client Name:", "Product Name:"],
         "dash_cols": {"val": "Value", "com": "Comm", "kg": "Kg"},
         "install": "📲 Install: Menu -> Add to Home Screen",
-        "filter": "📅 Filter by Date"
+        "filter": "📅 Filter by Date",
+        # MAPA DE COLUMNAS Y VALORES PARA LOG
+        "col_map": {"Fecha_Hora": "📅 Date", "Accion": "⚡ Action", "Detalles": "📝 Details"},
+        "val_map": {"NEW": "🆕 New", "VENTA": "💰 Sale", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Deleted", "BORRADO_MASIVO": "🔥 Bulk", "CREAR": "✨ Create", "HIST_DEL": "🧹 Clean", "META_UPDATE": "🎯 Goal"}
     }
 }
 RATES = { "Português": {"s": "R$", "r": 1.0}, "Español": {"s": "$", "r": 165.0}, "English": {"s": "USD", "r": 0.18} }
@@ -188,7 +197,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
         st.info(t.get("install", "Install App"))
-        st.caption("v43.0 Enterprise + Filters")
+        st.caption("v44.0 Historial Bonito")
     
     s = RATES[lang]["s"]; r = RATES[lang]["r"]
 
@@ -232,7 +241,6 @@ def main():
     with tab1:
         st.title(t['headers'][0])
         if not df.empty:
-            # --- FILTRO DE FECHAS ---
             with st.expander(t.get("filter", "Filter Date"), expanded=False):
                 col_f1, col_f2 = st.columns(2)
                 df['Fecha_DT'] = pd.to_datetime(df['Fecha_Registro'], errors='coerce')
@@ -241,7 +249,6 @@ def main():
                 d1 = col_f1.date_input("Start", d_min)
                 d2 = col_f2.date_input("End", d_max)
             
-            # Aplicar Filtro
             mask = (df['Fecha_DT'].dt.date >= d1) & (df['Fecha_DT'].dt.date <= d2)
             df_fil = df.loc[mask]
 
@@ -255,7 +262,7 @@ def main():
                 
                 st.divider(); st.subheader(t['stock_t'])
                 stock = df_fil.groupby('Producto')['Kg'].sum().sort_values(ascending=False).head(3)
-                for p, q in stock.items(): st.progress(min(q/1000, 1.0), text=f"{p}: {q:,.0f} kg (Selection)")
+                for p, q in stock.items(): st.progress(min(q/1000, 1.0), text=f"{p}: {q:,.0f} kg")
                 
                 st.divider()
                 c_izq, c_der = st.columns([2, 1])
@@ -272,14 +279,23 @@ def main():
                     st.plotly_chart(fig2, use_container_width=True)
 
                 st.subheader(t['table_title'])
-                st.dataframe(df_fil[['Fecha_Registro', 'Empresa', 'Producto', 'Kg', 'Valor_BRL']].iloc[::-1], use_container_width=True, hide_index=True)
+                
+                # --- TABLA BONITA DASHBOARD ---
+                st.dataframe(
+                    df_fil[['Fecha_Registro', 'Empresa', 'Producto', 'Kg', 'Valor_BRL']].iloc[::-1],
+                    use_container_width=True, hide_index=True,
+                    column_config={
+                        "Valor_BRL": st.column_config.NumberColumn(t['dash_cols']['val'], format=f"{s} %.2f"),
+                        "Kg": st.column_config.NumberColumn(t['dash_cols']['kg'], format="%.1f kg")
+                    }
+                )
 
     # 2. VENDER
     with tab2:
         st.header(t['headers'][1])
         with st.container(border=True):
             c1, c2 = st.columns(2)
-            op_new = t['actions'][3] # "✨ Novo..."
+            op_new = t['actions'][3]
             sel_emp = c1.selectbox(t['forms'][0], [op_new] + empresas)
             emp = c1.text_input(t['new_labels'][0]) if sel_emp == op_new else sel_emp
             sel_prod = c2.selectbox(t['forms'][1], [op_new] + productos)
@@ -301,20 +317,19 @@ def main():
                         except: pass
                     time.sleep(2); st.rerun()
 
-    # 3. ADMIN (RESTAURADO)
+    # 3. ADMIN
     with tab3:
         filtro = st.text_input(t['actions'][2]) 
         if not df.empty:
             df_s = df[df.astype(str).apply(lambda x: x.str.contains(filtro, case=False)).any(axis=1)] if filtro else df.tail(5).iloc[::-1]
             for i, r in df_s.iterrows():
                 with st.expander(f"{r['Empresa']} | {r['Producto']}"):
-                    if st.button(t['actions'][1], key=f"d{i}"): # Borrar uno
+                    if st.button(t['actions'][1], key=f"d{i}"):
                         try:
                             cell = sheet.find(str(r['Fecha_Registro']))
                             sheet.delete_rows(cell.row)
                             st.success(t['msgs'][1]); time.sleep(1); st.rerun()
                         except: st.error("Error")
-            
             st.divider()
             with st.expander(t['bulk_label']):
                 df_rev = df.iloc[::-1].reset_index()
@@ -332,15 +347,31 @@ def main():
                         log_action(book, "BORRADO_MASIVO", f"{len(rows_to_del)}")
                         st.success(t['msgs'][1]); time.sleep(1); st.rerun()
 
-    # 4. LOG (RESTAURADO)
+    # 4. LOG (RESTAURADO CON EMOJIS)
     with tab4:
+        st.title(t['headers'][3])
         try:
             sh_log = book.worksheet("Historial")
             h_dt = pd.DataFrame(sh_log.get_all_records())
-            st.dataframe(h_dt.iloc[::-1], use_container_width=True)
-            st.divider()
-            with st.expander(t['clean_hist_label']):
-                if not h_dt.empty:
+            
+            if not h_dt.empty:
+                # 1. Crear copia para visualización
+                show_log = h_dt.copy()
+                
+                # 2. Reemplazar códigos por Emojis (Usando el diccionario val_map)
+                if "Accion" in show_log.columns:
+                    show_log["Accion"] = show_log["Accion"].replace(t['val_map'])
+                
+                # 3. Traducir Columnas (Fecha_Hora -> 📅 Fecha)
+                show_log = show_log.rename(columns=t['col_map'])
+                
+                # 4. Mostrar
+                st.dataframe(show_log.iloc[::-1], use_container_width=True)
+                
+                st.divider()
+                
+                # 5. Lógica de borrado (Usa nombres originales para no romper lógica)
+                with st.expander(t['clean_hist_label']):
                     rev_h = h_dt.iloc[::-1].reset_index()
                     opc_h = [f"{r['Fecha_Hora']} | {r['Accion']} | {r['Detalles']}" for i, r in rev_h.iterrows()]
                     sel_h = st.multiselect(t['msgs'][4], opc_h)
@@ -355,6 +386,8 @@ def main():
                             dels.sort(reverse=True)
                             for d in dels: sh_log.delete_rows(d)
                             st.success(t['msgs'][1]); time.sleep(1); st.rerun()
+            else:
+                st.info(t['msgs'][2])
         except: st.write("Log vacío")
 
 if __name__ == "__main__":
