@@ -341,7 +341,6 @@ def render_admin(t, productos_all, df_sales, df_stock_in, s):
     # --- SECCIÓN 1: GESTIÓN DE STOCK ---
     st.markdown("## 📦 Gestión de Stock")
     
-    # 1.1 FORMULARIO DE AÑADIR
     stk_suffix = str(st.session_state.stock_key)
     with st.container(border=True):
         st.caption("Añadir nueva entrada:")
@@ -369,41 +368,49 @@ def render_admin(t, productos_all, df_sales, df_stock_in, s):
                 else: st.error(f"Error: {err}")
             except Exception as e: st.error(f"Error grave: {e}")
 
-    # 1.2 TABLA Y EDICIÓN DE STOCK
+    # BORRADO TOTAL STOCK
+    with st.expander("🔥 Borrar Todo el Stock (Peligro)"):
+        st.warning("Esto borrará todas las entradas de stock. No se puede deshacer.")
+        check_wipe_stk = st.checkbox("Estoy seguro de borrar el stock", key="chk_wipe_stk")
+        if check_wipe_stk:
+            if st.button("BORRAR TODO STOCK", type="primary"):
+                bk = get_book_direct()
+                try:
+                    sh_stk = bk.worksheet("Estoque")
+                    def do_wipe_stk():
+                        sh_stk.clear()
+                        sh_stk.append_row(["Data", "Produto", "Kg", "Usuario"])
+                    success, err = safe_api_action(do_wipe_stk)
+                    if success: st.cache_data.clear(); st.success("¡Stock vaciado!"); time.sleep(1); st.rerun()
+                    else: st.error(f"Error: {err}")
+                except: st.error("No existe hoja Estoque")
+
     st.write("")
     with st.expander("🛠️ Ver / Editar Entradas Pasadas"):
         if not df_stock_in.empty:
-            # Mostrar tabla simple
             st.dataframe(df_stock_in.iloc[::-1], use_container_width=True, hide_index=True)
-            
             st.write("---")
             st.caption("Editar o Borrar entrada específica:")
-            # Iterar últimas 10 entradas para editar
             df_stk_edit = df_stock_in.tail(10).iloc[::-1]
             for i, r in df_stk_edit.iterrows():
-                # Clave única combinando producto y fecha
                 row_label = f"📦 {r.get('Produto', '?')} | {r.get('Data', '?')} | {r.get('Kg', 0)}kg"
                 with st.expander(row_label):
                     c_esk1, c_esk2 = st.columns(2)
-                    # Campos de edición
                     new_stk_prod = c_esk1.text_input("Producto", value=str(r.get('Produto', '')), key=f"ed_stk_p_{i}")
                     new_stk_kg = c_esk2.number_input("Kg", value=float(r.get('Kg', 0)), step=1.0, key=f"ed_stk_k_{i}")
-                    
                     c_btn_s1, c_btn_s2 = st.columns(2)
                     if c_btn_s1.button("💾 Guardar Cambios", key=f"sav_stk_{i}"):
                         bk = get_book_direct()
                         sh_stk = bk.worksheet("Estoque")
-                        # Buscar celda por fecha (asumiendo fecha unica o casi unica)
                         try:
                             cell = sh_stk.find(str(r['Data']))
                             def do_stk_update():
-                                sh_stk.update_cell(cell.row, 2, new_stk_prod) # Col 2 = Prod
-                                sh_stk.update_cell(cell.row, 3, new_stk_kg)   # Col 3 = Kg
+                                sh_stk.update_cell(cell.row, 2, new_stk_prod) 
+                                sh_stk.update_cell(cell.row, 3, new_stk_kg)   
                             success, err = safe_api_action(do_stk_update)
                             if success: st.cache_data.clear(); st.success("¡Stock actualizado!"); time.sleep(1); st.rerun()
                             else: st.error(f"Error: {err}")
                         except: st.error("No encontré la fila exacta.")
-
                     if c_btn_s2.button("🗑️ Borrar Entrada", key=f"del_stk_{i}", type="secondary"):
                         bk = get_book_direct()
                         sh_stk = bk.worksheet("Estoque")
@@ -422,16 +429,28 @@ def render_admin(t, productos_all, df_sales, df_stock_in, s):
     # --- SECCIÓN 2: GESTIÓN DE VENTAS ---
     st.markdown("## 💰 Admin Ventas")
     filtro = st.text_input(t['actions'][2], key="admin_search") 
+    
     if not df_sales.empty:
+        # LÓGICA DE FILTRADO (SOLO 5 O TODAS SI BUSCA)
+        if filtro:
+            # Si hay filtro, busca en todo y muestra todo lo que coincida
+            df_filtered = df_sales[df_sales.astype(str).apply(lambda x: x.str.contains(filtro, case=False)).any(axis=1)]
+            st.info(f"Mostrando {len(df_filtered)} resultados para '{filtro}'")
+        else:
+            # Si no hay filtro, muestra solo las ultimas 5
+            df_filtered = df_sales.tail(5)
+            st.caption("Mostrando las 5 ventas más recientes (Usa el buscador para ver más)")
+
         # Tabla Visual
-        df_admin_show = df_sales[['Fecha_Registro', 'Empresa', 'Producto', 'Kg', 'Valor_BRL']].copy()
+        df_admin_show = df_filtered[['Fecha_Registro', 'Empresa', 'Producto', 'Kg', 'Valor_BRL']].copy()
         cols_admin = {'Fecha_Registro': t['col_map']['Fecha_Hora'], 'Empresa': t['dash_cols']['emp'], 'Producto': t['dash_cols']['prod'], 'Kg': t['dash_cols']['kg'], 'Valor_BRL': t['dash_cols']['val']}
         st.dataframe(df_admin_show.rename(columns=cols_admin).iloc[::-1], use_container_width=True, hide_index=True, column_config={t['dash_cols']['val']: st.column_config.NumberColumn(format=f"{s} %.2f"), t['dash_cols']['kg']: st.column_config.NumberColumn(format="%.1f kg")})
         
         st.write("")
-        st.caption("🛠️ Editar / Borrar Ventas (Individual):")
-        df_s = df_sales[df_sales.astype(str).apply(lambda x: x.str.contains(filtro, case=False)).any(axis=1)] if filtro else df_sales.tail(10).iloc[::-1]
-        for i, r in df_s.iterrows():
+        st.caption("🛠️ Editar / Borrar Ventas (Mostradas arriba):")
+        
+        # Iterar sobre las filtradas (reversed para ver recientes primero)
+        for i, r in df_filtered.iloc[::-1].iterrows():
             with st.expander(f"💰 {r['Empresa']} | {r['Producto']} | {r['Fecha_Registro']}"):
                 c_ed1, c_ed2 = st.columns(2)
                 new_kg = c_ed1.number_input("Kg", value=float(r['Kg']), key=f"k_{i}")
@@ -480,11 +499,26 @@ def render_admin(t, productos_all, df_sales, df_stock_in, s):
                     if success: log_action(bk, "BORRADO_MASIVO", f"{len(rows_to_del)}"); st.cache_data.clear(); st.success(t['msgs'][1]); time.sleep(1); st.rerun()
                     else: st.error(f"Error: {err}")
 
+        # BORRADO TOTAL VENTAS
+        st.write("")
+        with st.expander("🔥 Borrar TODAS las Ventas (Peligro)"):
+            st.warning("Esto borrará todas las ventas registradas. ¡Irreversible!")
+            check_wipe_sales = st.checkbox("Estoy seguro de borrar ventas", key="chk_wipe_sales")
+            if check_wipe_sales:
+                if st.button("BORRAR TODAS VENTAS", type="primary"):
+                    bk = get_book_direct()
+                    sh_sl = bk.get_worksheet(0)
+                    def do_wipe_sales():
+                        sh_sl.clear()
+                        # Restaurar Headers originales
+                        sh_sl.append_row(["Empresa", "Producto", "Kg", "Valor_BRL", "Comissao_BRL", "Fecha_Registro", "Tipo"])
+                    success, err = safe_api_action(do_wipe_sales)
+                    if success: st.cache_data.clear(); st.success("¡Ventas vaciadas!"); time.sleep(1); st.rerun()
+                    else: st.error(f"Error: {err}")
+
 @st.fragment
 def render_log(t):
     st.title(t['headers'][3])
-    # ... (Log code stays similar) ...
-    # (Para ahorrar espacio aquí, el log es el mismo de v68)
     col_btn, col_info = st.columns([1, 2])
     if col_btn.button("🔄 Cargar/Ocultar Historial", type="secondary"):
         st.session_state.show_log = not st.session_state.show_log
@@ -528,7 +562,7 @@ def render_log(t):
 
                 st.write("")
                 col_danger1, col_danger2 = st.columns([3, 1])
-                check_danger = col_danger1.checkbox("⚠️ Habilitar borrado completo (Irreversible)")
+                check_danger = col_danger1.checkbox("⚠️ Habilitar borrado completo")
                 if check_danger:
                     if col_danger2.button("🔥 BORRAR TODO", type="primary"):
                         def do_wipe():
@@ -554,7 +588,7 @@ def main():
         st.markdown(f"<h3 style='text-align: center;'>{NOMBRE_EMPRESA}</h3>", unsafe_allow_html=True)
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
-        st.caption("v69.0 Control Total Stock")
+        st.caption("v70.0 Admin Pro & Limpieza")
         if st.button("🔄 Forzar Actualización"):
             st.cache_data.clear()
             st.rerun()
