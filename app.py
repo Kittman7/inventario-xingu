@@ -35,9 +35,9 @@ except:
 # --- CONFIGURACIÓN BÁSICA ---
 try:
     img_icon = Image.open(ICONO_ARCHIVO)
-    st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon=img_icon, layout="wide")
+    st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon=img_icon, layout="wide", initial_sidebar_state="collapsed")
 except:
-    st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon="🍇", layout="wide")
+    st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon="🍇", layout="wide", initial_sidebar_state="collapsed")
 
 # --- 🚀 FUERZA BRUTA PARA EL ICONO DEL CELULAR ---
 def inject_mobile_icon():
@@ -68,28 +68,58 @@ def inject_mobile_icon():
 
 inject_mobile_icon()
 
-# --- ESTILOS CSS ---
+# --- ESTILOS CSS OPTIMIZADOS PARA MÓVIL ---
 st.markdown("""
     <style>
+    /* Ocultar elementos innecesarios */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+    
+    /* Métricas estilo tarjeta */
     div[data-testid="stMetric"] {
-        background-color: #262730;
-        border: 1px solid #464b5f;
-        padding: 15px 20px;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        transition: transform 0.2s;
+        background-color: #1E1E1E;
+        border: 1px solid #333;
+        padding: 10px;
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
-    div[data-testid="stMetric"]:hover {
-        transform: translateY(-2px);
-        border-color: #ff4b4b;
-    }
+    
+    /* Botones grandes para dedos (Touch targets) */
     .stButton>button {
-        width: 100%; border-radius: 8px; height: 3em; font-weight: 700; border: none; transition: 0.3s;
+        width: 100%;
+        border-radius: 10px;
+        height: 3.5em; /* Más alto para tocar fácil */
+        font-weight: 600;
+        font-size: 16px;
+        border: none;
+        transition: 0.2s;
     }
-    .stButton>button:hover { transform: scale(1.02); }
-    h2 { border-bottom: 2px solid #444; padding-bottom: 10px; }
+    .stButton>button:hover { transform: scale(1.01); }
+    
+    /* Ajustes para móviles */
+    @media only screen and (max-width: 600px) {
+        .block-container {
+            padding-top: 2rem !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+        h1 { font-size: 1.8rem !important; }
+        h2 { font-size: 1.5rem !important; }
+        h3 { font-size: 1.2rem !important; }
+        
+        /* Forzar que las pestañas se vean completas */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 2px;
+        }
+        .stTabs [data-baseweb="tab"] {
+            height: 50px;
+            white-space: pre-wrap;
+            background-color: #0E1117;
+            border-radius: 5px;
+            margin-right: 2px;
+            font-size: 12px;
+        }
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -108,16 +138,18 @@ def check_password():
     if st.session_state.authenticated:
         return True
     
-    c1, c2, c3 = st.columns([1,2,1])
+    c1, c2, c3 = st.columns([1,4,1]) # Más ancho en el medio para móvil
     with c2:
-        try: st.image(ICONO_ARCHIVO, width=150)
+        st.write("")
+        st.write("")
+        try: st.image(ICONO_ARCHIVO, use_container_width=True)
         except: st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA}</h1>", unsafe_allow_html=True)
         st.write("")
         if not USING_SECRETS:
-            st.caption("⚠️ Modo Demo (Configurar Secrets)")
+            st.caption("⚠️ Modo Demo")
         with st.form("login_form"):
             input_pass = st.text_input("Senha / Contraseña", type="password")
-            submit_btn = st.form_submit_button("Entrar", type="primary")
+            submit_btn = st.form_submit_button("Entrar / Login", type="primary", use_container_width=True)
         if submit_btn:
             if input_pass.strip() == CONTRASEÑA_MAESTRA:
                 st.session_state.authenticated = True
@@ -151,198 +183,198 @@ MONTHS_UI = {
 
 TR = {
     "Português": {
-        "tabs": [f"📊 Dashboard", "➕ Nova Venda", "📦 Estoque", "💰 Admin Vendas", "📜 Log"],
+        "tabs": [f"📊 Dash", "➕ Venda", "📦 Stock", "💰 Admin", "📜 Log"],
         "headers": ["Dashboard", "Registrar Venda", "Gestão de Estoque", "Auditoria"],
-        "metrics": ["Faturamento", "Volume Vendido", "Comissão", "Ticket Médio", "Melhor Cliente"],
+        "metrics": ["Faturamento", "Volume", "Comissão", "Ticket Médio", "Melhor Cliente"],
         "charts": ["Tendência", "Mix Produtos", "Por Empresa"],
-        "stock_add_title": "📦 Adicionar Estoque (Entradas)",
+        "stock_add_title": "📦 Entrada de Estoque",
         "stock_btn": "➕ Adicionar",
-        "stock_alert": "Monitoramento de Estoque",
+        "stock_alert": "Monitoramento",
         "table_title": "Detalhes",
-        "forms": ["Cliente", "Produto", "Kg", "Valor (R$)", "✅ Confirmar Venda"],
+        "forms": ["Cliente", "Produto", "Kg", "Valor (R$)", "✅ Confirmar"],
         "actions": ["Salvar", "DELETAR", "Buscar...", "✨ Novo...", "🗑️ Apagar Seleção"],
         "bulk_label": "Gestão em Massa",
-        "clean_hist_label": "Limpeza de Histórico",
-        "dl_excel": "📗 Baixar Relatório (Excel Dashboard)",
+        "clean_hist_label": "Limpeza",
+        "dl_excel": "📗 Relatório (Excel)",
         "logout": "🔒 Sair",
-        "goal_lbl": "🎯 Meta de", "goal_btn": "💾 Salvar Meta",
+        "goal_lbl": "🎯 Meta de", "goal_btn": "💾 Salvar",
         "new_labels": ["Nome Cliente:", "Nome Produto:"],
         "dash_cols": {"val": "Valor", "com": "Comissão", "kg": "Kg", "emp": "Empresa", "prod": "Produto", "mes": "Mês"},
         "msgs": ["Sucesso!", "Apagado!", "Sem dados", "Atualizado!", "Selecione items"],
-        "stock_msg": "Estoque Adicionado!",
-        "user_lbl": "Usuário / Responsável",
-        "filter_viz": "👁️ Ver apenas estes produtos:",
-        "save_view": "💾 Salvar Vista Padrão",
+        "stock_msg": "Adicionado!",
+        "user_lbl": "Usuário",
+        "filter_viz": "👁️ Ver apenas:",
+        "save_view": "💾 Salvar Vista",
         "hist_entries": "Histórico de Entradas",
-        "search_stk": "🔍 Buscar no histórico:",
+        "search_stk": "🔍 Buscar:",
         "edit_del_stk": "Editar ou Apagar Entrada",
-        "save_changes": "💾 Salvar Alterações",
-        "del_entry": "🗑️ Apagar Entrada",
-        "wipe_stk_title": "🔥 Apagar TODO o Estoque (Perigo)",
+        "save_changes": "💾 Salvar",
+        "del_entry": "🗑️ Apagar",
+        "wipe_stk_title": "🔥 Apagar TUDO (Perigo)",
         "wipe_stk_warn": "Isso apagará todas as entradas. Irreversível.",
         "wipe_stk_check": "Tenho certeza",
-        "wipe_stk_btn": "APAGAR TODO ESTOQUE",
-        "admin_sales_title": "💰 Administração de Vendas",
+        "wipe_stk_btn": "ZERAR ESTOQUE",
+        "admin_sales_title": "💰 Admin Vendas",
         "search_sales": "🔍 Buscar vendas...",
-        "wipe_sales_title": "🔥 Apagar TODAS as Vendas (Perigo)",
-        "wipe_sales_btn": "APAGAR TODAS VENDAS",
+        "wipe_sales_title": "🔥 Apagar TODAS Vendas (Perigo)",
+        "wipe_sales_btn": "ZERAR VENDAS",
         "col_map": {"Fecha_Hora": "📅 Data", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"},
         "xls_head": ["Data", "Mês", "Empresa", "Produto", "Kg", "Valor (R$)", "Comissão (R$)"],
         "xls_tot": "TOTAL GERAL:",
         "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edição", "BORRAR": "🗑️ Apagado", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta", "EDIT_TABLE_STOCK": "✏️ Tbl Stock", "EDIT_TABLE_SALES": "✏️ Tbl Vendas"},
         "alerts": {
-            "stock_out": "Estoque Esgotado",
-            "stock_low": "Estoque Baixo",
-            "stock_ok": "Estoque Disponível",
-            "err_stock": "Erro: Estoque insuficiente. Você tem",
+            "stock_out": "Esgotado",
+            "stock_low": "Baixo",
+            "stock_ok": "Disponível",
+            "err_stock": "Erro: Estoque insuficiente. Tem",
             "try_sell": "kg e tenta vender",
-            "saving": "Salvando venda...",
-            "sold_ok": "Venda registrada com sucesso!",
-            "adding": "Adicionando estoque...",
+            "saving": "Salvando...",
+            "sold_ok": "Venda registrada!",
+            "adding": "Adicionando...",
             "deleting": "Apagando...",
             "wiping": "Excluindo TUDO...",
             "updating": "Atualizando...",
-            "backup_title": "🛡️ Área de Segurança (Backup)",
-            "backup_desc": "Baixe uma cópia completa de todo o banco de dados.",
-            "backup_btn": "📦 Baixar Backup Completo",
-            "backup_load": "Gerando arquivo de segurança...",
-            "last_sales": "📋 Últimas vendas registradas (Top 3):",
-            "tot_sold": "Tot. Vendido",
-            "excel_edit_mode": "📝 Modo Edição Excel",
-            "save_table": "💾 Salvar Alterações da Tabela",
-            "show_all": "👁️ Ver Todo o Histórico",
-            "lazy_msg": "Mostrando as últimas 50 entradas para velocidade.",
-            "manual_mode": "📝 Modo Manual (Editar/Apagar Individualmente)"
+            "backup_title": "🛡️ Backup",
+            "backup_desc": "Baixe cópia completa do banco de dados.",
+            "backup_btn": "📦 Baixar Backup",
+            "backup_load": "Gerando arquivo...",
+            "last_sales": "📋 Últimas (Top 3):",
+            "tot_sold": "Vendido",
+            "excel_edit_mode": "📝 Edição Rápida (Excel)",
+            "save_table": "💾 Salvar Tabela",
+            "show_all": "👁️ Ver Tudo",
+            "lazy_msg": "Mostrando últimas 50.",
+            "manual_mode": "📝 Editar Individualmente"
         }
     },
     "Español": {
-        "tabs": [f"📊 Dashboard", "➕ Nueva Venta", "📦 Stock", "💰 Admin Ventas", "📜 Log"],
-        "headers": ["Dashboard Ejecutivo", "Registrar Venta", "Gestión", "Auditoría"],
-        "metrics": ["Facturación Total", "Volumen (Kg)", "Comisión", "Ticket Medio", "Top Cliente"],
-        "charts": ["Tendencia de Ventas", "Mix de Productos", "Top Empresas"],
-        "stock_add_title": "📦 Añadir Stock (Entradas)",
+        "tabs": [f"📊 Dash", "➕ Venta", "📦 Stock", "💰 Admin", "📜 Log"],
+        "headers": ["Dashboard", "Registrar Venta", "Gestión", "Auditoría"],
+        "metrics": ["Facturación", "Volumen", "Comisión", "Ticket Medio", "Top Cliente"],
+        "charts": ["Tendencia", "Mix", "Top Empresas"],
+        "stock_add_title": "📦 Entrada Stock",
         "stock_btn": "➕ Sumar",
-        "stock_alert": "Monitor de Stock",
-        "table_title": "Detalle de Ventas",
-        "forms": ["Cliente", "Producto", "Kg", "Valor ($)", "✅ Confirmar Venta"],
+        "stock_alert": "Monitor",
+        "table_title": "Detalles",
+        "forms": ["Cliente", "Producto", "Kg", "Valor ($)", "✅ Confirmar"],
         "actions": ["Guardar", "BORRAR", "Buscar...", "✨ Nuevo...", "🗑️ Borrar Selección"],
         "bulk_label": "Gestión Masiva",
-        "clean_hist_label": "Limpieza de Historial",
-        "dl_excel": "📗 Bajar Reporte (Excel Dashboard)",
+        "clean_hist_label": "Limpieza",
+        "dl_excel": "📗 Reporte (Excel)",
         "logout": "🔒 Salir",
-        "goal_lbl": "🎯 Meta de", "goal_btn": "💾 Salvar Meta",
+        "goal_lbl": "🎯 Meta de", "goal_btn": "💾 Salvar",
         "new_labels": ["Nombre Cliente:", "Nombre Producto:"],
         "dash_cols": {"val": "Valor", "com": "Comisión", "kg": "Kg", "emp": "Empresa", "prod": "Producto", "mes": "Mes"},
         "msgs": ["¡Éxito!", "¡Borrado!", "Sin datos", "¡Actualizado!", "Seleccione items"],
-        "stock_msg": "¡Stock Añadido!",
-        "user_lbl": "Usuario / Responsable",
-        "filter_viz": "👁️ Ver solo estos productos:",
-        "save_view": "💾 Guardar Vista Predeterminada",
-        "hist_entries": "Historial de Entradas",
-        "search_stk": "🔍 Buscar en historial:",
+        "stock_msg": "¡Añadido!",
+        "user_lbl": "Usuario",
+        "filter_viz": "👁️ Ver solo:",
+        "save_view": "💾 Guardar Vista",
+        "hist_entries": "Historial Entradas",
+        "search_stk": "🔍 Buscar:",
         "edit_del_stk": "Editar o Borrar Entrada",
-        "save_changes": "💾 Guardar Cambios",
-        "del_entry": "🗑️ Borrar Entrada",
-        "wipe_stk_title": "🔥 Borrar TODO el Stock (Peligro)",
-        "wipe_stk_warn": "Esto borrará todas las entradas. Irreversible.",
+        "save_changes": "💾 Guardar",
+        "del_entry": "🗑️ Borrar",
+        "wipe_stk_title": "🔥 Borrar TODO (Peligro)",
+        "wipe_stk_warn": "Irreversible.",
         "wipe_stk_check": "Estoy seguro",
         "wipe_stk_btn": "BORRAR TODO STOCK",
-        "admin_sales_title": "💰 Administración de Ventas",
-        "search_sales": "🔍 Buscar ventas...",
-        "wipe_sales_title": "🔥 Borrar TODAS las Ventas (Peligro)",
-        "wipe_sales_btn": "BORRAR TODAS VENTAS",
+        "admin_sales_title": "💰 Admin Ventas",
+        "search_sales": "🔍 Buscar...",
+        "wipe_sales_title": "🔥 Borrar TODAS Ventas (Peligro)",
+        "wipe_sales_btn": "BORRAR TODAS",
         "col_map": {"Fecha_Hora": "📅 Fecha", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"},
         "xls_head": ["Fecha", "Mes", "Empresa", "Producto", "Kg", "Valor ($)", "Comisión ($)"],
-        "xls_tot": "TOTAL GENERAL:",
+        "xls_tot": "TOTAL:",
         "val_map": {"NEW": "🆕 Nuevo", "VENTA": "💰 Venta", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Masa", "CREAR": "✨ Crear", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta", "EDIT_TABLE_STOCK": "✏️ Tbl Stock", "EDIT_TABLE_SALES": "✏️ Tbl Ventas"},
         "alerts": {
-            "stock_out": "Stock Agotado",
-            "stock_low": "Stock Bajo",
-            "stock_ok": "Stock Disponible",
-            "err_stock": "Error: Stock insuficiente. Tienes",
+            "stock_out": "Agotado",
+            "stock_low": "Bajo",
+            "stock_ok": "Disponible",
+            "err_stock": "Error: Insuficiente. Tienes",
             "try_sell": "kg e intentas vender",
-            "saving": "Guardando venta...",
-            "sold_ok": "¡Venta registrada con éxito!",
-            "adding": "Sumando stock...",
+            "saving": "Guardando...",
+            "sold_ok": "¡Venta registrada!",
+            "adding": "Sumando...",
             "deleting": "Borrando...",
             "wiping": "Eliminando TODO...",
             "updating": "Actualizando...",
-            "backup_title": "🛡️ Zona de Seguridad (Backup)",
-            "backup_desc": "Descarga una copia completa de toda la base de datos.",
-            "backup_btn": "📦 Descargar Backup Completo",
-            "backup_load": "Generando archivo de seguridad...",
-            "last_sales": "📋 Últimas ventas registradas (Top 3):",
-            "tot_sold": "Tot. Vendido",
-            "excel_edit_mode": "📝 Modo Edición Excel",
-            "save_table": "💾 Guardar Cambios de la Tabla",
-            "show_all": "👁️ Ver Todo el Historial",
-            "lazy_msg": "Mostrando las últimas 50 entradas para velocidad.",
-            "manual_mode": "📝 Modo Manual (Editar/Borrar Individualmente)"
+            "backup_title": "🛡️ Backup",
+            "backup_desc": "Descarga copia completa.",
+            "backup_btn": "📦 Bajar Backup",
+            "backup_load": "Generando...",
+            "last_sales": "📋 Últimas (Top 3):",
+            "tot_sold": "Vendido",
+            "excel_edit_mode": "📝 Edición Rápida (Excel)",
+            "save_table": "💾 Guardar Tabla",
+            "show_all": "👁️ Ver Todo",
+            "lazy_msg": "Mostrando últimas 50.",
+            "manual_mode": "📝 Editar Individualmente"
         }
     },
     "English": {
-        "tabs": [f"📊 Dashboard", "➕ New Sale", "📦 Stock", "💰 Admin Sales", "📜 Log"],
-        "headers": ["Executive Dashboard", "New Sale", "Stock Mgmt", "Log"],
-        "metrics": ["Total Revenue", "Volume (Kg)", "Commission", "Avg Ticket", "Top Client"],
-        "charts": ["Sales Trend", "Product Mix", "Top Companies"],
-        "stock_add_title": "📦 Add Stock (Inputs)",
+        "tabs": [f"📊 Dash", "➕ Sale", "📦 Stock", "💰 Admin", "📜 Log"],
+        "headers": ["Dashboard", "New Sale", "Stock Mgmt", "Log"],
+        "metrics": ["Revenue", "Volume", "Commission", "Avg Ticket", "Top Client"],
+        "charts": ["Trend", "Mix", "Top Companies"],
+        "stock_add_title": "📦 Add Stock",
         "stock_btn": "➕ Add",
-        "stock_alert": "Stock Monitor",
-        "table_title": "Sales Details",
-        "forms": ["Client", "Product", "Kg", "Value", "✅ Confirm Sale"],
-        "actions": ["Save", "DELETE", "Search...", "✨ New...", "🗑️ Delete Selection"],
-        "bulk_label": "Bulk Management",
-        "clean_hist_label": "Clear History",
-        "dl_excel": "📗 Download Report (Excel Dashboard)",
+        "stock_alert": "Monitor",
+        "table_title": "Details",
+        "forms": ["Client", "Product", "Kg", "Value", "✅ Confirm"],
+        "actions": ["Save", "DELETE", "Search...", "✨ New...", "🗑️ Delete"],
+        "bulk_label": "Bulk Mgmt",
+        "clean_hist_label": "Clean",
+        "dl_excel": "📗 Report",
         "logout": "🔒 Logout",
-        "goal_lbl": "🎯 Goal for", "goal_btn": "💾 Save Goal",
+        "goal_lbl": "🎯 Goal", "goal_btn": "💾 Save",
         "new_labels": ["Client Name:", "Product Name:"],
         "dash_cols": {"val": "Value", "com": "Comm", "kg": "Kg", "emp": "Company", "prod": "Product", "mes": "Month"},
         "msgs": ["Success!", "Deleted!", "No data", "Updated!", "Select items"],
-        "stock_msg": "Stock Added!",
-        "user_lbl": "User / Responsible",
-        "filter_viz": "👁️ View only these products:",
-        "save_view": "💾 Save Default View",
-        "hist_entries": "Stock Input History",
-        "search_stk": "🔍 Search stock history:",
-        "edit_del_stk": "Edit or Delete Entry",
-        "save_changes": "💾 Save Changes",
-        "del_entry": "🗑️ Delete Entry",
-        "wipe_stk_title": "🔥 Wipe ALL Stock (Danger)",
-        "wipe_stk_warn": "This will delete all inputs. Irreversible.",
+        "stock_msg": "Added!",
+        "user_lbl": "User",
+        "filter_viz": "👁️ View only:",
+        "save_view": "💾 Save View",
+        "hist_entries": "Inputs History",
+        "search_stk": "🔍 Search:",
+        "edit_del_stk": "Edit/Delete Entry",
+        "save_changes": "💾 Save",
+        "del_entry": "🗑️ Delete",
+        "wipe_stk_title": "🔥 Wipe ALL (Danger)",
+        "wipe_stk_warn": "Irreversible.",
         "wipe_stk_check": "I am sure",
-        "wipe_stk_btn": "WIPE ALL STOCK",
-        "admin_sales_title": "💰 Sales Administration",
-        "search_sales": "🔍 Search sales...",
+        "wipe_stk_btn": "WIPE STOCK",
+        "admin_sales_title": "💰 Sales Admin",
+        "search_sales": "🔍 Search...",
         "wipe_sales_title": "🔥 Wipe ALL Sales (Danger)",
-        "wipe_sales_btn": "WIPE ALL SALES",
+        "wipe_sales_btn": "WIPE SALES",
         "col_map": {"Fecha_Hora": "📅 Date", "Accion": "⚡ Action", "Detalles": "📝 Details"},
         "xls_head": ["Date", "Month", "Company", "Product", "Kg", "Value", "Commission"],
-        "xls_tot": "GRAND TOTAL:",
-        "val_map": {"NEW": "🆕 New", "VENTA": "💰 Sale", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Deleted", "BORRADO_MASIVO": "🔥 Bulk", "CREAR": "✨ Create", "HIST_DEL": "🧹 Clean", "META_UPDATE": "🎯 Goal", "EDIT_TABLE_STOCK": "✏️ Tbl Stock", "EDIT_TABLE_SALES": "✏️ Tbl Sales"},
+        "xls_tot": "TOTAL:",
+        "val_map": {"NEW": "🆕 New", "VENTA": "💰 Sale", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Bulk", "CREAR": "✨ Create", "HIST_DEL": "🧹 Clean", "META_UPDATE": "🎯 Goal", "EDIT_TABLE_STOCK": "✏️ Tbl Stock", "EDIT_TABLE_SALES": "✏️ Tbl Sales"},
         "alerts": {
             "stock_out": "Out of Stock",
             "stock_low": "Low Stock",
-            "stock_ok": "Stock Available",
-            "err_stock": "Error: Insufficient stock. You have",
+            "stock_ok": "Available",
+            "err_stock": "Error: Insufficient. You have",
             "try_sell": "kg and try to sell",
-            "saving": "Saving sale...",
-            "sold_ok": "Sale registered successfully!",
-            "adding": "Adding stock...",
+            "saving": "Saving...",
+            "sold_ok": "Registered!",
+            "adding": "Adding...",
             "deleting": "Deleting...",
             "wiping": "Wiping ALL...",
             "updating": "Updating...",
-            "backup_title": "🛡️ Security Zone (Backup)",
-            "backup_desc": "Download a full copy of the entire database.",
-            "backup_btn": "📦 Download Full Backup",
-            "backup_load": "Generating security file...",
-            "last_sales": "📋 Latest Sales (Top 3):",
-            "tot_sold": "Tot. Sold",
-            "excel_edit_mode": "📝 Excel Edit Mode",
-            "save_table": "💾 Save Table Changes",
-            "show_all": "👁️ Show Full History",
-            "lazy_msg": "Showing last 50 entries for speed.",
-            "manual_mode": "📝 Manual Mode (Edit/Delete Individual)"
+            "backup_title": "🛡️ Backup",
+            "backup_desc": "Download full copy.",
+            "backup_btn": "📦 Download",
+            "backup_load": "Generating...",
+            "last_sales": "📋 Latest (Top 3):",
+            "tot_sold": "Sold",
+            "excel_edit_mode": "📝 Quick Edit (Excel)",
+            "save_table": "💾 Save Table",
+            "show_all": "👁️ Show All",
+            "lazy_msg": "Showing last 50.",
+            "manual_mode": "📝 Edit Individually"
         }
     }
 }
@@ -414,9 +446,7 @@ def save_conf(book, key, val):
     except:
         sh.append_row([key, str(val)])
 
-# --- FUNCIÓN DE BÚSQUEDA ROBUSTA (FIX NO ENCONTRADO) ---
 def find_row_by_date(sheet, date_str):
-    """Busca una fila por la fecha (col 1), intentando ser robusto ante formatos."""
     clean_date = str(date_str).strip()
     try:
         return sheet.find(clean_date)
@@ -454,6 +484,7 @@ def render_dashboard(t, df_sales, stock_real, sales_real, prods_stock, prods_sal
             total_kg = df_fil['Kg'].sum()
             total_com = total_val * 0.02
             
+            # Métricas en columnas que se apilan solas en móvil
             k1, k2, k3 = st.columns(3)
             k1.metric(t['metrics'][0], f"{s} {total_val:,.0f}", delta=None) 
             k2.metric(t['metrics'][1], f"{total_kg:,.0f} kg", delta=None) 
@@ -468,13 +499,13 @@ def render_dashboard(t, df_sales, stock_real, sales_real, prods_stock, prods_sal
             if saved_filter:
                 default_selection = [p for p in saved_filter.split(',') if p in all_prods_display]
 
-            selected_view = st.multiselect(t['filter_viz'], all_prods_display, default=default_selection)
-            
-            if st.button(t['save_view']):
-                bk = get_book_direct()
-                val_to_save = ",".join(selected_view)
-                save_conf(bk, "stock_view_pref", val_to_save)
-                st.toast(f"✅ {t['msgs'][3]}", icon="💾")
+            with st.expander(t['filter_viz']):
+                selected_view = st.multiselect("Select", all_prods_display, default=default_selection, label_visibility="collapsed")
+                if st.button(t['save_view'], use_container_width=True):
+                    bk = get_book_direct()
+                    val_to_save = ",".join(selected_view)
+                    save_conf(bk, "stock_view_pref", val_to_save)
+                    st.toast(f"✅ {t['msgs'][3]}", icon="💾")
             
             if stock_real:
                 items_to_show = {k: v for k, v in stock_real.items() if k in selected_view} if selected_view else stock_real
@@ -485,12 +516,12 @@ def render_dashboard(t, df_sales, stock_real, sales_real, prods_stock, prods_sal
                     
                     if show_it:
                         kg_sold_total = sales_real.get(p, 0.0)
+                        # Barra de progreso optimizada
+                        st.write(f"📦 **{p}**")
                         c_s1, c_s2 = st.columns([3, 1])
                         pct = max(0.0, min(kg_left / 1000.0, 1.0))
-                        c_s1.progress(pct, text=f"📦 **{p}**: {kg_left:,.1f} kg  •  📉 {t['alerts']['tot_sold']}: {kg_sold_total:,.1f} kg")
-                        if kg_left < 0: c_s2.error(f"⚠️ ({kg_left})")
-                        elif kg_left < 50: c_s2.warning("⚠️")
-                        else: c_s2.success("✅")
+                        c_s1.progress(pct)
+                        c_s2.caption(f"{kg_left:,.1f}kg / 📉 {t['alerts']['tot_sold']}: {kg_sold_total:,.1f}")
             
             st.divider()
             
@@ -500,11 +531,12 @@ def render_dashboard(t, df_sales, stock_real, sales_real, prods_stock, prods_sal
                 df_tr.columns = ['Fecha', 'Venta']
                 df_tr['Venta'] = df_tr['Venta'] * r
                 fig_area = px.area(df_tr, x='Fecha', y='Venta', title=t['charts'][0], markers=True)
-                fig_area.update_layout(plot_bgcolor="rgba(0,0,0,0)", xaxis_showgrid=False)
+                fig_area.update_layout(plot_bgcolor="rgba(0,0,0,0)", xaxis_showgrid=False, margin=dict(l=20, r=20, t=40, b=20))
                 fig_area.update_traces(line_color='#FF4B4B', fillcolor='rgba(255, 75, 75, 0.2)')
                 st.plotly_chart(fig_area, use_container_width=True)
             with c_chart2:
                 fig_donut = px.pie(df_fil, names='Producto', values='Kg', hole=0.6, title=t['charts'][1])
+                fig_donut.update_layout(margin=dict(l=20, r=20, t=40, b=20))
                 st.plotly_chart(fig_donut, use_container_width=True)
 
             st.subheader(t['table_title'])
@@ -517,18 +549,19 @@ def render_new_sale(t, empresas, productos_all, stock_real, df_sales, s):
     st.header(t['headers'][1])
     key_suffix = str(st.session_state.sale_key)
     with st.container(border=True):
-        c1, c2 = st.columns(2)
-        op_new = t['actions'][3]
-        sel_emp = c1.selectbox(t['forms'][0], [op_new] + empresas, key=f"emp_{key_suffix}")
-        emp = c1.text_input(t['new_labels'][0], key=f"emp_txt_{key_suffix}") if sel_emp == op_new else sel_emp
-        sel_prod = c2.selectbox(t['forms'][1], [op_new] + productos_all, key=f"prod_{key_suffix}")
-        prod = c2.text_input(t['new_labels'][1], key=f"prod_txt_{key_suffix}") if sel_prod == op_new else sel_prod
-        kg = c1.number_input(t['forms'][2], step=10.0, key=f"kg_{key_suffix}")
-        val = c2.number_input(t['forms'][3], step=100.0, key=f"val_{key_suffix}")
+        # Campos full width en movil
+        sel_emp = st.selectbox(t['forms'][0], [t['actions'][3]] + empresas, key=f"emp_{key_suffix}")
+        emp = st.text_input(t['new_labels'][0], key=f"emp_txt_{key_suffix}") if sel_emp == t['actions'][3] else sel_emp
+        
+        sel_prod = st.selectbox(t['forms'][1], [t['actions'][3]] + productos_all, key=f"prod_{key_suffix}")
+        prod = st.text_input(t['new_labels'][1], key=f"prod_txt_{key_suffix}") if sel_prod == t['actions'][3] else sel_prod
+        
+        c_k, c_v = st.columns(2)
+        kg = c_k.number_input(t['forms'][2], step=10.0, key=f"kg_{key_suffix}")
+        val = c_v.number_input(t['forms'][3], step=100.0, key=f"val_{key_suffix}")
         
         current_stock = stock_real.get(prod, 0.0) if prod in stock_real else 0.0
         
-        # --- ALERTA DE STOCK DINÁMICA ---
         if prod in stock_real: 
             if current_stock <= 0: 
                 st.error(f"⚠️ {t['alerts']['stock_out']}: {current_stock:.1f} kg")
@@ -541,7 +574,7 @@ def render_new_sale(t, empresas, productos_all, stock_real, df_sales, s):
         
         success_flag = False
         
-        if st.button(t['forms'][4], type="primary"):
+        if st.button(t['forms'][4], type="primary", use_container_width=True):
             if emp and prod:
                 if kg > current_stock:
                     st.error(f"🚫 {t['alerts']['err_stock']} {current_stock:.1f} kg {t['alerts']['try_sell']} {kg:.1f} kg.")
@@ -559,7 +592,7 @@ def render_new_sale(t, empresas, productos_all, stock_real, df_sales, s):
                             if PDF_AVAILABLE:
                                 try:
                                     pdf_data = create_pdf(emp, prod, kg, val, st.session_state.username)
-                                    st.download_button(t['pdf'], data=pdf_data, file_name=f"Recibo.pdf", mime="application/pdf")
+                                    st.download_button(t['dl_excel'], data=pdf_data, file_name=f"Recibo.pdf", mime="application/pdf")
                                 except: pass
                             success_flag = True
                         else: st.error(f"Error: {error}")
@@ -584,15 +617,16 @@ def render_stock_management(t, productos_all, df_stock_in):
     stk_suffix = str(st.session_state.stock_key)
     with st.container(border=True):
         st.caption(t['stock_add_title'])
-        c_st1, c_st2, c_st3, c_st4 = st.columns([2, 1, 1, 1])
-        prod_stock = c_st1.selectbox(t['forms'][1], ["✨ Novo..."] + productos_all, key=f"s_prod_{stk_suffix}")
-        if prod_stock == "✨ Novo...": prod_stock = c_st1.text_input(t['new_labels'][1], key=f"s_prod_txt_{stk_suffix}")
-        kg_stock = c_st2.number_input("Kg (+)", step=10.0, key=f"s_kg_{stk_suffix}")
-        user_stock = c_st3.text_input(t['user_lbl'], value="CEO", key=f"s_usr_{stk_suffix}")
+        prod_stock = st.selectbox(t['forms'][1], ["✨ Novo..."] + productos_all, key=f"s_prod_{stk_suffix}")
+        if prod_stock == "✨ Novo...": prod_stock = st.text_input(t['new_labels'][1], key=f"s_prod_txt_{stk_suffix}")
+        
+        c_k, c_u = st.columns(2)
+        kg_stock = c_k.number_input("Kg (+)", step=10.0, key=f"s_kg_{stk_suffix}")
+        user_stock = c_u.text_input(t['user_lbl'], value="CEO", key=f"s_usr_{stk_suffix}")
         
         success_stock = False
         
-        if c_st4.button(t['stock_btn'], type="primary"):
+        if st.button(t['stock_btn'], type="primary", use_container_width=True):
             with st.spinner(f"{t['alerts']['adding']}"):
                 bk = get_book_direct()
                 try:
@@ -616,33 +650,6 @@ def render_stock_management(t, productos_all, df_stock_in):
             time.sleep(0.5)
             st.rerun()
 
-    # --- BOTÓN BORRAR TODO EN STOCK ---
-    with st.expander(t['wipe_stk_title']):
-        st.warning(t['wipe_stk_warn'])
-        check_wipe_stk = st.checkbox(t['wipe_stk_check'], key="chk_wipe_stk")
-        if check_wipe_stk:
-            wipe_success = False
-            if st.button(t['wipe_stk_btn'], type="primary"):
-                with st.spinner(f"{t['alerts']['wiping']}"):
-                    bk = get_book_direct()
-                    try:
-                        sh_stk = bk.worksheet("Estoque")
-                        def do_wipe_stk():
-                            sh_stk.clear()
-                            sh_stk.append_row(["Data", "Produto", "Kg", "Usuario"])
-                        success, err = safe_api_action(do_wipe_stk)
-                        if success: 
-                            log_action(bk, "WIPE_STOCK", "Tabela Estoque Zerada")
-                            st.cache_data.clear()
-                            wipe_success = True
-                        else: st.error(f"Error: {err}")
-                    except: st.error("No existe hoja Estoque")
-            
-            if wipe_success:
-                st.toast(t['msgs'][1], icon="🔥")
-                time.sleep(0.5)
-                st.rerun()
-
     st.write("")
     st.divider()
     
@@ -654,7 +661,6 @@ def render_stock_management(t, productos_all, df_stock_in):
     filtro_stock = st.text_input(t['search_stk'], key="search_stk")
     
     if not df_stock_in.empty:
-        # Lógica de visualización
         if not use_all and not filtro_stock:
             df_view = df_stock_in.tail(50)
             st.caption(f"⚡ {t['alerts']['lazy_msg']}")
@@ -672,11 +678,11 @@ def render_stock_management(t, productos_all, df_stock_in):
             df_editor,
             num_rows="fixed",
             use_container_width=True,
-            disabled=["Data"], # Solo fecha bloqueada
+            disabled=["Data"],
             key="stock_editor"
         )
         
-        if st.button(t['alerts']['save_table'], key="save_stk_table"):
+        if st.button(t['alerts']['save_table'], key="save_stk_table", use_container_width=True):
             with st.spinner(f"{t['alerts']['updating']}"):
                 bk = get_book_direct()
                 sh_stk = bk.worksheet("Estoque")
@@ -704,15 +710,14 @@ def render_stock_management(t, productos_all, df_stock_in):
         to_edit_manual = df_view.iloc[::-1]
         
         for i, r in to_edit_manual.iterrows():
-            row_label = f"📦 {r.get('Produto', '?')} | {r.get('Data', '?')} | {r.get('Kg', 0)}kg"
+            row_label = f"📦 {r.get('Produto', '?')} | {r.get('Kg', 0)}kg"
             with st.expander(row_label):
-                c_esk1, c_esk2 = st.columns(2)
-                new_stk_prod = c_esk1.text_input(t['forms'][1], value=str(r.get('Produto', '')), key=f"ed_stk_p_{i}")
-                new_stk_kg = c_esk2.number_input("Kg", value=float(r.get('Kg', 0)), step=1.0, key=f"ed_stk_k_{i}")
+                new_stk_prod = st.text_input(t['forms'][1], value=str(r.get('Produto', '')), key=f"ed_stk_p_{i}")
+                new_stk_kg = st.number_input("Kg", value=float(r.get('Kg', 0)), step=1.0, key=f"ed_stk_k_{i}")
                 
                 c_btn_s1, c_btn_s2 = st.columns(2)
                 
-                if c_btn_s1.button(t['save_changes'], key=f"sav_stk_{i}"):
+                if c_btn_s1.button(t['save_changes'], key=f"sav_stk_{i}", use_container_width=True):
                     with st.spinner(f"{t['alerts']['updating']}"):
                         bk = get_book_direct()
                         sh_stk = bk.worksheet("Estoque")
@@ -735,7 +740,7 @@ def render_stock_management(t, productos_all, df_stock_in):
                             else: st.error(f"Error: {err}")
                         else: st.error("No encontré la fila.")
 
-                if c_btn_s2.button(t['del_entry'], key=f"del_stk_{i}", type="secondary"):
+                if c_btn_s2.button(t['del_entry'], key=f"del_stk_{i}", type="secondary", use_container_width=True):
                     with st.spinner(f"{t['alerts']['deleting']}"):
                         bk = get_book_direct()
                         sh_stk = bk.worksheet("Estoque")
@@ -754,6 +759,33 @@ def render_stock_management(t, productos_all, df_stock_in):
 
     else:
         st.info(t['msgs'][2])
+
+    st.write("")
+    with st.expander(t['wipe_stk_title']):
+        st.warning(t['wipe_stk_warn'])
+        check_wipe_stk = st.checkbox(t['wipe_stk_check'], key="chk_wipe_stk")
+        if check_wipe_stk:
+            wipe_success = False
+            if st.button(t['wipe_stk_btn'], type="primary", use_container_width=True):
+                with st.spinner(f"{t['alerts']['wiping']}"):
+                    bk = get_book_direct()
+                    try:
+                        sh_stk = bk.worksheet("Estoque")
+                        def do_wipe_stk():
+                            sh_stk.clear()
+                            sh_stk.append_row(["Data", "Produto", "Kg", "Usuario"])
+                        success, err = safe_api_action(do_wipe_stk)
+                        if success: 
+                            log_action(bk, "WIPE_STOCK", "Tabela Estoque Zerada")
+                            st.cache_data.clear()
+                            wipe_success = True
+                        else: st.error(f"Error: {err}")
+                    except: st.error("No existe hoja Estoque")
+            
+            if wipe_success:
+                st.toast(t['msgs'][1], icon="🔥")
+                time.sleep(0.5)
+                st.rerun()
 
 @st.fragment
 def render_sales_management(t, df_sales, s):
@@ -777,7 +809,6 @@ def render_sales_management(t, df_sales, s):
         st.caption(f"{t['alerts']['excel_edit_mode']}")
         df_editor_sales = df_filtered.iloc[::-1].copy()
         
-        # PERMITIMOS EDITAR EMPRESA Y PRODUCTO
         edited_sales = st.data_editor(
             df_editor_sales,
             use_container_width=True,
@@ -789,13 +820,12 @@ def render_sales_management(t, df_sales, s):
             }
         )
         
-        if st.button(t['alerts']['save_table'], key="save_sales_table"):
+        if st.button(t['alerts']['save_table'], key="save_sales_table", use_container_width=True):
             with st.spinner(f"{t['alerts']['updating']}"):
                 bk = get_book_direct()
                 sh_sl = bk.get_worksheet(0)
                 updated_count = 0
                 for index, row in edited_sales.iterrows():
-                    # Usamos busqueda robusta
                     cell = find_row_by_date(sh_sl, str(row['Fecha_Registro']))
                     if cell:
                         sh_sl.update_cell(cell.row, 1, row['Empresa'])
@@ -813,27 +843,26 @@ def render_sales_management(t, df_sales, s):
                 time.sleep(1)
                 st.rerun()
         
-        # LISTA INDIVIDUAL RESTAURADA PARA VENTAS TAMBIÉN
+        # LISTA INDIVIDUAL
         st.write("---")
         st.caption(f"{t['alerts']['manual_mode']}")
         
         to_edit_sales = df_filtered.iloc[::-1]
         
-        # Si NO hay filtro y NO es "Ver Todo", mostramos solo 20 para no colgar la página
         if not filtro and not use_all and len(to_edit_sales) > 20:
-             st.info("Mostrando últimos 20 para edición manual. Use el buscador para más.")
+             st.info("Mostrando últimos 20. Usa el buscador para más.")
              to_edit_sales = to_edit_sales.head(20)
 
         for i, r in to_edit_sales.iterrows():
-            with st.expander(f"💰 {r['Empresa']} | {r['Producto']} | {r['Fecha_Registro']}"):
-                c_ed1, c_ed2 = st.columns(2)
-                new_kg = c_ed1.number_input("Kg", value=float(r['Kg']), key=f"k_{i}")
-                new_val = c_ed2.number_input("Valor", value=float(r['Valor_BRL']), key=f"v_{i}")
-                new_emp = st.text_input("Empresa/Cliente", value=r['Empresa'], key=f"admin_emp_{i}")
+            with st.expander(f"💰 {r['Empresa']} | {r['Producto']}"):
+                new_emp = st.text_input("Cliente", value=r['Empresa'], key=f"admin_emp_{i}")
+                c_k, c_v = st.columns(2)
+                new_kg = c_k.number_input("Kg", value=float(r['Kg']), key=f"k_{i}")
+                new_val = c_v.number_input("Valor", value=float(r['Valor_BRL']), key=f"v_{i}")
                 
                 c_btn1, c_btn2 = st.columns(2)
                 
-                if c_btn1.button(t['save_changes'], key=f"save_{i}"):
+                if c_btn1.button(t['save_changes'], key=f"save_{i}", use_container_width=True):
                     with st.spinner(f"{t['alerts']['updating']}"):
                         bk = get_book_direct()
                         sh_sl = bk.get_worksheet(0)
@@ -847,15 +876,12 @@ def render_sales_management(t, df_sales, s):
                                 sh_sl.update_cell(cell.row, 5, new_val*0.02)
                             success, err = safe_api_action(do_update)
                             if success: 
-                                # LOG DETALLADO
                                 diffs = []
                                 if r['Empresa'] != new_emp: diffs.append(f"Cli: {r['Empresa']}->{new_emp}")
                                 if float(r['Kg']) != float(new_kg): diffs.append(f"Kg: {r['Kg']}->{new_kg}")
                                 if float(r['Valor_BRL']) != float(new_val): diffs.append(f"$: {r['Valor_BRL']}->{new_val}")
-                                
                                 log_msg = f"Edit Venda: {r['Fecha_Registro']} | " + " | ".join(diffs)
                                 log_action(bk, "EDIT_SALE", log_msg)
-                                
                                 st.cache_data.clear()
                                 st.toast(t['msgs'][3], icon="💾")
                                 time.sleep(0.5)
@@ -863,7 +889,7 @@ def render_sales_management(t, df_sales, s):
                             else: st.error(f"Error: {err}")
                         else: st.error("No encontrado (Error fecha).")
                 
-                if c_btn2.button(t['del_entry'], key=f"del_{i}", type="secondary"):
+                if c_btn2.button(t['del_entry'], key=f"del_{i}", type="secondary", use_container_width=True):
                     with st.spinner(f"{t['alerts']['deleting']}"):
                         bk = get_book_direct()
                         sh_sl = bk.get_worksheet(0)
@@ -886,7 +912,7 @@ def render_sales_management(t, df_sales, s):
             check_wipe_sales = st.checkbox(t['wipe_stk_check'], key="chk_wipe_sales")
             if check_wipe_sales:
                 wipe_sales_flag = False
-                if st.button(t['wipe_sales_btn'], type="primary"):
+                if st.button(t['wipe_sales_btn'], type="primary", use_container_width=True):
                     with st.spinner(f"{t['alerts']['wiping']}"):
                         bk = get_book_direct()
                         sh_sl = bk.get_worksheet(0)
@@ -908,7 +934,7 @@ def render_sales_management(t, df_sales, s):
         st.divider()
         with st.expander(t['alerts']['backup_title']):
             st.info(t['alerts']['backup_desc'])
-            if st.button(t['alerts']['backup_btn']):
+            if st.button(t['alerts']['backup_btn'], use_container_width=True):
                 with st.spinner(t['alerts']['backup_load']):
                     bk = get_book_direct()
                     d_sales = pd.DataFrame(bk.get_worksheet(0).get_all_records())
@@ -925,21 +951,22 @@ def render_sales_management(t, df_sales, s):
                         label="📥 Download",
                         data=buffer,
                         file_name=f"Backup_Xingu_{datetime.now().strftime('%Y-%m-%d')}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True
                     )
 
 @st.fragment
 def render_log(t):
     st.title(t['headers'][3])
     col_btn, col_info = st.columns([1, 2])
-    if col_btn.button("🔄 Cargar/Ocultar Historial", type="secondary"):
+    if col_btn.button("🔄 Cargar/Ocultar Historial", type="secondary", use_container_width=True):
         st.session_state.show_log = not st.session_state.show_log
         st.rerun()
 
     # --- FILTRO ACTIVO ---
     if st.session_state.log_filter_override:
         st.info(f"🔎 Filtrando por: **{st.session_state.log_filter_override}**")
-        if st.button("❌ Limpar Filtro"):
+        if st.button("❌ Limpar Filtro", use_container_width=True):
             st.session_state.log_filter_override = ""
             st.rerun()
 
@@ -971,27 +998,20 @@ def render_log(t):
                 # LÓGICA DE "IR AL USUARIO"
                 if selection.selection.rows:
                     idx = selection.selection.rows[0]
-                    # El índice es visual, hay que mapearlo al dataframe invertido
                     row_data = show_log.iloc[::-1].iloc[idx]
-                    
                     details = str(row_data.get(t['col_map']['Detalles'], ''))
-                    
-                    # Intentar extraer algo útil (Nombre o Producto)
-                    # Formato usual: "Editado: [Fecha] | [Empresa] | [Cambio]"
                     parts = details.split('|')
                     possible_filter = ""
                     if len(parts) > 1:
-                        # Parte 1 suele ser la Empresa o Producto
                         possible_filter = parts[1].strip().split('->')[0].replace("Cli: ", "").replace("Prod: ", "").strip()
                     else:
-                        # Si no hay pipes, intentamos con guiones
                         parts_dash = details.split('-')
                         if len(parts_dash) > 1:
                              possible_filter = parts_dash[-1].strip()
 
                     if possible_filter:
                         st.info(f"Seleccionado: {possible_filter}")
-                        if st.button(f"🔍 Filtrar historial por '{possible_filter}'"):
+                        if st.button(f"🔍 Filtrar historial por '{possible_filter}'", use_container_width=True):
                             st.session_state.log_filter_override = possible_filter
                             st.rerun()
 
@@ -1002,8 +1022,7 @@ def render_log(t):
                     opc_h = [f"{r['Fecha_Hora']} | {r['Accion']} | {r['Detalles']}" for i, r in rev_h.iterrows()]
                     sel_h = st.multiselect("Items", opc_h)
                     
-                    del_log_flag = False
-                    if st.button(t['actions'][4], key="btn_h", type="primary"):
+                    if st.button(t['actions'][4], key="btn_h", type="primary", use_container_width=True):
                         if sel_h:
                             with st.spinner(f"{t['alerts']['deleting']}"):
                                 dts_h = [x.split(" | ")[0] for x in sel_h]
@@ -1019,30 +1038,26 @@ def render_log(t):
                                 
                                 success, err = safe_api_action(do_log_del)
                                 if success: 
-                                    del_log_flag = True
+                                    st.toast(t['msgs'][1], icon="🗑️")
+                                    time.sleep(0.5)
+                                    st.rerun()
                                 else: st.error(f"Error: {err}")
-                    if del_log_flag:
-                        st.toast(t['msgs'][1], icon="🗑️")
-                        time.sleep(0.5)
-                        st.rerun()
 
                 st.write("")
                 col_danger1, col_danger2 = st.columns([3, 1])
                 check_danger = col_danger1.checkbox(t['wipe_stk_check'])
                 if check_danger:
-                    wipe_log_flag = False
-                    if col_danger2.button("🔥 BORRAR LOG", type="primary"):
+                    if col_danger2.button("🔥 BORRAR LOG", type="primary", use_container_width=True):
                         with st.spinner(f"{t['alerts']['wiping']}"):
                             def do_wipe():
                                 sh_log.clear()
                                 sh_log.append_row(["Fecha_Hora", "Accion", "Detalles"])
                             success, err = safe_api_action(do_wipe)
-                            if success: wipe_log_flag = True
+                            if success: 
+                                st.toast(t['msgs'][1], icon="🧹")
+                                time.sleep(0.5)
+                                st.rerun()
                             else: st.error(f"Error: {err}")
-                    if wipe_log_flag:
-                        st.toast(t['msgs'][1], icon="🧹")
-                        time.sleep(0.5)
-                        st.rerun()
             else:
                 st.info(t['msgs'][2])
         except Exception as e:
@@ -1061,11 +1076,11 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
         t["tabs"] = [t['tabs'][0], t['tabs'][1], t['tabs'][2], t['tabs'][3], t['tabs'][4]]
-        st.caption("v99.0 Robust Search")
-        if st.button("🔄"):
+        st.caption("v100.0 Mobile Pro")
+        if st.button("🔄", use_container_width=True):
             st.cache_data.clear()
             st.rerun()
-        if st.button(t['logout']): st.session_state.authenticated = False; st.rerun()
+        if st.button(t['logout'], use_container_width=True): st.session_state.authenticated = False; st.rerun()
     
     s = RATES[lang]["s"]; r = RATES[lang]["r"]
 
@@ -1113,7 +1128,7 @@ def main():
     with st.sidebar:
         st.write(f"**{t['goal_lbl']} {MESES_UI_SIDEBAR[ahora.month]}**")
         meta = st.number_input("Meta", value=saved_meta, step=1000.0, label_visibility="collapsed")
-        if st.button(t['goal_btn']):
+        if st.button(t['goal_btn'], use_container_width=True):
             bk = get_book_direct()
             save_conf(bk, "meta_goal", meta)
             st.toast("Meta Atualizada", icon="🎯")
@@ -1173,7 +1188,7 @@ def main():
                     chart.set_style(10)
                     ws.insert_chart('H2', chart)
 
-                st.download_button(t['dl_excel'], data=buffer, file_name=f"Reporte_Dashboard_{datetime.now().strftime('%Y-%m-%d')}.xlsx", mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+                st.download_button(t['dl_excel'], data=buffer, file_name=f"Reporte_Dashboard_{datetime.now().strftime('%Y-%m-%d')}.xlsx", mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
             except Exception as ex: st.warning(f"⚠️ ({ex})")
 
     # TABS
