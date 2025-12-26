@@ -19,7 +19,9 @@ except ImportError:
 # 🎨 ZONA DE PERSONALIZACIÓN
 # ==========================================
 NOMBRE_EMPRESA = "Xingu CEO"
-ICONO_APP = "🍇"
+
+# 🦅 LOGO REAL (Asegúrate de tener "logo.png" en tu GitHub)
+ICONO_APP = "logo.png"
 
 # 🔑 LOGIN SIMPLE
 CONTRASEÑA_MAESTRA = "Julio777" 
@@ -53,7 +55,12 @@ def check_password():
     
     c1, c2, c3 = st.columns([1,2,1])
     with c2:
-        st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA}</h1>", unsafe_allow_html=True)
+        # LOGO EN LOGIN
+        try:
+            st.image(ICONO_APP, width=150)
+        except:
+            st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA}</h1>", unsafe_allow_html=True)
+            
         st.write("")
         with st.form("login_form"):
             input_pass = st.text_input("Senha / Contraseña", type="password")
@@ -212,17 +219,22 @@ def main():
     if not check_password(): return
 
     with st.sidebar:
-        st.markdown(f"<h1 style='text-align: center; font-size: 50px; margin:0;'>{ICONO_APP}</h1>", unsafe_allow_html=True)
+        # LOGO LATERAL
+        try:
+            st.image(ICONO_APP, width=100) 
+        except:
+            st.markdown(f"<h1 style='text-align: center; font-size: 50px; margin:0;'>🍇</h1>", unsafe_allow_html=True)
+            
         st.markdown(f"<h3 style='text-align: center;'>{NOMBRE_EMPRESA}</h3>", unsafe_allow_html=True)
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         
         t = TR.get(lang, TR["Português"]) 
-        st.caption("v57.0 Diagnóstico")
+        st.caption("v58.0 Final Pro")
         if st.button(t['logout']): st.session_state.authenticated = False; st.rerun()
     
     s = RATES[lang]["s"]; r = RATES[lang]["r"]
 
-    # --- DATA LOADING (MODO DIAGNÓSTICO) ---
+    # --- DATA LOADING (CON DIAGNÓSTICO ACTIVO) ---
     df_sales = pd.DataFrame()
     df_stock_in = pd.DataFrame()
     book = None
@@ -231,21 +243,18 @@ def main():
 
     try:
         book = get_data()
-        sheet_sales = book.get_worksheet(0) # Intenta agarrar la primera hoja
+        sheet_sales = book.get_worksheet(0) # Siempre agarra la primera hoja
         df_sales = pd.DataFrame(sheet_sales.get_all_records())
     except Exception as e:
         st.error("⛔ ERROR DE CONEXIÓN")
         st.warning("Tu App no tiene permiso para ver el Excel.")
-        
-        # Intentar mostrar el email para ayudar
         try:
             email_robot = st.secrets["google_credentials"]["client_email"]
-            st.info(f"👉 **SOLUCIÓN:** Ve a tu Google Sheet, dale al botón 'Compartir' e invita a este correo como **Editor**:")
+            st.info(f"👉 **SOLUCIÓN:** Comparte tu Excel con este correo (Editor):")
             st.code(email_robot, language="text")
         except:
-            st.write("No pude leer el email del robot en los Secrets.")
-            
-        st.caption(f"Detalle técnico: {e}")
+            st.write("No pude leer el email del robot.")
+        st.caption(f"Detalle: {e}")
         st.stop()
 
     try:
@@ -334,7 +343,7 @@ def main():
 
     tab1, tab2, tab3, tab4 = st.tabs(t['tabs'])
 
-    # 1. DASHBOARD (ORDEN CAMBIADO)
+    # 1. DASHBOARD
     with tab1:
         st.title(t['headers'][0])
         if not df_sales.empty:
@@ -433,7 +442,7 @@ def main():
                         except: pass
                     time.sleep(2); st.rerun()
 
-    # 3. ADMIN (TABLA VISUAL + EDITAR)
+    # 3. ADMIN
     with tab3:
         # STOCK ADD
         st.header(t['stock_add_title'])
