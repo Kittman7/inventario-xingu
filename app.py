@@ -95,7 +95,7 @@ MONTHS_UI = {
 }
 TR = {
     "Português": {
-        "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nova Venda", "🛠️ Admin Total", "📜 Log"],
+        "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nova Venda", "📦 Stock", "💰 Admin Ventas", "📜 Log"],
         "headers": ["Dashboard", "Registrar Venda", "Gestão de Estoque", "Auditoria"],
         "metrics": ["Faturamento", "Volume Vendido", "Comissão", "Ticket Médio", "Melhor Cliente"],
         "charts": ["Tendência", "Mix Produtos", "Por Empresa"],
@@ -122,7 +122,7 @@ TR = {
         "col_map": {"Fecha_Hora": "📅 Data", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"}
     },
     "Español": {
-        "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nueva Venta", "🛠️ Admin Total", "📜 Log"],
+        "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nueva Venta", "📦 Stock", "💰 Admin Ventas", "📜 Log"],
         "headers": ["Dashboard", "Registrar Venta", "Gestión", "Auditoría"],
         "metrics": ["Facturación", "Volumen Vendido", "Comisión", "Ticket Medio", "Top Cliente"],
         "charts": ["Tendencia", "Mix Productos", "Por Empresa"],
@@ -149,7 +149,7 @@ TR = {
         "col_map": {"Fecha_Hora": "📅 Fecha", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"}
     },
     "English": {
-        "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ New Sale", "🛠️ Admin Total", "📜 Log"],
+        "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ New Sale", "📦 Stock", "💰 Admin Sales", "📜 Log"],
         "headers": ["Dashboard", "New Sale", "Stock Mgmt", "Log"],
         "metrics": ["Revenue", "Volume Sold", "Commission", "Avg Ticket", "Top Client"],
         "charts": ["Trend", "Mix", "By Company"],
@@ -235,7 +235,7 @@ def get_goal(book, key):
     return 0.0
 
 # ==========================================
-# 🧩 FRAGMENTOS
+# 🧩 FRAGMENTOS (PÁGINAS)
 # ==========================================
 
 @st.fragment
@@ -260,17 +260,14 @@ def render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, la
             
             st.divider()
             
-            # --- FILTRO VISUAL STOCK (NUEVO) ---
+            # --- FILTRO VISUAL STOCK ---
             st.subheader(t['stock_alert'])
             all_prods_display = sorted(list(stock_real.keys()))
             selected_view = st.multiselect("👁️ Ver solo estos productos:", all_prods_display)
             
             if stock_real:
-                # Filtrar si hay selección
                 items_to_show = {k: v for k, v in stock_real.items() if k in selected_view} if selected_view else stock_real
-                
                 for p, kg_left in sorted(items_to_show.items(), key=lambda item: item[1], reverse=True):
-                    # Mostrar solo si tiene actividad o fue seleccionado
                     if kg_left != 0 or p in selected_view or p in prods_stock:
                         c_s1, c_s2 = st.columns([3, 1])
                         pct = max(0.0, min(kg_left / 1000.0, 1.0))
@@ -346,9 +343,9 @@ def render_new_sale(t, empresas, productos_all, stock_real, df_sales, s):
         })
 
 @st.fragment
-def render_admin(t, productos_all, df_sales, df_stock_in, s):
-    # --- SECCIÓN 1: GESTIÓN DE STOCK ---
-    st.markdown("## 📦 Gestión de Stock")
+def render_stock_management(t, productos_all, df_stock_in):
+    # --- PESTAÑA: GESTIÓN DE STOCK ---
+    st.title("📦 Gestión de Stock")
     
     stk_suffix = str(st.session_state.stock_key)
     with st.container(border=True):
@@ -377,7 +374,7 @@ def render_admin(t, productos_all, df_sales, df_stock_in, s):
                 else: st.error(f"Error: {err}")
             except Exception as e: st.error(f"Error grave: {e}")
 
-    # BORRADO TOTAL STOCK (NUEVO)
+    # BORRADO TOTAL STOCK
     with st.expander("🔥 Borrar Todo el Stock (Peligro)"):
         st.warning("Esto borrará todas las entradas de stock. No se puede deshacer.")
         check_wipe_stk = st.checkbox("Estoy seguro de borrar el stock", key="chk_wipe_stk")
@@ -395,48 +392,49 @@ def render_admin(t, productos_all, df_sales, df_stock_in, s):
                 except: st.error("No existe hoja Estoque")
 
     st.write("")
-    with st.expander("🛠️ Ver / Editar Entradas Pasadas"):
-        if not df_stock_in.empty:
-            st.dataframe(df_stock_in.iloc[::-1], use_container_width=True, hide_index=True)
-            st.write("---")
-            st.caption("Editar o Borrar entrada específica:")
-            df_stk_edit = df_stock_in.tail(10).iloc[::-1]
-            for i, r in df_stk_edit.iterrows():
-                row_label = f"📦 {r.get('Produto', '?')} | {r.get('Data', '?')} | {r.get('Kg', 0)}kg"
-                with st.expander(row_label):
-                    c_esk1, c_esk2 = st.columns(2)
-                    new_stk_prod = c_esk1.text_input("Producto", value=str(r.get('Produto', '')), key=f"ed_stk_p_{i}")
-                    new_stk_kg = c_esk2.number_input("Kg", value=float(r.get('Kg', 0)), step=1.0, key=f"ed_stk_k_{i}")
-                    c_btn_s1, c_btn_s2 = st.columns(2)
-                    if c_btn_s1.button("💾 Guardar Cambios", key=f"sav_stk_{i}"):
-                        bk = get_book_direct()
-                        sh_stk = bk.worksheet("Estoque")
-                        try:
-                            cell = sh_stk.find(str(r['Data']))
-                            def do_stk_update():
-                                sh_stk.update_cell(cell.row, 2, new_stk_prod) 
-                                sh_stk.update_cell(cell.row, 3, new_stk_kg)   
-                            success, err = safe_api_action(do_stk_update)
-                            if success: st.cache_data.clear(); st.success("¡Stock actualizado!"); time.sleep(1); st.rerun()
-                            else: st.error(f"Error: {err}")
-                        except: st.error("No encontré la fila exacta.")
-                    if c_btn_s2.button("🗑️ Borrar Entrada", key=f"del_stk_{i}", type="secondary"):
-                        bk = get_book_direct()
-                        sh_stk = bk.worksheet("Estoque")
-                        try:
-                            cell = sh_stk.find(str(r['Data']))
-                            def do_stk_del(): sh_stk.delete_rows(cell.row)
-                            success, err = safe_api_action(do_stk_del)
-                            if success: st.cache_data.clear(); st.success("¡Borrado!"); time.sleep(1); st.rerun()
-                            else: st.error(f"Error: {err}")
-                        except: st.error("Error al borrar.")
-        else:
-            st.info("No hay historial de stock.")
+    st.subheader("Historial de Entradas")
+    if not df_stock_in.empty:
+        st.dataframe(df_stock_in.iloc[::-1], use_container_width=True, hide_index=True)
+        st.write("---")
+        st.caption("Editar o Borrar entrada específica:")
+        df_stk_edit = df_stock_in.tail(10).iloc[::-1]
+        for i, r in df_stk_edit.iterrows():
+            row_label = f"📦 {r.get('Produto', '?')} | {r.get('Data', '?')} | {r.get('Kg', 0)}kg"
+            with st.expander(row_label):
+                c_esk1, c_esk2 = st.columns(2)
+                new_stk_prod = c_esk1.text_input("Producto", value=str(r.get('Produto', '')), key=f"ed_stk_p_{i}")
+                new_stk_kg = c_esk2.number_input("Kg", value=float(r.get('Kg', 0)), step=1.0, key=f"ed_stk_k_{i}")
+                c_btn_s1, c_btn_s2 = st.columns(2)
+                if c_btn_s1.button("💾 Guardar Cambios", key=f"sav_stk_{i}"):
+                    bk = get_book_direct()
+                    sh_stk = bk.worksheet("Estoque")
+                    try:
+                        cell = sh_stk.find(str(r['Data']))
+                        def do_stk_update():
+                            sh_stk.update_cell(cell.row, 2, new_stk_prod) 
+                            sh_stk.update_cell(cell.row, 3, new_stk_kg)   
+                        success, err = safe_api_action(do_stk_update)
+                        if success: st.cache_data.clear(); st.success("¡Stock actualizado!"); time.sleep(1); st.rerun()
+                        else: st.error(f"Error: {err}")
+                    except: st.error("No encontré la fila exacta.")
+                if c_btn_s2.button("🗑️ Borrar Entrada", key=f"del_stk_{i}", type="secondary"):
+                    bk = get_book_direct()
+                    sh_stk = bk.worksheet("Estoque")
+                    try:
+                        cell = sh_stk.find(str(r['Data']))
+                        def do_stk_del(): sh_stk.delete_rows(cell.row)
+                        success, err = safe_api_action(do_stk_del)
+                        if success: st.cache_data.clear(); st.success("¡Borrado!"); time.sleep(1); st.rerun()
+                        else: st.error(f"Error: {err}")
+                    except: st.error("Error al borrar.")
+    else:
+        st.info("No hay historial de stock.")
 
-    st.divider()
-
-    # --- SECCIÓN 2: GESTIÓN DE VENTAS ---
-    st.markdown("## 💰 Admin Ventas")
+@st.fragment
+def render_sales_management(t, df_sales, s):
+    # --- PESTAÑA: ADMIN VENTAS ---
+    st.title("💰 Administración de Ventas")
+    
     filtro = st.text_input(t['actions'][2], key="admin_search") 
     
     if not df_sales.empty:
@@ -596,8 +594,12 @@ def main():
         except: st.markdown(f"<h1 style='text-align: center; font-size: 50px; margin:0;'>🍇</h1>", unsafe_allow_html=True)
         st.markdown(f"<h3 style='text-align: center;'>{NOMBRE_EMPRESA}</h3>", unsafe_allow_html=True)
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
+        
+        # 5 PESTAÑAS AHORA
         t = TR.get(lang, TR["Português"]) 
-        st.caption("v71.0 Control Visual & Limpieza")
+        t["tabs"] = ["📊 Dashboard", "➕ Nova Venda", "📦 Stock", "💰 Admin Ventas", "📜 Log"]
+        
+        st.caption("v72.0 Estructura Pro")
         if st.button("🔄 Forzar Actualización"):
             st.cache_data.clear()
             st.rerun()
@@ -674,12 +676,14 @@ def main():
                 ws.write(lr, 3, t['xls_tot'], fmt_total); ws.write(lr, 4, data_final['Kg'].sum(), fmt_total); ws.write(lr, 5, data_final['Valor_BRL'].sum(), fmt_total); ws.write(lr, 6, data_final['Comissao_BRL'].sum(), fmt_total)
             st.download_button(t['dl_excel'], data=buffer, file_name=f"Reporte_{datetime.now().strftime('%Y-%m-%d')}.xlsx", mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
-    # TABS
-    tab1, tab2, tab3, tab4 = st.tabs(t['tabs'])
+    # --- TABS (AHORA SON 5) ---
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(t['tabs']) # Ajustado para 5 pestañas
+
     with tab1: render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, lang)
     with tab2: render_new_sale(t, empresas, productos_all, stock_real, df_sales, s)
-    with tab3: render_admin(t, productos_all, df_sales, df_stock_in, s)
-    with tab4: render_log(t)
+    with tab3: render_stock_management(t, productos_all, df_stock_in) # SOLO STOCK
+    with tab4: render_sales_management(t, df_sales, s) # SOLO VENTAS
+    with tab5: render_log(t)
 
 if __name__ == "__main__":
     main()
