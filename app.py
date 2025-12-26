@@ -37,19 +37,19 @@ def inject_mobile_icon():
     try:
         with open(ICONO_ARCHIVO, "rb") as image_file:
             encoded_string = base64.b64encode(image_file.read()).decode()
-        icon_html = f"""
-        <script>
-            var link = document.querySelector("link[rel~='icon']");
-            if (!link) {{
-                link = document.createElement('link');
-                link.rel = 'icon';
-                document.getElementsByTagName('head')[0].appendChild(link);
-            }}
-            link.href = 'data:image/png;base64,{encoded_string}';
-        </script>
-        """
         st.markdown(
             f"""
+            <style>
+            </style>
+            <script>
+                var link = document.querySelector("link[rel~='icon']");
+                if (!link) {{
+                    link = document.createElement('link');
+                    link.rel = 'icon';
+                    document.getElementsByTagName('head')[0].appendChild(link);
+                }}
+                link.href = 'data:image/png;base64,{encoded_string}';
+            </script>
             <head>
                 <link rel="apple-touch-icon" href="data:image/png;base64,{encoded_string}">
                 <link rel="shortcut icon" href="data:image/png;base64,{encoded_string}">
@@ -385,15 +385,10 @@ def render_dashboard(t, df_sales, stock_real, sales_real, prods_stock, prods_sal
                     elif kg_left != 0 or p in prods_stock: show_it = True
                     
                     if show_it:
-                        # OBTENER VENTAS HISTORICAS PARA ESTE PRODUCTO
                         kg_sold_total = sales_real.get(p, 0.0)
-                        
                         c_s1, c_s2 = st.columns([3, 1])
                         pct = max(0.0, min(kg_left / 1000.0, 1.0))
-                        
-                        # MOSTRAR TEXTO COMBINADO (STOCK + VENDIDO)
                         c_s1.progress(pct, text=f"📦 **{p}**: {kg_left:,.1f} kg  •  📉 Tot. Vendido: {kg_sold_total:,.1f} kg")
-                        
                         if kg_left < 0: c_s2.error(f"⚠️ ({kg_left})")
                         elif kg_left < 50: c_s2.warning("⚠️")
                         else: c_s2.success("✅")
@@ -550,13 +545,22 @@ def render_stock_management(t, productos_all, df_stock_in):
                 if c_btn_s2.button(t['del_entry'], key=f"del_stk_{i}", type="secondary"):
                     bk = get_book_direct()
                     sh_stk = bk.worksheet("Estoque")
+                    
+                    found = False
                     try:
                         cell = sh_stk.find(str(r['Data']))
+                        found = True
+                    except: st.error("No encontré la fila en la base de datos.")
+
+                    if found:
                         def do_stk_del(): sh_stk.delete_rows(cell.row)
                         success, err = safe_api_action(do_stk_del)
-                        if success: st.cache_data.clear(); st.success(t['msgs'][1]); time.sleep(1); st.rerun()
+                        if success: 
+                            st.cache_data.clear()
+                            st.success(t['msgs'][1])
+                            time.sleep(1)
+                            st.rerun()
                         else: st.error(f"Error: {err}")
-                    except: st.error("Error.")
     else:
         st.info(t['msgs'][2])
 
@@ -584,22 +588,35 @@ def render_sales_management(t, df_sales, s):
                 if c_btn1.button(t['save_changes'], key=f"save_{i}"):
                     bk = get_book_direct()
                     sh_sl = bk.get_worksheet(0)
-                    cell = sh_sl.find(str(r['Fecha_Registro']))
-                    def do_update():
-                        sh_sl.update_cell(cell.row, 3, new_kg)
-                        sh_sl.update_cell(cell.row, 4, new_val)
-                        sh_sl.update_cell(cell.row, 5, new_val*0.02)
-                    success, err = safe_api_action(do_update)
-                    if success: st.cache_data.clear(); st.success(t['msgs'][3]); time.sleep(1); st.rerun()
-                    else: st.error(f"Error: {err}")
+                    try:
+                        cell = sh_sl.find(str(r['Fecha_Registro']))
+                        def do_update():
+                            sh_sl.update_cell(cell.row, 3, new_kg)
+                            sh_sl.update_cell(cell.row, 4, new_val)
+                            sh_sl.update_cell(cell.row, 5, new_val*0.02)
+                        success, err = safe_api_action(do_update)
+                        if success: st.cache_data.clear(); st.success(t['msgs'][3]); time.sleep(1); st.rerun()
+                        else: st.error(f"Error: {err}")
+                    except: st.error("No encontrado.")
                 if c_btn2.button(t['del_entry'], key=f"del_{i}", type="secondary"):
                     bk = get_book_direct()
                     sh_sl = bk.get_worksheet(0)
-                    cell = sh_sl.find(str(r['Fecha_Registro']))
-                    def do_del(): sh_sl.delete_rows(cell.row)
-                    success, err = safe_api_action(do_del)
-                    if success: st.cache_data.clear(); st.success(t['msgs'][1]); time.sleep(1); st.rerun()
-                    else: st.error(f"Error: {err}")
+                    
+                    found = False
+                    try:
+                        cell = sh_sl.find(str(r['Fecha_Registro']))
+                        found = True
+                    except: st.error("No encontrado.")
+
+                    if found:
+                        def do_del(): sh_sl.delete_rows(cell.row)
+                        success, err = safe_api_action(do_del)
+                        if success: 
+                            st.cache_data.clear()
+                            st.success(t['msgs'][1])
+                            time.sleep(1)
+                            st.rerun()
+                        else: st.error(f"Error: {err}")
         st.write("")
         with st.expander(t['wipe_sales_title']):
             st.warning(t['wipe_stk_warn'])
@@ -650,10 +667,15 @@ def render_log(t):
                                 if i==0: continue
                                 if row[0] in dts_h: dels.append(i+1)
                             dels.sort(reverse=True)
+                            
                             def do_log_del():
                                 for d in dels: sh_log.delete_rows(d)
+                            
                             success, err = safe_api_action(do_log_del)
-                            if success: st.success(t['msgs'][1]); time.sleep(1); st.rerun()
+                            if success: 
+                                st.success(t['msgs'][1])
+                                time.sleep(1)
+                                st.rerun()
                             else: st.error(f"Error: {err}")
                 st.write("")
                 col_danger1, col_danger2 = st.columns([3, 1])
@@ -684,7 +706,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
         t["tabs"] = [t['tabs'][0], t['tabs'][1], t['tabs'][2], t['tabs'][3], t['tabs'][4]]
-        st.caption("v85.0 Total View")
+        st.caption("v86.0 Delete Fix")
         if st.button("🔄"):
             st.cache_data.clear()
             st.rerun()
@@ -724,12 +746,12 @@ def main():
     productos_all = sorted(list(set(["AÇAI MÉDIO", "AÇAI POP", "CUPUAÇU"] + prods_sales + prods_stock)))
 
     stock_real = {}
-    sales_real = {} # DICCIONARIO PARA GUARDAR VENTAS TOTALES
+    sales_real = {} 
     for p in productos_all:
         total_in = df_stock_in[df_stock_in['Produto'] == p]['Kg'].sum() if not df_stock_in.empty else 0
         total_out = df_sales[df_sales['Producto'] == p]['Kg'].sum() if not df_sales.empty else 0
         stock_real[p] = total_in - total_out
-        sales_real[p] = total_out # GUARDAMOS EL TOTAL VENDIDO
+        sales_real[p] = total_out 
 
     # SIDEBAR
     ahora = datetime.now(); periodo_clave = ahora.strftime("%Y-%m")
@@ -801,7 +823,6 @@ def main():
 
     # TABS
     tab1, tab2, tab3, tab4, tab5 = st.tabs(t['tabs'])
-    # PASAMOS sales_real AL DASHBOARD
     with tab1: render_dashboard(t, df_sales, stock_real, sales_real, prods_stock, prods_sales, s, r, lang, saved_filter)
     with tab2: render_new_sale(t, empresas, productos_all, stock_real, df_sales, s)
     with tab3: render_stock_management(t, productos_all, df_stock_in)
