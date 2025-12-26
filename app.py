@@ -186,7 +186,7 @@ def get_connection():
     return client
 
 # --- DATOS CACHEADOS ---
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=900) # 15 minutos de caché para lecturas masivas
 def load_cached_data():
     client = get_connection()
     try:
@@ -206,6 +206,7 @@ def get_book_direct():
     client = get_connection()
     return client.open("Inventario_Xingu_DB")
 
+# ACCIÓN SEGURA CON ESPERA EXPONENCIAL
 def safe_api_action(action_func, *args):
     last_error = None
     for attempt in range(1, 4): 
@@ -214,7 +215,8 @@ def safe_api_action(action_func, *args):
             return True, None 
         except Exception as e:
             last_error = e
-            time.sleep(2) 
+            # Espera inteligente: 1s, 2s, 4s...
+            time.sleep(2 ** attempt) 
     return False, last_error
 
 def log_action(book, action, detail):
@@ -234,7 +236,7 @@ def get_goal(book, key):
     return 0.0
 
 # ==========================================
-# 🧩 FRAGMENTOS (ISLAS DE CÓDIGO)
+# 🧩 FRAGMENTOS OPTIMIZADOS
 # ==========================================
 
 @st.fragment
@@ -292,8 +294,6 @@ def render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, la
 @st.fragment
 def render_new_sale(t, empresas, productos_all, stock_real, df_sales, s):
     st.header(t['headers'][1])
-    
-    # LLAVE DE SESIÓN PARA LIMPIAR
     key_suffix = str(st.session_state.sale_key)
     
     with st.container(border=True):
@@ -320,7 +320,6 @@ def render_new_sale(t, empresas, productos_all, stock_real, df_sales, s):
                     log_action(bk, "VENTA", f"{emp} | {kg}kg | {prod}")
                     st.cache_data.clear() 
                     st.success(t['msgs'][0])
-                    # INCREMENTAR KEY PARA LIMPIAR INPUTS
                     st.session_state.sale_key += 1
                     
                     if PDF_AVAILABLE:
@@ -329,9 +328,8 @@ def render_new_sale(t, empresas, productos_all, stock_real, df_sales, s):
                             st.download_button(t['pdf'], data=pdf_data, file_name=f"Recibo.pdf", mime="application/pdf")
                         except: pass
                     time.sleep(1.0); st.rerun()
-                else: st.error(f"Error al guardar: {error}")
+                else: st.error(f"Error: {error}")
 
-    # TABLA DE ÚLTIMAS VENTAS (FEEDBACK)
     st.divider()
     st.caption("📋 Últimas ventas registradas:")
     if not df_sales.empty:
@@ -435,42 +433,44 @@ def render_admin(t, productos_all, df_sales, s):
 @st.fragment
 def render_log(t):
     st.title(t['headers'][3])
-    try:
-        bk = get_book_direct()
-        sh_log = bk.worksheet("Historial")
-        h_dt = pd.DataFrame(sh_log.get_all_records())
-        
-        if not h_dt.empty:
-            show_log = h_dt.copy()
-            if "Accion" in show_log.columns:
-                emoji_map = t['val_map'].copy()
-                show_log["Accion"] = show_log["Accion"].replace(emoji_map)
-            show_log = show_log.rename(columns=t['col_map'])
-            st.dataframe(show_log.iloc[::-1], use_container_width=True)
-            st.divider()
-            with st.expander(t['clean_hist_label']):
-                rev_h = h_dt.iloc[::-1].reset_index()
-                opc_h = [f"{r['Fecha_Hora']} | {r['Accion']} | {r['Detalles']}" for i, r in rev_h.iterrows()]
-                sel_h = st.multiselect(t['msgs'][4], opc_h)
-                if st.button(t['actions'][4], key="btn_h", type="primary"):
-                    if sel_h:
-                        dts_h = [x.split(" | ")[0] for x in sel_h]
-                        all_vals = sh_log.get_all_values()
-                        dels = []
-                        for i, row in enumerate(all_vals):
-                            if i==0: continue
-                            if row[0] in dts_h: dels.append(i+1)
-                        dels.sort(reverse=True)
-                        def do_log_del():
-                            for d in dels: sh_log.delete_rows(d)
-                        success, err = safe_api_action(do_log_del)
-                        if success: st.success(t['msgs'][1]); time.sleep(1); st.rerun()
-                        else: st.error(f"Error: {err}")
-        else:
-            st.info("El historial está limpio.")
-    except Exception as e:
-        if "429" in str(e): st.warning("⏳ Google está ocupado, reintentando...")
-        else: st.write("Historial vacío o error de lectura.")
+    st.info("💡 Para proteger la velocidad de la App, el historial no carga automáticamente.")
+    
+    if st.button("📂 Cargar Historial Completo", type="primary"):
+        try:
+            bk = get_book_direct()
+            sh_log = bk.worksheet("Historial")
+            h_dt = pd.DataFrame(sh_log.get_all_records())
+            
+            if not h_dt.empty:
+                show_log = h_dt.copy()
+                if "Accion" in show_log.columns:
+                    emoji_map = t['val_map'].copy()
+                    show_log["Accion"] = show_log["Accion"].replace(emoji_map)
+                show_log = show_log.rename(columns=t['col_map'])
+                st.dataframe(show_log.iloc[::-1], use_container_width=True)
+                st.divider()
+                with st.expander(t['clean_hist_label']):
+                    rev_h = h_dt.iloc[::-1].reset_index()
+                    opc_h = [f"{r['Fecha_Hora']} | {r['Accion']} | {r['Detalles']}" for i, r in rev_h.iterrows()]
+                    sel_h = st.multiselect(t['msgs'][4], opc_h)
+                    if st.button(t['actions'][4], key="btn_h", type="primary"):
+                        if sel_h:
+                            dts_h = [x.split(" | ")[0] for x in sel_h]
+                            all_vals = sh_log.get_all_values()
+                            dels = []
+                            for i, row in enumerate(all_vals):
+                                if i==0: continue
+                                if row[0] in dts_h: dels.append(i+1)
+                            dels.sort(reverse=True)
+                            def do_log_del():
+                                for d in dels: sh_log.delete_rows(d)
+                            success, err = safe_api_action(do_log_del)
+                            if success: st.success(t['msgs'][1]); time.sleep(1); st.rerun()
+                            else: st.error(f"Error: {err}")
+            else:
+                st.info("El historial está limpio.")
+        except Exception as e:
+            st.error(f"Error: {e}")
 
 # --- APP MAIN ---
 def main():
@@ -483,7 +483,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         
         t = TR.get(lang, TR["Português"]) 
-        st.caption("v66.0 Pulido")
+        st.caption("v67.0 Modo Turbo")
         
         if st.button("🔄 Forzar Actualización"):
             st.cache_data.clear()
