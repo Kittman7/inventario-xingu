@@ -22,7 +22,7 @@ NOMBRE_EMPRESA = "Xingu CEO"
 ICONO_APP = "🍇"
 
 # 🔑 LOGIN SIMPLE
-CONTRASEÑA_MAESTRA = "julio777" 
+CONTRASEÑA_MAESTRA = "Julio777" 
 # ==========================================
 
 st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon=ICONO_APP, layout="wide")
@@ -42,7 +42,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- LOGIN SIMPLE MEJORADO (FORMULARIO + ANTI-ESPACIOS) ---
+# --- LOGIN SIMPLE (CON FORMULARIO PARA GUARDAR CLAVE) ---
 def check_password():
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
@@ -56,19 +56,14 @@ def check_password():
         st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA}</h1>", unsafe_allow_html=True)
         st.write("")
         
-        # --- CAMBIO IMPORTANTE: FORMULARIO ---
-        # Al usar st.form, el navegador detecta que esto es un login
-        # y te ofrecerá "Guardar Contraseña" automáticamente.
+        # Formulario para que el navegador guarde la contraseña
         with st.form("login_form"):
             input_pass = st.text_input("Senha / Contraseña", type="password")
             submit_btn = st.form_submit_button("Entrar", type="primary")
         
         if submit_btn:
-            # --- CAMBIO ANTI-ESPACIOS: .strip() ---
-            # Esto borra espacios vacíos al inicio o al final
-            clave_limpia = input_pass.strip()
-            
-            if clave_limpia == CONTRASEÑA_MAESTRA:
+            # .strip() elimina espacios accidentales
+            if input_pass.strip() == CONTRASEÑA_MAESTRA:
                 st.session_state.authenticated = True
                 st.rerun()
             else:
@@ -142,7 +137,7 @@ TR = {
     "English": {
         "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ New Sale", "🛠️ Admin", "📜 Log"],
         "headers": ["Dashboard", "New Sale", "Admin", "Log"],
-        "metrics": ["Total", "Volume (Kg)", "Commission", "Avg Ticket", "Top Client"],
+        "metrics": ["Total Revenue", "Volume (Kg)", "Commission (2%)", "Avg Ticket", "Top Client"],
         "charts": ["Trend", "Mix", "By Company"],
         "table_title": "Details",
         "forms": ["Client", "Product", "Kg", "Value", "✅ Confirm"],
@@ -206,7 +201,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
         st.info(t.get("install", "Install App"))
-        st.caption("v47.0 Fixed Login")
+        st.caption("v48.0 Excel Clásico")
     
     s = RATES[lang]["s"]; r = RATES[lang]["r"]
 
@@ -238,10 +233,20 @@ def main():
             st.progress(min(val_mes/meta, 1.0))
             st.caption(f"{val_mes/meta*100:.1f}% ({s} {val_mes:,.0f} / {s} {meta:,.0f})")
         st.divider()
+        
+        # --- EXCEL SIMPLE (COMO ANTES) ---
         if not df.empty:
             buffer = io.BytesIO()
-            with pd.ExcelWriter(buffer) as writer: df.to_excel(writer, index=False)
-            st.download_button(t['dl_excel'], data=buffer, file_name="Data.xlsx")
+            with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+                # Solo descargamos los datos tal cual, sin hojas extra ni formatos raros
+                df.to_excel(writer, index=False)
+            st.download_button(
+                label=t['dl_excel'],
+                data=buffer, 
+                file_name=f"Data_Xingu_{datetime.now().strftime('%Y-%m-%d')}.xlsx",
+                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            
         if st.button(t['logout']): st.session_state.authenticated = False; st.rerun()
 
     tab1, tab2, tab3, tab4 = st.tabs(t['tabs'])
@@ -389,4 +394,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
