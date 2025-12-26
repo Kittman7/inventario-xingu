@@ -42,7 +42,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- LOGIN SIMPLE (CON FORMULARIO PARA GUARDAR CLAVE) ---
+# --- LOGIN SIMPLE ---
 def check_password():
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
@@ -55,7 +55,6 @@ def check_password():
     with c2:
         st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA}</h1>", unsafe_allow_html=True)
         st.write("")
-        
         with st.form("login_form"):
             input_pass = st.text_input("Senha / Contraseña", type="password")
             submit_btn = st.form_submit_button("Entrar", type="primary")
@@ -84,6 +83,14 @@ if PDF_AVAILABLE:
         pdf.cell(100, 10, f"{prod}", 1); pdf.cell(40, 10, f"{kg}", 1); pdf.cell(50, 10, f"R$ {val:,.2f}", 1)
         return pdf.output(dest='S').encode('latin-1')
 
+# --- MAPA DE MESES ---
+MESES_PT = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto", 9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"}
+MONTHS_UI = {
+    "Português": MESES_PT,
+    "Español": {1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril", 5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto", 9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"},
+    "English": {1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June", 7: "July", 8: "August", 9: "September", 10: "October", 11: "November", 12: "December"}
+}
+
 # --- DICCIONARIO ---
 TR = {
     "Português": {
@@ -96,7 +103,7 @@ TR = {
         "actions": ["Salvar", "DELETAR", "Buscar...", "✨ Novo...", "🗑️ Apagar Seleção"],
         "bulk_label": "Gestão em Massa (Apagar Vários)",
         "clean_hist_label": "Limpeza de Histórico",
-        "dl_excel": "📗 Baixar Excel (Pro)",
+        "dl_excel": "📗 Baixar Excel (Completo)",
         "logout": "🔒 Sair",
         "goal_lbl": "🎯 Meta de", "goal_btn": "💾 Salvar Meta",
         "msgs": ["Sucesso!", "Apagado!", "Sem dados", "Atualizado!", "Seleccione items"],
@@ -107,7 +114,10 @@ TR = {
         "install": "📲 Instalar: Menu -> Adicionar à Tela de Início",
         "filter": "📅 Filtrar por Data",
         "col_map": {"Fecha_Hora": "📅 Data", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"},
-        "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "EDITAR": "✏️ Edição", "BORRAR": "🗑️ Apagado", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"}
+        "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "EDITAR": "✏️ Edição", "BORRAR": "🗑️ Apagado", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"},
+        # EXCEL HEADERS
+        "xls_head": ["Data", "Mês", "Empresa", "Produto", "Kg", "Valor (R$)", "Comissão (R$)"],
+        "xls_tot": "TOTAL GERAL:"
     },
     "Español": {
         "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nueva Venta", "🛠️ Admin", "📜 Log"],
@@ -119,7 +129,7 @@ TR = {
         "actions": ["Guardar", "BORRAR", "Buscar...", "✨ Nuevo...", "🗑️ Borrar Selección"],
         "bulk_label": "Gestión Masiva (Borrar Varios)",
         "clean_hist_label": "Limpieza de Historial",
-        "dl_excel": "📗 Bajar Excel (Pro)",
+        "dl_excel": "📗 Bajar Excel (Completo)",
         "logout": "🔒 Salir",
         "goal_lbl": "🎯 Meta de", "goal_btn": "💾 Salvar Meta",
         "msgs": ["¡Éxito!", "¡Borrado!", "Sin datos", "¡Actualizado!", "Seleccione items"],
@@ -130,7 +140,10 @@ TR = {
         "install": "📲 Instalar: Menú -> Agregar a Pantalla de Inicio",
         "filter": "📅 Filtrar por Fecha",
         "col_map": {"Fecha_Hora": "📅 Fecha", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"},
-        "val_map": {"NEW": "🆕 Nuevo", "VENTA": "💰 Venta", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Masa", "CREAR": "✨ Crear", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"}
+        "val_map": {"NEW": "🆕 Nuevo", "VENTA": "💰 Venta", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Masa", "CREAR": "✨ Crear", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"},
+        # EXCEL HEADERS
+        "xls_head": ["Fecha", "Mes", "Empresa", "Producto", "Kg", "Valor ($)", "Comisión ($)"],
+        "xls_tot": "TOTAL GENERAL:"
     },
     "English": {
         "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ New Sale", "🛠️ Admin", "📜 Log"],
@@ -142,7 +155,7 @@ TR = {
         "actions": ["Save", "DELETE", "Search...", "✨ New...", "🗑️ Delete Selection"],
         "bulk_label": "Bulk Management",
         "clean_hist_label": "Clear History",
-        "dl_excel": "📗 Download Excel (Pro)",
+        "dl_excel": "📗 Download Excel (Full)",
         "logout": "🔒 Logout",
         "goal_lbl": "🎯 Goal for", "goal_btn": "💾 Save Goal",
         "msgs": ["Success!", "Deleted!", "No data", "Updated!", "Select items"],
@@ -153,11 +166,14 @@ TR = {
         "install": "📲 Install: Menu -> Add to Home Screen",
         "filter": "📅 Filter by Date",
         "col_map": {"Fecha_Hora": "📅 Date", "Accion": "⚡ Action", "Detalles": "📝 Details"},
-        "val_map": {"NEW": "🆕 New", "VENTA": "💰 Sale", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Deleted", "BORRADO_MASIVO": "🔥 Bulk", "CREAR": "✨ Create", "HIST_DEL": "🧹 Clean", "META_UPDATE": "🎯 Goal"}
+        "val_map": {"NEW": "🆕 New", "VENTA": "💰 Sale", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Deleted", "BORRADO_MASIVO": "🔥 Bulk", "CREAR": "✨ Create", "HIST_DEL": "🧹 Clean", "META_UPDATE": "🎯 Goal"},
+        # EXCEL HEADERS
+        "xls_head": ["Date", "Month", "Company", "Product", "Kg", "Value", "Commission"],
+        "xls_tot": "GRAND TOTAL:"
     }
 }
 RATES = { "Português": {"s": "R$", "r": 1.0}, "Español": {"s": "$", "r": 165.0}, "English": {"s": "USD", "r": 0.18} }
-MESES_UI = {1: "Jan", 2: "Feb", 3: "Mar", 4: "Abr", 5: "Mai", 6: "Jun", 7: "Jul", 8: "Ago", 9: "Set", 10: "Out", 11: "Nov", 12: "Dez"}
+MESES_UI_SIDEBAR = {1: "Jan", 2: "Feb", 3: "Mar", 4: "Abr", 5: "Mai", 6: "Jun", 7: "Jul", 8: "Ago", 9: "Set", 10: "Out", 11: "Nov", 12: "Dez"}
 
 # --- CONEXIÓN CACHEADA ⚡ ---
 @st.cache_resource(ttl=600) 
@@ -199,7 +215,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
         st.info(t.get("install", "Install App"))
-        st.caption("v49.0 Excel Pro")
+        st.caption("v50.0 Excel Total")
     
     s = RATES[lang]["s"]; r = RATES[lang]["r"]
 
@@ -219,7 +235,7 @@ def main():
 
     # SIDEBAR META
     with st.sidebar:
-        st.write(f"**{t['goal_lbl']} {MESES_UI[ahora.month]}**")
+        st.write(f"**{t['goal_lbl']} {MESES_UI_SIDEBAR[ahora.month]}**")
         db_goal = get_goal(book, periodo_clave)
         meta = st.number_input("Meta", value=db_goal, step=1000.0, label_visibility="collapsed")
         if st.button(t['goal_btn']):
@@ -232,46 +248,55 @@ def main():
             st.caption(f"{val_mes/meta*100:.1f}% ({s} {val_mes:,.0f} / {s} {meta:,.0f})")
         st.divider()
         
-        # --- EXCEL PRO (PROFESIONAL Y ORDENADO) ---
+        # --- EXCEL INTELIGENTE 🧠 ---
         if not df.empty:
             buffer = io.BytesIO()
             with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-                # 1. Preparar datos limpios
                 df_ex = df.copy()
-                # Formatear fecha para que no sea un string feo
-                try:
-                    df_ex['Fecha_Registro'] = pd.to_datetime(df_ex['Fecha_Registro']).dt.strftime('%d/%m/%Y %H:%M')
-                except: pass
                 
-                # Columnas ordenadas
-                cols_export = ['Fecha_Registro', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']
-                # Verificar que existan (por seguridad)
-                cols_final = [c for c in cols_export if c in df_ex.columns]
-                df_final = df_ex[cols_final]
+                # 1. Crear columna MES (Idioma dinámico)
+                df_ex['Fecha_DT'] = pd.to_datetime(df_ex['Fecha_Registro'], errors='coerce')
+                # Mapea el numero de mes al nombre en el idioma seleccionado
+                df_ex['Mes_Lang'] = df_ex['Fecha_DT'].dt.month.map(MONTHS_UI[lang])
+                df_ex['Fecha_Clean'] = df_ex['Fecha_DT'].dt.strftime('%d/%m/%Y %H:%M')
                 
-                # 2. Escribir a Excel (Sin índice)
-                df_final.to_excel(writer, index=False, sheet_name='Reporte')
+                # 2. Seleccionar datos para exportar
+                # Columnas Internas: ['Fecha_Clean', 'Mes_Lang', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']
+                data_final = df_ex[['Fecha_Clean', 'Mes_Lang', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']].copy()
                 
-                # 3. Aplicar Formatos Profesionales
+                # 3. Escribir datos
+                sheet_name = 'Reporte'
+                data_final.to_excel(writer, index=False, sheet_name=sheet_name, startrow=1, header=False)
+                
+                # 4. Formatos
                 workbook = writer.book
-                worksheet = writer.sheets['Reporte']
+                ws = writer.sheets[sheet_name]
                 
-                # Definir Estilos
-                fmt_header = workbook.add_format({'bold': True, 'fg_color': '#2C3E50', 'font_color': 'white', 'border': 1, 'align': 'center', 'valign': 'vcenter'})
-                fmt_money = workbook.add_format({'num_format': 'R$ #,##0.00', 'border': 1, 'align': 'right'})
+                fmt_head = workbook.add_format({'bold': True, 'fg_color': '#2C3E50', 'font_color': 'white', 'border': 1, 'align': 'center'})
+                fmt_money = workbook.add_format({'num_format': 'R$ #,##0.00', 'border': 1})
                 fmt_num = workbook.add_format({'num_format': '0.0', 'border': 1, 'align': 'center'})
-                fmt_date = workbook.add_format({'border': 1, 'align': 'center'})
-                fmt_text = workbook.add_format({'border': 1, 'align': 'left'})
+                fmt_base = workbook.add_format({'border': 1})
+                fmt_total = workbook.add_format({'bold': True, 'bg_color': '#D3D3D3', 'num_format': 'R$ #,##0.00', 'border': 1})
+                fmt_total_kg = workbook.add_format({'bold': True, 'bg_color': '#D3D3D3', 'num_format': '0.0 "Kg"', 'border': 1})
                 
-                # Aplicar anchos y formatos a columnas (A=0, B=1, etc.)
-                worksheet.set_column('A:A', 20, fmt_date) # Fecha
-                worksheet.set_column('B:C', 25, fmt_text) # Empresa, Producto
-                worksheet.set_column('D:D', 12, fmt_num)  # Kg
-                worksheet.set_column('E:F', 18, fmt_money)# Valor, Comissao
+                # 5. Escribir Encabezados (Traducidos)
+                headers = t['xls_head'] # ["Fecha", "Mes", "Empresa"...]
+                for col_num, h in enumerate(headers):
+                    ws.write(0, col_num, h, fmt_head)
                 
-                # Sobrescribir Encabezados para que tengan estilo
-                for col_num, value in enumerate(df_final.columns):
-                    worksheet.write(0, col_num, value, fmt_header)
+                # 6. Anchos de columna
+                ws.set_column('A:A', 18, fmt_base) # Fecha
+                ws.set_column('B:B', 12, fmt_base) # Mes
+                ws.set_column('C:D', 22, fmt_base) # Empresa, Producto
+                ws.set_column('E:E', 12, fmt_num)  # Kg
+                ws.set_column('F:G', 18, fmt_money)# Dinero
+                
+                # 7. FILA DE TOTALES 
+                last_row = len(data_final) + 1
+                ws.write(last_row, 3, t['xls_tot'], fmt_total) # Label "TOTAL"
+                ws.write(last_row, 4, data_final['Kg'].sum(), fmt_total_kg) # Suma Kg
+                ws.write(last_row, 5, data_final['Valor_BRL'].sum(), fmt_total) # Suma Valor
+                ws.write(last_row, 6, data_final['Comissao_BRL'].sum(), fmt_total) # Suma Comisión
 
             st.download_button(
                 label=t['dl_excel'],
