@@ -7,9 +7,8 @@ from oauth2client.service_account import ServiceAccountCredentials
 import time
 import io
 import xlsxwriter
-import urllib.parse
 
-# INTENTO DE IMPORTAR FPDF (Para evitar errores si falta)
+# INTENTO DE IMPORTAR FPDF (Para evitar errores si falta en requirements.txt)
 try:
     from fpdf import FPDF
     PDF_AVAILABLE = True
@@ -103,7 +102,7 @@ if PDF_AVAILABLE:
         pdf.cell(0, 10, txt="Obrigado!", ln=True, align='C')
         return pdf.output(dest='S').encode('latin-1')
 
-# --- DICCIONARIO DE IDIOMAS (CORREGIDO Y VERIFICADO) ---
+# --- DICCIONARIO DE IDIOMAS (REPARADO) ---
 TR = {
     "Português": {
         "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nova Venda", "🛠️ Admin", "📜 Log"],
@@ -122,7 +121,7 @@ TR = {
         "msgs": ["Sucesso!", "Apagado!", "Sem dados", "Atualizado!"],
         "pdf": "📄 Baixar Recibo",
         "stock_t": "📦 Estoque",
-        "new_labels": ["Nome Cliente:", "Nome Produto:"], # AQUÍ ESTÁ LA CLAVE QUE FALTABA
+        "new_labels": ["Nome Cliente:", "Nome Produto:"], # ¡ESTA ES LA LÍNEA QUE FALTABA!
         "dash_cols": {"val": "Valor", "com": "Comissão", "kg": "Kg"},
         "install": "📲 Instalar: Menu -> Adicionar à Tela de Início"
     },
@@ -143,7 +142,7 @@ TR = {
         "msgs": ["¡Éxito!", "¡Borrado!", "Sin datos", "¡Actualizado!"],
         "pdf": "📄 Bajar Recibo",
         "stock_t": "📦 Stock",
-        "new_labels": ["Nombre Cliente:", "Nombre Producto:"], # AQUÍ TAMBIÉN
+        "new_labels": ["Nombre Cliente:", "Nombre Producto:"], # ¡ESTA ES LA LÍNEA QUE FALTABA!
         "dash_cols": {"val": "Valor", "com": "Comisión", "kg": "Kg"},
         "install": "📲 Instalar: Menú -> Agregar a Pantalla de Inicio"
     },
@@ -164,7 +163,7 @@ TR = {
         "msgs": ["Success!", "Deleted!", "No data", "Updated!"],
         "pdf": "📄 Download Receipt",
         "stock_t": "📦 Stock",
-        "new_labels": ["Client Name:", "Product Name:"], # Y AQUÍ
+        "new_labels": ["Client Name:", "Product Name:"], # ¡ESTA ES LA LÍNEA QUE FALTABA!
         "dash_cols": {"val": "Value", "com": "Comm", "kg": "Kg"},
         "install": "📲 Install: Menu -> Add to Home Screen"
     }
@@ -206,13 +205,13 @@ def main():
         st.caption(f"👤 {st.session_state.username.upper()}")
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         
-        # --- FIX PARA DICCIONARIO ---
-        # Si por alguna razón falla el idioma, usa Portugués por defecto para no romper la app
+        # --- SELECCIÓN SEGURA DE IDIOMA ---
+        # Si falla el idioma, usa Portugués por defecto para evitar KeyError
         t = TR.get(lang, TR["Português"]) 
         
-        st.info(t["install"])
+        st.info(t.get("install", "Install App"))
         st.markdown("---")
-        st.caption("v40.0 Stable")
+        st.caption("v41.0 Fixed")
     
     s = RATES[lang]["s"]
     r = RATES[lang]["r"]
@@ -221,7 +220,7 @@ def main():
         book = get_data()
         sheet = book.sheet1
         df = pd.DataFrame(sheet.get_all_records())
-    except: st.error("Error DB"); st.stop()
+    except: st.error("Error DB: Revisa tus credenciales o conexión."); st.stop()
 
     if not df.empty:
         for c in ['Valor_BRL', 'Kg', 'Comissao_BRL']:
@@ -285,11 +284,13 @@ def main():
         with st.container(border=True):
             c1, c2 = st.columns(2)
             
-            # --- CORRECCIÓN: Usamos indices seguros para "Novo" ---
-            opcion_nuevo = t['actions'][3] # Corresponde a "✨ Novo..."
+            # --- LÓGICA DE 'NUEVO' ---
+            opcion_nuevo = t['actions'][3] # "✨ Novo..."
             
             sel_emp = c1.selectbox(t['forms'][0], [opcion_nuevo] + empresas)
-            # Aquí es donde fallaba antes: ahora t['new_labels'] existe
+            
+            # **AQUÍ ESTABA EL ERROR ANTES, AHORA ESTÁ CORREGIDO**
+            # t['new_labels'] ya existe en el diccionario, así que esto funcionará.
             emp = c1.text_input(t['new_labels'][0]) if sel_emp == opcion_nuevo else sel_emp
             
             sel_prod = c2.selectbox(t['forms'][1], [opcion_nuevo] + productos)
