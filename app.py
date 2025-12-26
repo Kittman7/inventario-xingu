@@ -23,8 +23,7 @@ except ImportError:
 NOMBRE_EMPRESA = "Xingu CEO"
 ICONO_ARCHIVO = "logo.png"
 
-# --- MEJORA 2: SEGURIDAD DE CONTRASEÑA ---
-# Intenta leer de secrets.toml, si no existe, usa la fija por defecto.
+# INTENTO DE LEER SECRETS, SINO USA LA FIJA
 try:
     CONTRASEÑA_MAESTRA = st.secrets["PASSWORD"]
     USING_SECRETS = True
@@ -208,10 +207,11 @@ TR = {
             "backup_load": "Gerando arquivo de segurança...",
             "last_sales": "📋 Últimas vendas registradas (Top 3):",
             "tot_sold": "Tot. Vendido",
-            "excel_edit_mode": "📝 Modo Edição Excel",
+            "excel_edit_mode": "📝 Modo Edição Rápida (Excel)",
             "save_table": "💾 Salvar Alterações da Tabela",
             "show_all": "👁️ Ver Todo o Histórico",
-            "lazy_msg": "Mostrando as últimas 50 entradas para velocidade."
+            "lazy_msg": "Mostrando as últimas 50 entradas para velocidade.",
+            "manual_mode": "📝 Modo Manual (Editar/Apagar Individualmente)"
         }
     },
     "Español": {
@@ -272,10 +272,11 @@ TR = {
             "backup_load": "Generando archivo de seguridad...",
             "last_sales": "📋 Últimas ventas registradas (Top 3):",
             "tot_sold": "Tot. Vendido",
-            "excel_edit_mode": "📝 Modo Edición Excel",
+            "excel_edit_mode": "📝 Modo Edición Rápida (Excel)",
             "save_table": "💾 Guardar Cambios de la Tabla",
             "show_all": "👁️ Ver Todo el Historial",
-            "lazy_msg": "Mostrando las últimas 50 entradas para velocidad."
+            "lazy_msg": "Mostrando las últimas 50 entradas para velocidad.",
+            "manual_mode": "📝 Modo Manual (Editar/Borrar Individualmente)"
         }
     },
     "English": {
@@ -339,7 +340,8 @@ TR = {
             "excel_edit_mode": "📝 Excel Edit Mode",
             "save_table": "💾 Save Table Changes",
             "show_all": "👁️ Show Full History",
-            "lazy_msg": "Showing last 50 entries for speed."
+            "lazy_msg": "Showing last 50 entries for speed.",
+            "manual_mode": "📝 Manual Mode (Edit/Delete Individual)"
         }
     }
 }
@@ -596,10 +598,35 @@ def render_stock_management(t, productos_all, df_stock_in):
             time.sleep(0.5)
             st.rerun()
 
+    with st.expander(t['wipe_stk_title']):
+        st.warning(t['wipe_stk_warn'])
+        check_wipe_stk = st.checkbox(t['wipe_stk_check'], key="chk_wipe_stk")
+        if check_wipe_stk:
+            wipe_success = False
+            if st.button(t['wipe_stk_btn'], type="primary"):
+                with st.spinner(f"{t['alerts']['wiping']}"):
+                    bk = get_book_direct()
+                    try:
+                        sh_stk = bk.worksheet("Estoque")
+                        def do_wipe_stk():
+                            sh_stk.clear()
+                            sh_stk.append_row(["Data", "Produto", "Kg", "Usuario"])
+                        success, err = safe_api_action(do_wipe_stk)
+                        if success: 
+                            st.cache_data.clear()
+                            wipe_success = True
+                        else: st.error(f"Error: {err}")
+                    except: st.error("No existe hoja Estoque")
+            
+            if wipe_success:
+                st.toast(t['msgs'][1], icon="🔥")
+                time.sleep(0.5)
+                st.rerun()
+
     st.write("")
     st.divider()
     
-    # --- MEJORA 3: CARGA DIFERIDA + MODO EXCEL ---
+    # --- ZONA DE HISTÓRICO Y EDICIÓN ---
     c_laz1, c_laz2 = st.columns([3,1])
     c_laz1.subheader(t['hist_entries'])
     use_all = c_laz2.checkbox(t['alerts']['show_all'], value=False)
@@ -607,7 +634,7 @@ def render_stock_management(t, productos_all, df_stock_in):
     filtro_stock = st.text_input(t['search_stk'], key="search_stk")
     
     if not df_stock_in.empty:
-        # MEJORA 3: Optimización
+        # Lógica de visualización (Ultimos 50 o Todo)
         if not use_all and not filtro_stock:
             df_view = df_stock_in.tail(50)
             st.caption(f"⚡ {t['alerts']['lazy_msg']}")
@@ -617,10 +644,8 @@ def render_stock_management(t, productos_all, df_stock_in):
         if filtro_stock:
             df_view = df_view[df_view.astype(str).apply(lambda x: x.str.contains(filtro_stock, case=False)).any(axis=1)]
         
-        # --- MEJORA 1: MODO EXCEL (Solo editable Kg y Usuario para seguridad) ---
+        # 1. TABLA EXCEL (Edición rápida)
         st.caption(f"{t['alerts']['excel_edit_mode']}")
-        
-        # Invertimos para que lo nuevo salga arriba en el editor
         df_editor = df_view.iloc[::-1].copy()
         
         edited_df = st.data_editor(
@@ -631,62 +656,81 @@ def render_stock_management(t, productos_all, df_stock_in):
             key="stock_editor"
         )
         
-        # BOTÓN GUARDAR CAMBIOS DE TABLA
         if st.button(t['alerts']['save_table'], key="save_stk_table"):
             with st.spinner(f"{t['alerts']['updating']}"):
                 bk = get_book_direct()
                 sh_stk = bk.worksheet("Estoque")
-                
-                # Iteramos sobre el dataframe editado
-                # Nota: Esto es operación costosa, por eso limitamos a 50 filas por defecto
                 updated_count = 0
                 for index, row in edited_df.iterrows():
-                    # Buscamos la fila original por FECHA (que es única)
                     try:
                         cell = sh_stk.find(str(row['Data']))
-                        # Verificamos si cambió algo para no llamar a la API por gusto
-                        # Esto requeriría comparar con df_view, pero por simplicidad actualizamos
                         sh_stk.update_cell(cell.row, 3, row['Kg'])
                         sh_stk.update_cell(cell.row, 4, row['Usuario'])
                         updated_count += 1
                     except: pass
-                
                 st.cache_data.clear()
                 st.toast(f"{t['msgs'][3]} ({updated_count})", icon="💾")
                 time.sleep(1)
                 st.rerun()
 
+        # 2. LISTA DE EDICIÓN INDIVIDUAL (RESTAURADA)
+        st.write("---")
+        st.caption(f"{t['alerts']['manual_mode']}")
+        
+        to_edit_manual = df_view.iloc[::-1]
+        
+        for i, r in to_edit_manual.iterrows():
+            row_label = f"📦 {r.get('Produto', '?')} | {r.get('Data', '?')} | {r.get('Kg', 0)}kg"
+            with st.expander(row_label):
+                c_esk1, c_esk2 = st.columns(2)
+                # Inputs para editar individualmente
+                new_stk_prod = c_esk1.text_input(t['forms'][1], value=str(r.get('Produto', '')), key=f"ed_stk_p_{i}")
+                new_stk_kg = c_esk2.number_input("Kg", value=float(r.get('Kg', 0)), step=1.0, key=f"ed_stk_k_{i}")
+                
+                c_btn_s1, c_btn_s2 = st.columns(2)
+                
+                if c_btn_s1.button(t['save_changes'], key=f"sav_stk_{i}"):
+                    with st.spinner(f"{t['alerts']['updating']}"):
+                        bk = get_book_direct()
+                        sh_stk = bk.worksheet("Estoque")
+                        try:
+                            cell = sh_stk.find(str(r['Data']))
+                            def do_stk_update():
+                                sh_stk.update_cell(cell.row, 2, new_stk_prod) 
+                                sh_stk.update_cell(cell.row, 3, new_stk_kg)   
+                            success, err = safe_api_action(do_stk_update)
+                            if success: 
+                                st.cache_data.clear()
+                                st.toast(t['msgs'][3], icon="💾")
+                                time.sleep(0.5)
+                                st.rerun()
+                            else: st.error(f"Error: {err}")
+                        except: st.error("No encontré la fila.")
+
+                if c_btn_s2.button(t['del_entry'], key=f"del_stk_{i}", type="secondary"):
+                    with st.spinner(f"{t['alerts']['deleting']}"):
+                        bk = get_book_direct()
+                        sh_stk = bk.worksheet("Estoque")
+                        try:
+                            cell = sh_stk.find(str(r['Data']))
+                            def do_stk_del(): sh_stk.delete_rows(cell.row)
+                            success, err = safe_api_action(do_stk_del)
+                            if success: 
+                                st.cache_data.clear()
+                                st.toast(t['msgs'][1], icon="🗑️")
+                                time.sleep(0.5)
+                                st.rerun()
+                            else: st.error(f"Error: {err}")
+                        except: st.error("Error.")
+
     else:
         st.info(t['msgs'][2])
-
-    # Se mantiene la opción de borrar individualmente por seguridad
-    with st.expander(t['edit_del_stk']):
-        st.caption("Opción segura para eliminar registros:")
-        to_edit = df_stock_in.tail(10).iloc[::-1]
-        for i, r in to_edit.iterrows():
-            c_btn_s2 = st.columns(1)[0]
-            if c_btn_s2.button(f"🗑️ {r['Data']} - {r['Produto']}", key=f"del_stk_{i}"):
-                with st.spinner(f"{t['alerts']['deleting']}"):
-                    bk = get_book_direct()
-                    sh_stk = bk.worksheet("Estoque")
-                    try:
-                        cell = sh_stk.find(str(r['Data']))
-                        def do_stk_del(): sh_stk.delete_rows(cell.row)
-                        success, err = safe_api_action(do_stk_del)
-                        if success: 
-                            st.cache_data.clear()
-                            st.toast(t['msgs'][1], icon="🗑️")
-                            time.sleep(0.5)
-                            st.rerun()
-                        else: st.error(f"Error: {err}")
-                    except: st.error("Error.")
 
 @st.fragment
 def render_sales_management(t, df_sales, s):
     st.title(t['admin_sales_title'])
     filtro = st.text_input(t['search_sales'], key="admin_search") 
     
-    # --- MEJORA 3: CARGA DIFERIDA ---
     use_all = st.checkbox(t['alerts']['show_all'], value=False, key="all_sales")
     
     if not df_sales.empty:
@@ -700,9 +744,8 @@ def render_sales_management(t, df_sales, s):
             df_filtered = df_filtered[df_filtered.astype(str).apply(lambda x: x.str.contains(filtro, case=False)).any(axis=1)]
             st.info(f"Resultados: {len(df_filtered)}")
         
-        # --- MEJORA 1: MODO EXCEL (Sales) ---
+        # MODO EXCEL
         st.caption(f"{t['alerts']['excel_edit_mode']}")
-        
         df_editor_sales = df_filtered.iloc[::-1].copy()
         
         edited_sales = st.data_editor(
@@ -720,12 +763,10 @@ def render_sales_management(t, df_sales, s):
             with st.spinner(f"{t['alerts']['updating']}"):
                 bk = get_book_direct()
                 sh_sl = bk.get_worksheet(0)
-                
                 updated_count = 0
                 for index, row in edited_sales.iterrows():
                     try:
                         cell = sh_sl.find(str(row['Fecha_Registro']))
-                        # Actualizamos Kg, Valor y recalculamos Comisión
                         sh_sl.update_cell(cell.row, 3, row['Kg'])
                         sh_sl.update_cell(cell.row, 4, row['Valor_BRL'])
                         sh_sl.update_cell(cell.row, 5, float(row['Valor_BRL']) * 0.02)
@@ -737,12 +778,39 @@ def render_sales_management(t, df_sales, s):
                 time.sleep(1)
                 st.rerun()
         
-        # Opcion de borrado individual segura
-        st.write("")
-        with st.expander(t['edit_del_stk']):
-             to_edit_sales = df_filtered.iloc[::-1].head(10)
-             for i, r in to_edit_sales.iterrows():
-                if st.button(f"🗑️ {r['Fecha_Registro']} - {r['Empresa']}", key=f"del_sale_{i}"):
+        # LISTA INDIVIDUAL RESTAURADA PARA VENTAS TAMBIÉN
+        st.write("---")
+        st.caption(f"{t['alerts']['manual_mode']}")
+        
+        to_edit_sales = df_filtered.iloc[::-1]
+        
+        for i, r in to_edit_sales.iterrows():
+            with st.expander(f"💰 {r['Empresa']} | {r['Producto']} | {r['Fecha_Registro']}"):
+                c_ed1, c_ed2 = st.columns(2)
+                new_kg = c_ed1.number_input("Kg", value=float(r['Kg']), key=f"k_{i}")
+                new_val = c_ed2.number_input("Valor", value=float(r['Valor_BRL']), key=f"v_{i}")
+                c_btn1, c_btn2 = st.columns(2)
+                
+                if c_btn1.button(t['save_changes'], key=f"save_{i}"):
+                    with st.spinner(f"{t['alerts']['updating']}"):
+                        bk = get_book_direct()
+                        sh_sl = bk.get_worksheet(0)
+                        try:
+                            cell = sh_sl.find(str(r['Fecha_Registro']))
+                            def do_update():
+                                sh_sl.update_cell(cell.row, 3, new_kg)
+                                sh_sl.update_cell(cell.row, 4, new_val)
+                                sh_sl.update_cell(cell.row, 5, new_val*0.02)
+                            success, err = safe_api_action(do_update)
+                            if success: 
+                                st.cache_data.clear()
+                                st.toast(t['msgs'][3], icon="💾")
+                                time.sleep(0.5)
+                                st.rerun()
+                            else: st.error(f"Error: {err}")
+                        except: st.error("No encontrado.")
+                
+                if c_btn2.button(t['del_entry'], key=f"del_{i}", type="secondary"):
                     with st.spinner(f"{t['alerts']['deleting']}"):
                         bk = get_book_direct()
                         sh_sl = bk.get_worksheet(0)
@@ -759,6 +827,7 @@ def render_sales_management(t, df_sales, s):
                         except: st.error("No encontrado.")
         
         st.write("")
+        # BORRAR TODO RESTAURADO
         with st.expander(t['wipe_sales_title']):
             st.warning(t['wipe_stk_warn'])
             check_wipe_sales = st.checkbox(t['wipe_stk_check'], key="chk_wipe_sales")
@@ -891,7 +960,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
         t["tabs"] = [t['tabs'][0], t['tabs'][1], t['tabs'][2], t['tabs'][3], t['tabs'][4]]
-        st.caption("v91.0 Excel+Secure+Fast")
+        st.caption("v94.0 Hybrid Pro")
         if st.button("🔄"):
             st.cache_data.clear()
             st.rerun()
