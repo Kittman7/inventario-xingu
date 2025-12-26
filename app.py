@@ -433,6 +433,8 @@ def render_new_sale(t, empresas, productos_all, stock_real, df_sales, s):
             else: st.caption(f"Stock: {current_stock:.1f} kg")
         st.markdown("<br>", unsafe_allow_html=True)
         
+        success_flag = False
+        
         if st.button(t['forms'][4], type="primary"):
             if emp and prod:
                 if kg > current_stock:
@@ -446,20 +448,25 @@ def render_new_sale(t, empresas, productos_all, stock_real, df_sales, s):
                     if success:
                         log_action(bk, "VENTA", f"{emp} | {kg}kg | {prod}")
                         st.cache_data.clear() 
-                        st.success(t['msgs'][0])
                         st.session_state.sale_key += 1
                         if PDF_AVAILABLE:
                             try:
                                 pdf_data = create_pdf(emp, prod, kg, val, st.session_state.username)
                                 st.download_button(t['pdf'], data=pdf_data, file_name=f"Recibo.pdf", mime="application/pdf")
                             except: pass
-                        time.sleep(1.0); st.rerun()
+                        success_flag = True
                     else: st.error(f"Error: {error}")
+        
+        # MANEJO DE ÉXITO FUERA DEL BLOQUE
+        if success_flag:
+            st.success(t['msgs'][0])
+            time.sleep(1.0)
+            st.rerun()
 
     st.divider()
-    st.caption("📋 Últimas ventas registradas:")
+    st.caption("📋 Últimas ventas registradas (Top 3):")
     if not df_sales.empty:
-        # AQUI CAMBIAMOS .head(5) por .head(3) PARA MOSTRAR SOLO 3
+        # AQUI SE MUESTRAN SOLO LAS ULTIMAS 3
         df_mini = df_sales[['Fecha_Registro', 'Empresa', 'Producto', 'Kg', 'Valor_BRL']].iloc[::-1].head(3)
         st.dataframe(df_mini, use_container_width=True, hide_index=True, column_config={
             'Valor_BRL': st.column_config.NumberColumn(format=f"{s} %.2f"),
@@ -477,6 +484,9 @@ def render_stock_management(t, productos_all, df_stock_in):
         if prod_stock == "✨ Novo...": prod_stock = c_st1.text_input(t['new_labels'][1], key=f"s_prod_txt_{stk_suffix}")
         kg_stock = c_st2.number_input("Kg (+)", step=10.0, key=f"s_kg_{stk_suffix}")
         user_stock = c_st3.text_input(t['user_lbl'], value="CEO", key=f"s_usr_{stk_suffix}")
+        
+        success_stock = False
+        
         if c_st4.button(t['stock_btn'], type="primary"):
             bk = get_book_direct()
             try:
@@ -490,16 +500,21 @@ def render_stock_management(t, productos_all, df_stock_in):
                 if success:
                     log_action(bk, "STOCK_ADD", f"{prod_stock} | +{kg_stock}kg")
                     st.cache_data.clear()
-                    st.success(t['stock_msg'])
                     st.session_state.stock_key += 1
-                    time.sleep(1.0); st.rerun()
+                    success_stock = True
                 else: st.error(f"Error: {err}")
             except Exception as e: st.error(f"Error grave: {e}")
+        
+        if success_stock:
+            st.success(t['stock_msg'])
+            time.sleep(1.0)
+            st.rerun()
 
     with st.expander(t['wipe_stk_title']):
         st.warning(t['wipe_stk_warn'])
         check_wipe_stk = st.checkbox(t['wipe_stk_check'], key="chk_wipe_stk")
         if check_wipe_stk:
+            wipe_success = False
             if st.button(t['wipe_stk_btn'], type="primary"):
                 bk = get_book_direct()
                 try:
@@ -508,9 +523,16 @@ def render_stock_management(t, productos_all, df_stock_in):
                         sh_stk.clear()
                         sh_stk.append_row(["Data", "Produto", "Kg", "Usuario"])
                     success, err = safe_api_action(do_wipe_stk)
-                    if success: st.cache_data.clear(); st.success(t['msgs'][1]); time.sleep(1); st.rerun()
+                    if success: 
+                        st.cache_data.clear()
+                        wipe_success = True
                     else: st.error(f"Error: {err}")
                 except: st.error("No existe hoja Estoque")
+            
+            if wipe_success:
+                st.success(t['msgs'][1])
+                time.sleep(1)
+                st.rerun()
 
     st.write("")
     st.subheader(t['hist_entries'])
@@ -531,45 +553,46 @@ def render_stock_management(t, productos_all, df_stock_in):
                 new_stk_prod = c_esk1.text_input(t['forms'][1], value=str(r.get('Produto', '')), key=f"ed_stk_p_{i}")
                 new_stk_kg = c_esk2.number_input("Kg", value=float(r.get('Kg', 0)), step=1.0, key=f"ed_stk_k_{i}")
                 c_btn_s1, c_btn_s2 = st.columns(2)
+                
+                edit_success = False
+                del_success = False
+                
                 if c_btn_s1.button(t['save_changes'], key=f"sav_stk_{i}"):
                     bk = get_book_direct()
                     sh_stk = bk.worksheet("Estoque")
-                    
-                    found_cell = None
                     try:
-                        found_cell = sh_stk.find(str(r['Data']))
-                    except: st.error("No encontré la fila.")
-                    
-                    if found_cell:
+                        cell = sh_stk.find(str(r['Data']))
                         def do_stk_update():
-                            sh_stk.update_cell(found_cell.row, 2, new_stk_prod) 
-                            sh_stk.update_cell(found_cell.row, 3, new_stk_kg)   
+                            sh_stk.update_cell(cell.row, 2, new_stk_prod) 
+                            sh_stk.update_cell(cell.row, 3, new_stk_kg)   
                         success, err = safe_api_action(do_stk_update)
                         if success: 
                             st.cache_data.clear()
-                            st.success(t['msgs'][3])
-                            time.sleep(1)
-                            st.rerun()
+                            edit_success = True
                         else: st.error(f"Error: {err}")
-
+                    except: st.error("No encontré la fila.")
+                
                 if c_btn_s2.button(t['del_entry'], key=f"del_stk_{i}", type="secondary"):
                     bk = get_book_direct()
                     sh_stk = bk.worksheet("Estoque")
-                    
-                    found_cell = None
                     try:
-                        found_cell = sh_stk.find(str(r['Data']))
-                    except: st.error("No encontré la fila.")
-
-                    if found_cell:
-                        def do_stk_del(): sh_stk.delete_rows(found_cell.row)
+                        cell = sh_stk.find(str(r['Data']))
+                        def do_stk_del(): sh_stk.delete_rows(cell.row)
                         success, err = safe_api_action(do_stk_del)
                         if success: 
                             st.cache_data.clear()
-                            st.success(t['msgs'][1])
-                            time.sleep(1)
-                            st.rerun()
+                            del_success = True
                         else: st.error(f"Error: {err}")
+                    except: st.error("Error.")
+                
+                if edit_success:
+                    st.success(t['msgs'][3])
+                    time.sleep(1)
+                    st.rerun()
+                if del_success:
+                    st.success(t['msgs'][1])
+                    time.sleep(1)
+                    st.rerun()
     else:
         st.info(t['msgs'][2])
 
@@ -582,63 +605,72 @@ def render_sales_management(t, df_sales, s):
             df_filtered = df_sales[df_sales.astype(str).apply(lambda x: x.str.contains(filtro, case=False)).any(axis=1)]
             st.info(f"Resultados: {len(df_filtered)}")
         else:
-            df_filtered = df_sales.tail(5)
+            # AQUI: MOSTRAR TODO, NO SOLO EL TAIL(5)
+            df_filtered = df_sales
+        
         df_admin_show = df_filtered[['Fecha_Registro', 'Empresa', 'Producto', 'Kg', 'Valor_BRL']].copy()
         cols_admin = {'Fecha_Registro': t['col_map']['Fecha_Hora'], 'Empresa': t['dash_cols']['emp'], 'Producto': t['dash_cols']['prod'], 'Kg': t['dash_cols']['kg'], 'Valor_BRL': t['dash_cols']['val']}
         st.dataframe(df_admin_show.rename(columns=cols_admin).iloc[::-1], use_container_width=True, hide_index=True, column_config={t['dash_cols']['val']: st.column_config.NumberColumn(format=f"{s} %.2f"), t['dash_cols']['kg']: st.column_config.NumberColumn(format="%.1f kg")})
         st.write("")
         st.caption(t['edit_del_stk'])
-        for i, r in df_filtered.iloc[::-1].iterrows():
+        
+        # LIMITAMOS LA EDICION A LOS ULTIMOS 20 PARA NO CARGAR LA PAGINA SI HAY MUCHOS
+        to_edit_sales = df_filtered.iloc[::-1].head(20) if not filtro else df_filtered.iloc[::-1]
+        
+        for i, r in to_edit_sales.iterrows():
             with st.expander(f"💰 {r['Empresa']} | {r['Producto']} | {r['Fecha_Registro']}"):
                 c_ed1, c_ed2 = st.columns(2)
                 new_kg = c_ed1.number_input("Kg", value=float(r['Kg']), key=f"k_{i}")
                 new_val = c_ed2.number_input("Valor", value=float(r['Valor_BRL']), key=f"v_{i}")
                 c_btn1, c_btn2 = st.columns(2)
+                
+                edit_flag = False
+                del_flag = False
+                
                 if c_btn1.button(t['save_changes'], key=f"save_{i}"):
                     bk = get_book_direct()
                     sh_sl = bk.get_worksheet(0)
-                    
-                    found_cell = None
                     try:
-                        found_cell = sh_sl.find(str(r['Fecha_Registro']))
-                    except: st.error("No encontrado.")
-
-                    if found_cell:
+                        cell = sh_sl.find(str(r['Fecha_Registro']))
                         def do_update():
-                            sh_sl.update_cell(found_cell.row, 3, new_kg)
-                            sh_sl.update_cell(found_cell.row, 4, new_val)
-                            sh_sl.update_cell(found_cell.row, 5, new_val*0.02)
+                            sh_sl.update_cell(cell.row, 3, new_kg)
+                            sh_sl.update_cell(cell.row, 4, new_val)
+                            sh_sl.update_cell(cell.row, 5, new_val*0.02)
                         success, err = safe_api_action(do_update)
                         if success: 
                             st.cache_data.clear()
-                            st.success(t['msgs'][3])
-                            time.sleep(1)
-                            st.rerun()
+                            edit_flag = True
                         else: st.error(f"Error: {err}")
-
+                    except: st.error("No encontrado.")
+                
                 if c_btn2.button(t['del_entry'], key=f"del_{i}", type="secondary"):
                     bk = get_book_direct()
                     sh_sl = bk.get_worksheet(0)
-                    
-                    found_cell = None
                     try:
-                        found_cell = sh_sl.find(str(r['Fecha_Registro']))
-                    except: st.error("No encontrado.")
-
-                    if found_cell:
-                        def do_del(): sh_sl.delete_rows(found_cell.row)
+                        cell = sh_sl.find(str(r['Fecha_Registro']))
+                        def do_del(): sh_sl.delete_rows(cell.row)
                         success, err = safe_api_action(do_del)
                         if success: 
                             st.cache_data.clear()
-                            st.success(t['msgs'][1])
-                            time.sleep(1)
-                            st.rerun()
+                            del_flag = True
                         else: st.error(f"Error: {err}")
+                    except: st.error("No encontrado.")
+                
+                if edit_flag:
+                    st.success(t['msgs'][3])
+                    time.sleep(1)
+                    st.rerun()
+                if del_flag:
+                    st.success(t['msgs'][1])
+                    time.sleep(1)
+                    st.rerun()
+        
         st.write("")
         with st.expander(t['wipe_sales_title']):
             st.warning(t['wipe_stk_warn'])
             check_wipe_sales = st.checkbox(t['wipe_stk_check'], key="chk_wipe_sales")
             if check_wipe_sales:
+                wipe_sales_flag = False
                 if st.button(t['wipe_sales_btn'], type="primary"):
                     bk = get_book_direct()
                     sh_sl = bk.get_worksheet(0)
@@ -646,8 +678,14 @@ def render_sales_management(t, df_sales, s):
                         sh_sl.clear()
                         sh_sl.append_row(["Empresa", "Producto", "Kg", "Valor_BRL", "Comissao_BRL", "Fecha_Registro", "Tipo"])
                     success, err = safe_api_action(do_wipe_sales)
-                    if success: st.cache_data.clear(); st.success(t['msgs'][1]); time.sleep(1); st.rerun()
+                    if success: 
+                        st.cache_data.clear()
+                        wipe_sales_flag = True
                     else: st.error(f"Error: {err}")
+                if wipe_sales_flag:
+                    st.success(t['msgs'][1])
+                    time.sleep(1)
+                    st.rerun()
 
 @st.fragment
 def render_log(t):
@@ -675,6 +713,8 @@ def render_log(t):
                     rev_h = h_dt.iloc[::-1].reset_index()
                     opc_h = [f"{r['Fecha_Hora']} | {r['Accion']} | {r['Detalles']}" for i, r in rev_h.iterrows()]
                     sel_h = st.multiselect("Items", opc_h)
+                    
+                    del_log_flag = False
                     if st.button(t['actions'][4], key="btn_h", type="primary"):
                         if sel_h:
                             dts_h = [x.split(" | ")[0] for x in sel_h]
@@ -690,21 +730,29 @@ def render_log(t):
                             
                             success, err = safe_api_action(do_log_del)
                             if success: 
-                                st.success(t['msgs'][1])
-                                time.sleep(1)
-                                st.rerun()
+                                del_log_flag = True
                             else: st.error(f"Error: {err}")
+                    if del_log_flag:
+                        st.success(t['msgs'][1])
+                        time.sleep(1)
+                        st.rerun()
+
                 st.write("")
                 col_danger1, col_danger2 = st.columns([3, 1])
                 check_danger = col_danger1.checkbox(t['wipe_stk_check'])
                 if check_danger:
+                    wipe_log_flag = False
                     if col_danger2.button("🔥 BORRAR LOG", type="primary"):
                         def do_wipe():
                             sh_log.clear()
                             sh_log.append_row(["Fecha_Hora", "Accion", "Detalles"])
                         success, err = safe_api_action(do_wipe)
-                        if success: st.success(t['msgs'][1]); time.sleep(1); st.rerun()
+                        if success: wipe_log_flag = True
                         else: st.error(f"Error: {err}")
+                    if wipe_log_flag:
+                        st.success(t['msgs'][1])
+                        time.sleep(1)
+                        st.rerun()
             else:
                 st.info(t['msgs'][2])
         except Exception as e:
@@ -723,7 +771,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
         t["tabs"] = [t['tabs'][0], t['tabs'][1], t['tabs'][2], t['tabs'][3], t['tabs'][4]]
-        st.caption("v86.0 Delete Fix")
+        st.caption("v87.0 Speed & Fix")
         if st.button("🔄"):
             st.cache_data.clear()
             st.rerun()
