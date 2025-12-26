@@ -86,7 +86,7 @@ if PDF_AVAILABLE:
         pdf.cell(100, 10, f"{prod}", 1); pdf.cell(40, 10, f"{kg}", 1); pdf.cell(50, 10, f"R$ {val:,.2f}", 1)
         return pdf.output(dest='S').encode('latin-1')
 
-# --- TRADUCCIÓN COMPLETA ---
+# --- TRADUCCIÓN COMPLETA (CORREGIDA) ---
 MESES_PT = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto", 9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"}
 MONTHS_UI = {
     "Português": MESES_PT,
@@ -129,7 +129,9 @@ TR = {
         "search_sales": "🔍 Buscar vendas...",
         "wipe_sales_title": "🔥 Apagar TODAS as Vendas (Perigo)",
         "wipe_sales_btn": "APAGAR TODAS VENDAS",
-        "col_map": {"Fecha_Hora": "📅 Data", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"}
+        "col_map": {"Fecha_Hora": "📅 Data", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"},
+        "xls_head": ["Data", "Mês", "Empresa", "Produto", "Kg", "Valor (R$)", "Comissão (R$)"],
+        "xls_tot": "TOTAL GERAL:"
     },
     "Español": {
         "tabs": [f"📊 Dashboard", "➕ Nueva Venta", "📦 Stock", "💰 Admin Ventas", "📜 Log"],
@@ -166,7 +168,9 @@ TR = {
         "search_sales": "🔍 Buscar ventas...",
         "wipe_sales_title": "🔥 Borrar TODAS las Ventas (Peligro)",
         "wipe_sales_btn": "BORRAR TODAS VENTAS",
-        "col_map": {"Fecha_Hora": "📅 Fecha", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"}
+        "col_map": {"Fecha_Hora": "📅 Fecha", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"},
+        "xls_head": ["Fecha", "Mes", "Empresa", "Producto", "Kg", "Valor ($)", "Comisión ($)"],
+        "xls_tot": "TOTAL GENERAL:"
     },
     "English": {
         "tabs": [f"📊 Dashboard", "➕ New Sale", "📦 Stock", "💰 Admin Sales", "📜 Log"],
@@ -203,7 +207,9 @@ TR = {
         "search_sales": "🔍 Search sales...",
         "wipe_sales_title": "🔥 Wipe ALL Sales (Danger)",
         "wipe_sales_btn": "WIPE ALL SALES",
-        "col_map": {"Fecha_Hora": "📅 Date", "Accion": "⚡ Action", "Detalles": "📝 Details"}
+        "col_map": {"Fecha_Hora": "📅 Date", "Accion": "⚡ Action", "Detalles": "📝 Details"},
+        "xls_head": ["Date", "Month", "Company", "Product", "Kg", "Value", "Commission"],
+        "xls_tot": "GRAND TOTAL:"
     }
 }
 RATES = { "Português": {"s": "R$", "r": 1.0}, "Español": {"s": "$", "r": 165.0}, "English": {"s": "USD", "r": 0.18} }
@@ -380,14 +386,13 @@ def render_stock_management(t, productos_all, df_stock_in):
     stk_suffix = str(st.session_state.stock_key)
     with st.container(border=True):
         st.caption(t['stock_add_title'])
-        c_st1, c_st2, c_st3, c_st4 = st.columns([2, 1, 1, 1]) # COLUMNA EXTRA PARA USUARIO
+        c_st1, c_st2, c_st3, c_st4 = st.columns([2, 1, 1, 1])
         
         prod_stock = c_st1.selectbox(t['forms'][1], ["✨ Novo..."] + productos_all, key=f"s_prod_{stk_suffix}")
         if prod_stock == "✨ Novo...": prod_stock = c_st1.text_input(t['new_labels'][1], key=f"s_prod_txt_{stk_suffix}")
         
         kg_stock = c_st2.number_input("Kg (+)", step=10.0, key=f"s_kg_{stk_suffix}")
         
-        # INPUT DE USUARIO MANUAL
         user_stock = c_st3.text_input(t['user_lbl'], value="CEO", key=f"s_usr_{stk_suffix}")
         
         if c_st4.button(t['stock_btn'], type="primary"):
@@ -399,7 +404,6 @@ def render_stock_management(t, productos_all, df_stock_in):
                     sh_stk.append_row(["Data", "Produto", "Kg", "Usuario"])
                 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 
-                # GUARDAR CON EL USUARIO MANUAL
                 def do_stock(): sh_stk.append_row([now, prod_stock, kg_stock, user_stock])
                 
                 success, err = safe_api_action(do_stock)
@@ -412,7 +416,6 @@ def render_stock_management(t, productos_all, df_stock_in):
                 else: st.error(f"Error: {err}")
             except Exception as e: st.error(f"Error grave: {e}")
 
-    # BORRADO TOTAL STOCK
     with st.expander(t['wipe_stk_title']):
         st.warning(t['wipe_stk_warn'])
         check_wipe_stk = st.checkbox(t['wipe_stk_check'], key="chk_wipe_stk")
@@ -481,12 +484,12 @@ def render_stock_management(t, productos_all, df_stock_in):
 @st.fragment
 def render_sales_management(t, df_sales, s):
     st.title(t['admin_sales_title'])
-    
     filtro = st.text_input(t['search_sales'], key="admin_search") 
     
     if not df_sales.empty:
         if filtro:
             df_filtered = df_sales[df_sales.astype(str).apply(lambda x: x.str.contains(filtro, case=False)).any(axis=1)]
+            st.info(f"Resultados: {len(df_filtered)}")
         else:
             df_filtered = df_sales.tail(5)
 
@@ -613,7 +616,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
         t["tabs"] = [t['tabs'][0], t['tabs'][1], t['tabs'][2], t['tabs'][3], t['tabs'][4]]
-        st.caption("v74.0 Global & Flexible")
+        st.caption("v75.0 Bug Fix")
         if st.button("🔄"):
             st.cache_data.clear()
             st.rerun()
@@ -670,25 +673,34 @@ def main():
             st.caption(f"{val_mes/meta*100:.1f}% ({s} {val_mes:,.0f} / {s} {meta:,.0f})")
         st.divider()
         if not df_sales.empty:
-            buffer = io.BytesIO()
-            with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-                df_ex = df_sales.copy()
-                df_ex['Fecha_Clean'] = df_ex['Fecha_DT'].dt.strftime('%d/%m/%Y %H:%M')
-                data_final = df_ex[['Fecha_Clean', 'Mes_Lang', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']].copy()
-                sheet_name = 'Reporte'
-                data_final.to_excel(writer, index=False, sheet_name=sheet_name, startrow=1, header=False)
-                workbook = writer.book; ws = writer.sheets[sheet_name]
-                fmt_head = workbook.add_format({'bold': True, 'fg_color': '#2C3E50', 'font_color': 'white', 'border': 1, 'align': 'center'})
-                fmt_money = workbook.add_format({'num_format': 'R$ #,##0.00', 'border': 1})
-                fmt_num = workbook.add_format({'num_format': '0.0', 'border': 1, 'align': 'center'})
-                fmt_base = workbook.add_format({'border': 1})
-                fmt_total = workbook.add_format({'bold': True, 'bg_color': '#D3D3D3', 'num_format': 'R$ #,##0.00', 'border': 1})
-                for col_num, h in enumerate(t['xls_head']): ws.write(0, col_num, h, fmt_head)
-                ws.set_column('A:A', 18, fmt_base); ws.set_column('B:B', 12, fmt_base); ws.set_column('C:D', 22, fmt_base)
-                ws.set_column('E:E', 12, fmt_num); ws.set_column('F:G', 18, fmt_money)
-                lr = len(data_final) + 1
-                ws.write(lr, 3, t['xls_tot'], fmt_total); ws.write(lr, 4, data_final['Kg'].sum(), fmt_total); ws.write(lr, 5, data_final['Valor_BRL'].sum(), fmt_total); ws.write(lr, 6, data_final['Comissao_BRL'].sum(), fmt_total)
-            st.download_button(t['dl_excel'], data=buffer, file_name=f"Reporte_{datetime.now().strftime('%Y-%m-%d')}.xlsx", mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            # --- EXCEL SEGURO (SAFE FALLBACK) ---
+            try:
+                buffer = io.BytesIO()
+                with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+                    df_ex = df_sales.copy()
+                    df_ex['Fecha_Clean'] = df_ex['Fecha_DT'].dt.strftime('%d/%m/%Y %H:%M')
+                    data_final = df_ex[['Fecha_Clean', 'Mes_Lang', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']].copy()
+                    sheet_name = 'Reporte'
+                    data_final.to_excel(writer, index=False, sheet_name=sheet_name, startrow=1, header=False)
+                    workbook = writer.book; ws = writer.sheets[sheet_name]
+                    fmt_head = workbook.add_format({'bold': True, 'fg_color': '#2C3E50', 'font_color': 'white', 'border': 1, 'align': 'center'})
+                    fmt_money = workbook.add_format({'num_format': 'R$ #,##0.00', 'border': 1})
+                    fmt_num = workbook.add_format({'num_format': '0.0', 'border': 1, 'align': 'center'})
+                    fmt_base = workbook.add_format({'border': 1})
+                    fmt_total = workbook.add_format({'bold': True, 'bg_color': '#D3D3D3', 'num_format': 'R$ #,##0.00', 'border': 1})
+                    
+                    # HEADER SAFE GET
+                    xls_headers = t.get('xls_head', ["Fecha", "Mes", "Empresa", "Producto", "Kg", "Valor", "Comisión"])
+                    xls_total_lbl = t.get('xls_tot', "TOTAL:")
+                    
+                    for col_num, h in enumerate(xls_headers): ws.write(0, col_num, h, fmt_head)
+                    ws.set_column('A:A', 18, fmt_base); ws.set_column('B:B', 12, fmt_base); ws.set_column('C:D', 22, fmt_base)
+                    ws.set_column('E:E', 12, fmt_num); ws.set_column('F:G', 18, fmt_money)
+                    lr = len(data_final) + 1
+                    ws.write(lr, 3, xls_total_lbl, fmt_total); ws.write(lr, 4, data_final['Kg'].sum(), fmt_total); ws.write(lr, 5, data_final['Valor_BRL'].sum(), fmt_total); ws.write(lr, 6, data_final['Comissao_BRL'].sum(), fmt_total)
+                st.download_button(t['dl_excel'], data=buffer, file_name=f"Reporte_{datetime.now().strftime('%Y-%m-%d')}.xlsx", mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            except Exception as ex:
+                st.warning(f"⚠️ Reporte no disponible temporalmente ({ex})")
 
     # TABS
     tab1, tab2, tab3, tab4, tab5 = st.tabs(t['tabs'])
