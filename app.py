@@ -42,7 +42,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- LOGIN SIMPLE ---
+# --- LOGIN SIMPLE MEJORADO (FORMULARIO + ANTI-ESPACIOS) ---
 def check_password():
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
@@ -55,10 +55,20 @@ def check_password():
     with c2:
         st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA}</h1>", unsafe_allow_html=True)
         st.write("")
-        input_pass = st.text_input("Senha / Contraseña", type="password").strip()
         
-        if st.button("Entrar", type="primary"):
-            if input_pass == CONTRASEÑA_MAESTRA:
+        # --- CAMBIO IMPORTANTE: FORMULARIO ---
+        # Al usar st.form, el navegador detecta que esto es un login
+        # y te ofrecerá "Guardar Contraseña" automáticamente.
+        with st.form("login_form"):
+            input_pass = st.text_input("Senha / Contraseña", type="password")
+            submit_btn = st.form_submit_button("Entrar", type="primary")
+        
+        if submit_btn:
+            # --- CAMBIO ANTI-ESPACIOS: .strip() ---
+            # Esto borra espacios vacíos al inicio o al final
+            clave_limpia = input_pass.strip()
+            
+            if clave_limpia == CONTRASEÑA_MAESTRA:
                 st.session_state.authenticated = True
                 st.rerun()
             else:
@@ -81,7 +91,7 @@ if PDF_AVAILABLE:
         pdf.cell(100, 10, f"{prod}", 1); pdf.cell(40, 10, f"{kg}", 1); pdf.cell(50, 10, f"R$ {val:,.2f}", 1)
         return pdf.output(dest='S').encode('latin-1')
 
-# --- DICCIONARIO COMPLETO ---
+# --- DICCIONARIO ---
 TR = {
     "Português": {
         "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nova Venda", "🛠️ Admin", "📜 Log"],
@@ -132,7 +142,7 @@ TR = {
     "English": {
         "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ New Sale", "🛠️ Admin", "📜 Log"],
         "headers": ["Dashboard", "New Sale", "Admin", "Log"],
-        "metrics": ["Total Revenue", "Volume (Kg)", "Commission (2%)", "Avg Ticket", "Top Client"],
+        "metrics": ["Total", "Volume (Kg)", "Commission", "Avg Ticket", "Top Client"],
         "charts": ["Trend", "Mix", "By Company"],
         "table_title": "Details",
         "forms": ["Client", "Product", "Kg", "Value", "✅ Confirm"],
@@ -156,8 +166,8 @@ TR = {
 RATES = { "Português": {"s": "R$", "r": 1.0}, "Español": {"s": "$", "r": 165.0}, "English": {"s": "USD", "r": 0.18} }
 MESES_UI = {1: "Jan", 2: "Feb", 3: "Mar", 4: "Abr", 5: "Mai", 6: "Jun", 7: "Jul", 8: "Ago", 9: "Set", 10: "Out", 11: "Nov", 12: "Dez"}
 
-# --- CONEXIÓN CACHEADA (AQUÍ ESTÁ LA MAGIA ⚡) ---
-@st.cache_resource(ttl=600) # Mantiene la conexión viva por 10 minutos
+# --- CONEXIÓN CACHEADA ⚡ ---
+@st.cache_resource(ttl=600) 
 def get_connection():
     scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
     creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["google_credentials"], scope)
@@ -196,7 +206,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
         st.info(t.get("install", "Install App"))
-        st.caption("v46.0 Speed Cache")
+        st.caption("v47.0 Fixed Login")
     
     s = RATES[lang]["s"]; r = RATES[lang]["r"]
 
