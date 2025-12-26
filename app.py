@@ -459,7 +459,8 @@ def render_new_sale(t, empresas, productos_all, stock_real, df_sales, s):
     st.divider()
     st.caption("📋 Últimas ventas registradas:")
     if not df_sales.empty:
-        df_mini = df_sales[['Fecha_Registro', 'Empresa', 'Producto', 'Kg', 'Valor_BRL']].iloc[::-1].head(5)
+        # AQUI CAMBIAMOS .head(5) por .head(3) PARA MOSTRAR SOLO 3
+        df_mini = df_sales[['Fecha_Registro', 'Empresa', 'Producto', 'Kg', 'Valor_BRL']].iloc[::-1].head(3)
         st.dataframe(df_mini, use_container_width=True, hide_index=True, column_config={
             'Valor_BRL': st.column_config.NumberColumn(format=f"{s} %.2f"),
             'Kg': st.column_config.NumberColumn(format="%.1f kg")
@@ -533,27 +534,35 @@ def render_stock_management(t, productos_all, df_stock_in):
                 if c_btn_s1.button(t['save_changes'], key=f"sav_stk_{i}"):
                     bk = get_book_direct()
                     sh_stk = bk.worksheet("Estoque")
+                    
+                    found_cell = None
                     try:
-                        cell = sh_stk.find(str(r['Data']))
-                        def do_stk_update():
-                            sh_stk.update_cell(cell.row, 2, new_stk_prod) 
-                            sh_stk.update_cell(cell.row, 3, new_stk_kg)   
-                        success, err = safe_api_action(do_stk_update)
-                        if success: st.cache_data.clear(); st.success(t['msgs'][3]); time.sleep(1); st.rerun()
-                        else: st.error(f"Error: {err}")
+                        found_cell = sh_stk.find(str(r['Data']))
                     except: st.error("No encontré la fila.")
+                    
+                    if found_cell:
+                        def do_stk_update():
+                            sh_stk.update_cell(found_cell.row, 2, new_stk_prod) 
+                            sh_stk.update_cell(found_cell.row, 3, new_stk_kg)   
+                        success, err = safe_api_action(do_stk_update)
+                        if success: 
+                            st.cache_data.clear()
+                            st.success(t['msgs'][3])
+                            time.sleep(1)
+                            st.rerun()
+                        else: st.error(f"Error: {err}")
+
                 if c_btn_s2.button(t['del_entry'], key=f"del_stk_{i}", type="secondary"):
                     bk = get_book_direct()
                     sh_stk = bk.worksheet("Estoque")
                     
-                    found = False
+                    found_cell = None
                     try:
-                        cell = sh_stk.find(str(r['Data']))
-                        found = True
-                    except: st.error("No encontré la fila en la base de datos.")
+                        found_cell = sh_stk.find(str(r['Data']))
+                    except: st.error("No encontré la fila.")
 
-                    if found:
-                        def do_stk_del(): sh_stk.delete_rows(cell.row)
+                    if found_cell:
+                        def do_stk_del(): sh_stk.delete_rows(found_cell.row)
                         success, err = safe_api_action(do_stk_del)
                         if success: 
                             st.cache_data.clear()
@@ -588,28 +597,36 @@ def render_sales_management(t, df_sales, s):
                 if c_btn1.button(t['save_changes'], key=f"save_{i}"):
                     bk = get_book_direct()
                     sh_sl = bk.get_worksheet(0)
+                    
+                    found_cell = None
                     try:
-                        cell = sh_sl.find(str(r['Fecha_Registro']))
-                        def do_update():
-                            sh_sl.update_cell(cell.row, 3, new_kg)
-                            sh_sl.update_cell(cell.row, 4, new_val)
-                            sh_sl.update_cell(cell.row, 5, new_val*0.02)
-                        success, err = safe_api_action(do_update)
-                        if success: st.cache_data.clear(); st.success(t['msgs'][3]); time.sleep(1); st.rerun()
-                        else: st.error(f"Error: {err}")
+                        found_cell = sh_sl.find(str(r['Fecha_Registro']))
                     except: st.error("No encontrado.")
+
+                    if found_cell:
+                        def do_update():
+                            sh_sl.update_cell(found_cell.row, 3, new_kg)
+                            sh_sl.update_cell(found_cell.row, 4, new_val)
+                            sh_sl.update_cell(found_cell.row, 5, new_val*0.02)
+                        success, err = safe_api_action(do_update)
+                        if success: 
+                            st.cache_data.clear()
+                            st.success(t['msgs'][3])
+                            time.sleep(1)
+                            st.rerun()
+                        else: st.error(f"Error: {err}")
+
                 if c_btn2.button(t['del_entry'], key=f"del_{i}", type="secondary"):
                     bk = get_book_direct()
                     sh_sl = bk.get_worksheet(0)
                     
-                    found = False
+                    found_cell = None
                     try:
-                        cell = sh_sl.find(str(r['Fecha_Registro']))
-                        found = True
+                        found_cell = sh_sl.find(str(r['Fecha_Registro']))
                     except: st.error("No encontrado.")
 
-                    if found:
-                        def do_del(): sh_sl.delete_rows(cell.row)
+                    if found_cell:
+                        def do_del(): sh_sl.delete_rows(found_cell.row)
                         success, err = safe_api_action(do_del)
                         if success: 
                             st.cache_data.clear()
