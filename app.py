@@ -19,10 +19,7 @@ except ImportError:
 # 🎨 ZONA DE PERSONALIZACIÓN
 # ==========================================
 NOMBRE_EMPRESA = "Xingu CEO"
-
-# 🦅 CAMBIO DE LOGO (Opción B: Imagen Real)
-# Asegúrate de haber subido "logo.png" a tu GitHub junto a este archivo.
-ICONO_APP = "logo.png" 
+ICONO_APP = "🍇"
 
 # 🔑 LOGIN SIMPLE
 CONTRASEÑA_MAESTRA = "Julio777" 
@@ -56,12 +53,7 @@ def check_password():
     
     c1, c2, c3 = st.columns([1,2,1])
     with c2:
-        # INTENTA MOSTRAR EL LOGO EN EL LOGIN
-        try:
-            st.image(ICONO_APP, width=150) # Muestra tu logo grande
-        except:
-            st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA}</h1>", unsafe_allow_html=True)
-            
+        st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA}</h1>", unsafe_allow_html=True)
         st.write("")
         with st.form("login_form"):
             input_pass = st.text_input("Senha / Contraseña", type="password")
@@ -157,7 +149,7 @@ TR = {
     },
     "English": {
         "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ New Sale", "🛠️ Admin", "📜 Log"],
-        "headers": ["Dashboard", "New Sale", "Management", "Log"],
+        "headers": ["Dashboard", "New Sale", "Stock Mgmt", "Log"],
         "metrics": ["Revenue", "Volume Sold", "Commission", "Avg Ticket", "Top Client"],
         "charts": ["Trend", "Mix", "By Company"],
         "stock_add_title": "📦 Add Stock",
@@ -220,22 +212,17 @@ def main():
     if not check_password(): return
 
     with st.sidebar:
-        # INTENTA MOSTRAR EL LOGO EN LA BARRA LATERAL
-        try:
-            st.image(ICONO_APP, width=100) 
-        except:
-            st.markdown(f"<h1 style='text-align: center; font-size: 50px; margin:0;'>🍇</h1>", unsafe_allow_html=True)
-            
+        st.markdown(f"<h1 style='text-align: center; font-size: 50px; margin:0;'>{ICONO_APP}</h1>", unsafe_allow_html=True)
         st.markdown(f"<h3 style='text-align: center;'>{NOMBRE_EMPRESA}</h3>", unsafe_allow_html=True)
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         
         t = TR.get(lang, TR["Português"]) 
-        st.caption("v56.0 Logo Pro")
+        st.caption("v57.0 Diagnóstico")
         if st.button(t['logout']): st.session_state.authenticated = False; st.rerun()
     
     s = RATES[lang]["s"]; r = RATES[lang]["r"]
 
-    # --- DATA LOADING (CON FIX DE CONEXIÓN) ---
+    # --- DATA LOADING (MODO DIAGNÓSTICO) ---
     df_sales = pd.DataFrame()
     df_stock_in = pd.DataFrame()
     book = None
@@ -244,18 +231,28 @@ def main():
 
     try:
         book = get_data()
-        # FIX: Usar get_worksheet(0) para agarrar la PRIMERA hoja
-        sheet_sales = book.get_worksheet(0) 
+        sheet_sales = book.get_worksheet(0) # Intenta agarrar la primera hoja
         df_sales = pd.DataFrame(sheet_sales.get_all_records())
-    except: 
-        st.error("Error conectando. Revisa que 'Inventario_Xingu_DB' exista en tu Drive.")
+    except Exception as e:
+        st.error("⛔ ERROR DE CONEXIÓN")
+        st.warning("Tu App no tiene permiso para ver el Excel.")
+        
+        # Intentar mostrar el email para ayudar
+        try:
+            email_robot = st.secrets["google_credentials"]["client_email"]
+            st.info(f"👉 **SOLUCIÓN:** Ve a tu Google Sheet, dale al botón 'Compartir' e invita a este correo como **Editor**:")
+            st.code(email_robot, language="text")
+        except:
+            st.write("No pude leer el email del robot en los Secrets.")
+            
+        st.caption(f"Detalle técnico: {e}")
         st.stop()
 
     try:
         sheet_stock = book.worksheet("Estoque")
         df_stock_in = pd.DataFrame(sheet_stock.get_all_records())
     except:
-        st.warning("Aviso: Crea hoja 'Estoque' (Data, Produto, Kg, Usuario) para usar el inventario.")
+        # No paramos la app si falta stock, solo avisamos
         df_stock_in = pd.DataFrame(columns=["Data", "Produto", "Kg", "Usuario"]) 
 
     # --- PROCESAMIENTO ---
@@ -337,7 +334,7 @@ def main():
 
     tab1, tab2, tab3, tab4 = st.tabs(t['tabs'])
 
-    # 1. DASHBOARD
+    # 1. DASHBOARD (ORDEN CAMBIADO)
     with tab1:
         st.title(t['headers'][0])
         if not df_sales.empty:
@@ -436,9 +433,9 @@ def main():
                         except: pass
                     time.sleep(2); st.rerun()
 
-    # 3. ADMIN
+    # 3. ADMIN (TABLA VISUAL + EDITAR)
     with tab3:
-        # AÑADIR STOCK
+        # STOCK ADD
         st.header(t['stock_add_title'])
         with st.container(border=True):
             c_st1, c_st2, c_st3 = st.columns([2, 1, 1])
@@ -452,7 +449,7 @@ def main():
                     log_action(book, "STOCK_ADD", f"{prod_stock} | +{kg_stock}kg")
                     st.success(t['stock_msg']); time.sleep(1.5); st.rerun()
                 elif not sheet_stock:
-                    st.error("Error: Hoja 'Estoque' no creada.")
+                    st.error("Error: Hoja 'Estoque' missing.")
 
         st.divider()
         st.subheader("Admin Ventas")
