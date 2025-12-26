@@ -22,7 +22,7 @@ NOMBRE_EMPRESA = "Xingu CEO"
 ICONO_APP = "🍇"
 
 # 🔑 LOGIN SIMPLE
-CONTRASEÑA_MAESTRA = "julio777" 
+CONTRASEÑA_MAESTRA = "Julio777" 
 # ==========================================
 
 st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon=ICONO_APP, layout="wide")
@@ -83,11 +83,22 @@ if PDF_AVAILABLE:
         pdf.cell(100, 10, f"{prod}", 1); pdf.cell(40, 10, f"{kg}", 1); pdf.cell(50, 10, f"R$ {val:,.2f}", 1)
         return pdf.output(dest='S').encode('latin-1')
 
-# --- DICCIONARIO ---
+# --- MAPA DE MESES ---
+MESES_PT = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto", 9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"}
+MONTHS_UI = {
+    "Português": MESES_PT,
+    "Español": {1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril", 5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto", 9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"},
+    "English": {1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June", 7: "July", 8: "August", 9: "September", 10: "October", 11: "November", 12: "December"}
+}
+
+# --- DICCIONARIO CORREGIDO (HEADERS RESTAURADOS) ---
 TR = {
     "Português": {
         "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nova Venda", "🛠️ Admin (Stock)", "📜 Log"],
+        # ESTA LÍNEA ES LA QUE FALTABA:
+        "headers": ["Dashboard", "Registrar Venda", "Gestão de Estoque", "Auditoria"], 
         "metrics": ["Faturamento", "Volume Vendido", "Comissão", "Ticket Médio", "Melhor Cliente"],
+        "charts": ["Tendência", "Mix Produtos", "Por Empresa"],
         "stock_add_title": "📦 Adicionar Estoque (Entradas)",
         "stock_btn": "➕ Adicionar ao Estoque",
         "stock_alert": "Estoque Atual (Entradas - Vendas)",
@@ -96,17 +107,23 @@ TR = {
         "actions": ["Salvar", "DELETAR", "Buscar...", "✨ Novo...", "🗑️ Apagar Seleção"],
         "bulk_label": "Gestão em Massa",
         "clean_hist_label": "Limpeza de Histórico",
-        "dl_excel": "📗 Baixar Relatório",
+        "dl_excel": "📗 Baixar Relatório (Pro)",
         "logout": "🔒 Sair",
         "new_labels": ["Nome Cliente:", "Nome Produto:"],
         "dash_cols": {"val": "Valor", "com": "Comissão", "kg": "Kg"},
         "msgs": ["Sucesso!", "Apagado!", "Sem dados", "Atualizado!", "Seleccione items"],
         "stock_msg": "Estoque Adicionado!",
-        "install": "📲 Instalar: Menu -> Adicionar à Tela de Início"
+        "install": "📲 Instalar: Menu -> Adicionar à Tela de Início",
+        "xls_head": ["Data", "Mês", "Empresa", "Produto", "Kg", "Valor (R$)", "Comissão (R$)"],
+        "xls_tot": "TOTAL GERAL:",
+        "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edição", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"},
+        "col_map": {"Fecha_Hora": "📅 Data", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"}
     },
     "Español": {
         "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nueva Venta", "🛠️ Admin (Stock)", "📜 Log"],
+        "headers": ["Dashboard", "Registrar Venta", "Gestión de Stock", "Auditoría"],
         "metrics": ["Facturación", "Volumen Vendido", "Comisión", "Ticket Medio", "Top Cliente"],
+        "charts": ["Tendencia", "Mix Productos", "Por Empresa"],
         "stock_add_title": "📦 Añadir Stock (Entradas)",
         "stock_btn": "➕ Sumar al Stock",
         "stock_alert": "Stock Actual (Entradas - Ventas)",
@@ -115,17 +132,23 @@ TR = {
         "actions": ["Guardar", "BORRAR", "Buscar...", "✨ Nuevo...", "🗑️ Borrar Selección"],
         "bulk_label": "Gestión Masiva",
         "clean_hist_label": "Limpieza de Historial",
-        "dl_excel": "📗 Bajar Reporte",
+        "dl_excel": "📗 Bajar Reporte (Pro)",
         "logout": "🔒 Salir",
         "new_labels": ["Nombre Cliente:", "Nombre Producto:"],
         "dash_cols": {"val": "Valor", "com": "Comisión", "kg": "Kg"},
         "msgs": ["¡Éxito!", "¡Borrado!", "Sin datos", "¡Actualizado!", "Seleccione items"],
         "stock_msg": "¡Stock Añadido!",
-        "install": "📲 Instalar: Menú -> Agregar a Pantalla de Inicio"
+        "install": "📲 Instalar: Menú -> Agregar a Pantalla de Inicio",
+        "xls_head": ["Fecha", "Mes", "Empresa", "Producto", "Kg", "Valor ($)", "Comisión ($)"],
+        "xls_tot": "TOTAL GENERAL:",
+        "val_map": {"NEW": "🆕 Nuevo", "VENTA": "💰 Venta", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Masa", "CREAR": "✨ Crear", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"},
+        "col_map": {"Fecha_Hora": "📅 Fecha", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"}
     },
     "English": {
         "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ New Sale", "🛠️ Admin (Stock)", "📜 Log"],
+        "headers": ["Dashboard", "New Sale", "Stock Mgmt", "Log"],
         "metrics": ["Revenue", "Volume Sold", "Commission", "Avg Ticket", "Top Client"],
+        "charts": ["Trend", "Mix", "By Company"],
         "stock_add_title": "📦 Add Stock (Inputs)",
         "stock_btn": "➕ Add to Stock",
         "stock_alert": "Current Stock (Inputs - Sales)",
@@ -134,13 +157,17 @@ TR = {
         "actions": ["Save", "DELETE", "Search...", "✨ New...", "🗑️ Delete Selection"],
         "bulk_label": "Bulk Management",
         "clean_hist_label": "Clear History",
-        "dl_excel": "📗 Download Report",
+        "dl_excel": "📗 Download Report (Pro)",
         "logout": "🔒 Logout",
         "new_labels": ["Client Name:", "Product Name:"],
         "dash_cols": {"val": "Value", "com": "Comm", "kg": "Kg"},
         "msgs": ["Success!", "Deleted!", "No data", "Updated!", "Select items"],
         "stock_msg": "Stock Added!",
-        "install": "📲 Install: Menu -> Add to Home Screen"
+        "install": "📲 Install: Menu -> Add to Home Screen",
+        "xls_head": ["Date", "Month", "Company", "Product", "Kg", "Value", "Commission"],
+        "xls_tot": "GRAND TOTAL:",
+        "val_map": {"NEW": "🆕 New", "VENTA": "💰 Sale", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Deleted", "BORRADO_MASIVO": "🔥 Bulk", "CREAR": "✨ Create", "HIST_DEL": "🧹 Clean", "META_UPDATE": "🎯 Goal"},
+        "col_map": {"Fecha_Hora": "📅 Date", "Accion": "⚡ Action", "Detalles": "📝 Details"}
     }
 }
 RATES = { "Português": {"s": "R$", "r": 1.0}, "Español": {"s": "$", "r": 165.0}, "English": {"s": "USD", "r": 0.18} }
@@ -172,8 +199,11 @@ def main():
         st.markdown(f"<h1 style='text-align: center; font-size: 50px; margin:0;'>{ICONO_APP}</h1>", unsafe_allow_html=True)
         st.markdown(f"<h3 style='text-align: center;'>{NOMBRE_EMPRESA}</h3>", unsafe_allow_html=True)
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
+        
+        # --- FIX PARA DICCIONARIO ---
         t = TR.get(lang, TR["Português"]) 
-        st.caption("v51.0 Real Stock")
+        
+        st.caption("v52.0 Fixed")
         if st.button(t['logout']): st.session_state.authenticated = False; st.rerun()
     
     s = RATES[lang]["s"]; r = RATES[lang]["r"]
@@ -188,7 +218,7 @@ def main():
             df_stock_in = pd.DataFrame(sheet_stock.get_all_records())
         except:
             st.error("⚠️ Faltan datos: Crea una hoja llamada 'Estoque' con columnas: Data, Produto, Kg, Usuario")
-            df_stock_in = pd.DataFrame(columns=["Data", "Produto", "Kg", "Usuario"]) # Fallback vacío
+            df_stock_in = pd.DataFrame(columns=["Data", "Produto", "Kg", "Usuario"]) 
             sheet_stock = None
 
         df_sales = pd.DataFrame(sheet_sales.get_all_records())
@@ -217,20 +247,66 @@ def main():
     productos_all = sorted(list(set(["AÇAI MÉDIO", "AÇAI POP", "CUPUAÇU"] + prods_sales + prods_stock)))
 
     # --- CALCULO DE STOCK REAL ---
-    # Stock Real = Total Entradas - Total Salidas
     stock_real = {}
     for p in productos_all:
         total_in = df_stock_in[df_stock_in['Produto'] == p]['Kg'].sum() if not df_stock_in.empty else 0
         total_out = df_sales[df_sales['Producto'] == p]['Kg'].sum() if not df_sales.empty else 0
         stock_real[p] = total_in - total_out
 
+    # --- SIDEBAR EXCEL PRO ---
+    with st.sidebar:
+        st.divider()
+        if not df_sales.empty:
+            buffer = io.BytesIO()
+            with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+                df_ex = df_sales.copy()
+                df_ex['Fecha_DT'] = pd.to_datetime(df_ex['Fecha_Registro'], errors='coerce')
+                # Mapea mes según idioma
+                df_ex['Mes_Lang'] = df_ex['Fecha_DT'].dt.month.map(MONTHS_UI[lang])
+                df_ex['Fecha_Clean'] = df_ex['Fecha_DT'].dt.strftime('%d/%m/%Y %H:%M')
+                
+                data_final = df_ex[['Fecha_Clean', 'Mes_Lang', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']].copy()
+                
+                sheet_name = 'Reporte'
+                data_final.to_excel(writer, index=False, sheet_name=sheet_name, startrow=1, header=False)
+                
+                workbook = writer.book
+                ws = writer.sheets[sheet_name]
+                
+                fmt_head = workbook.add_format({'bold': True, 'fg_color': '#2C3E50', 'font_color': 'white', 'border': 1, 'align': 'center'})
+                fmt_money = workbook.add_format({'num_format': 'R$ #,##0.00', 'border': 1})
+                fmt_num = workbook.add_format({'num_format': '0.0', 'border': 1, 'align': 'center'})
+                fmt_base = workbook.add_format({'border': 1})
+                fmt_total = workbook.add_format({'bold': True, 'bg_color': '#D3D3D3', 'num_format': 'R$ #,##0.00', 'border': 1})
+                
+                for col_num, h in enumerate(t['xls_head']):
+                    ws.write(0, col_num, h, fmt_head)
+                
+                ws.set_column('A:A', 18, fmt_base)
+                ws.set_column('B:B', 12, fmt_base)
+                ws.set_column('C:D', 22, fmt_base)
+                ws.set_column('E:E', 12, fmt_num)
+                ws.set_column('F:G', 18, fmt_money)
+                
+                last_row = len(data_final) + 1
+                ws.write(last_row, 3, t['xls_tot'], fmt_total)
+                ws.write(last_row, 4, data_final['Kg'].sum(), fmt_total)
+                ws.write(last_row, 5, data_final['Valor_BRL'].sum(), fmt_total)
+                ws.write(last_row, 6, data_final['Comissao_BRL'].sum(), fmt_total)
+
+            st.download_button(
+                label=t['dl_excel'],
+                data=buffer, 
+                file_name=f"Reporte_Xingu_{datetime.now().strftime('%Y-%m-%d')}.xlsx",
+                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+
     tab1, tab2, tab3, tab4 = st.tabs(t['tabs'])
 
     # 1. DASHBOARD (STOCK REAL)
     with tab1:
-        st.title(t['headers'][0])
+        st.title(t['headers'][0]) # AHORA SÍ FUNCIONARÁ
         
-        # KPIs Financieros
         if not df_sales.empty:
             k1, k2, k3 = st.columns(3)
             k1.metric(t['metrics'][0], f"{s} {(df_sales['Valor_BRL'].sum() * r):,.0f}")
@@ -239,31 +315,17 @@ def main():
         
         st.divider()
         
-        # --- ZONA DE STOCK REAL ---
         st.subheader(t['stock_alert'])
         if stock_real:
-            # Ordenar por stock descendente
             for p, kg_left in sorted(stock_real.items(), key=lambda item: item[1], reverse=True):
-                # Solo mostrar si hay movimiento (entrada o salida)
                 if kg_left != 0 or p in prods_stock or p in prods_sales:
                     col_s1, col_s2 = st.columns([3, 1])
-                    
-                    # Color de la barra
-                    color_barra = "normal" 
-                    if kg_left < 50: color_barra = "off" # Rojo si es bajo (simulado)
-                    
-                    # Barra visual (Simulamos un tope de 1000kg para visualizar la barra)
-                    # La barra muestra lo que QUEDA
                     pct = max(0.0, min(kg_left / 1000.0, 1.0))
-                    
                     col_s1.progress(pct, text=f"📦 **{p}**: {kg_left:,.1f} kg Restantes")
                     
-                    if kg_left < 0:
-                        col_s2.error(f"⚠️ Negativo ({kg_left}kg)")
-                    elif kg_left < 50:
-                        col_s2.warning("⚠️ Poco Stock")
-                    else:
-                        col_s2.success("✅ OK")
+                    if kg_left < 0: col_s2.error(f"⚠️ Negativo ({kg_left}kg)")
+                    elif kg_left < 50: col_s2.warning("⚠️ Poco")
+                    else: col_s2.success("✅ OK")
         else:
             st.info("Sin datos de stock.")
 
@@ -280,81 +342,51 @@ def main():
             kg = c1.number_input(t['forms'][2], step=10.0)
             val = c2.number_input(t['forms'][3], step=100.0)
             
-            # Mostrar stock disponible al vender
-            if prod in stock_real:
-                st.caption(f"Stock disponible: {stock_real[prod]:.1f} kg")
+            if prod in stock_real: st.caption(f"Stock disponible: {stock_real[prod]:.1f} kg")
 
             st.markdown("<br>", unsafe_allow_html=True)
             if st.button(t['forms'][4], type="primary"):
                 if emp and prod:
-                    # Validar si hay stock (Opcional: permitir negativo)
                     row = [emp, prod, kg, val, val*0.02, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Auto"]
                     sheet_sales.append_row(row)
-                    log_action(book, "VENTA", f"{emp} | {kg}kg | {prod}") # Cambie log code
+                    log_action(book, "VENTA", f"{emp} | {kg}kg | {prod}")
                     st.success(t['msgs'][0])
                     
-                    # PDF
                     if PDF_AVAILABLE:
                         try:
                             pdf_data = create_pdf(emp, prod, kg, val, st.session_state.username)
                             st.download_button(t['pdf'], data=pdf_data, file_name=f"Recibo.pdf", mime="application/pdf")
                         except: pass
-                    
                     time.sleep(2); st.rerun()
 
     # 3. ADMIN & STOCK
     with tab3:
         st.header(t['stock_add_title'])
-        
-        # --- FORMULARIO AÑADIR STOCK ---
         with st.container(border=True):
             c_st1, c_st2, c_st3 = st.columns([2, 1, 1])
-            
-            # Selector de producto (permite escribir uno nuevo)
             prod_stock = c_st1.selectbox("Produto / Product", ["✨ Novo..."] + productos_all, key="stock_prod")
-            if prod_stock == "✨ Novo...":
-                prod_stock = c_st1.text_input("Nome do Produto", key="stock_prod_new")
-            
+            if prod_stock == "✨ Novo...": prod_stock = c_st1.text_input("Nome do Produto", key="stock_prod_new")
             kg_stock = c_st2.number_input("Kg (+)", step=10.0, key="stock_kg")
             
-            # Botón Añadir
             if c_st3.button(t['stock_btn'], type="primary"):
                 if prod_stock and kg_stock > 0 and sheet_stock:
-                    # Guardar en Hoja 'Estoque'
                     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    user = st.session_state.username
-                    sheet_stock.append_row([now, prod_stock, kg_stock, user])
-                    
-                    # Guardar en Log
+                    sheet_stock.append_row([now, prod_stock, kg_stock, st.session_state.username])
                     log_action(book, "STOCK_ADD", f"{prod_stock} | +{kg_stock}kg")
-                    
                     st.success(t['stock_msg'])
-                    time.sleep(1.5)
-                    st.rerun()
-                else:
-                    st.error("Error: Hoja 'Estoque' no existe o datos inválidos.")
+                    time.sleep(1.5); st.rerun()
+                else: st.error("Error: Hoja 'Estoque' no existe.")
 
         st.divider()
-        
-        # --- BORRADO MASIVO (VENTAS) ---
         st.subheader("Gestión de Ventas")
         filtro = st.text_input(t['actions'][2], key="admin_search") 
         if not df_sales.empty:
             df_s = df_sales[df_sales.astype(str).apply(lambda x: x.str.contains(filtro, case=False)).any(axis=1)] if filtro else df_sales.tail(5).iloc[::-1]
-            with st.expander(t['bulk_label']):
-                df_rev = df_sales.iloc[::-1].reset_index()
-                opc = [f"{r['Empresa']} | {r['Producto']} | {r['Fecha_Registro']}" for i, r in df_rev.iterrows()]
-                sels = st.multiselect(t['msgs'][4], opc)
-                if st.button(t['actions'][4], type="primary"):
-                    if sels:
-                        dates = [x.split(" | ")[-1] for x in sels]
-                        rows_to_del = []
-                        all_recs = sheet_sales.get_all_records()
-                        for i, r in enumerate(all_recs):
-                            if str(r['Fecha_Registro']) in dates: rows_to_del.append(i + 2)
-                        rows_to_del.sort(reverse=True)
-                        for rw in rows_to_del: sheet_sales.delete_rows(rw)
-                        log_action(book, "BORRADO_MASIVO", f"{len(rows_to_del)}")
+            for i, r in df_s.iterrows():
+                with st.expander(f"{r['Empresa']} | {r['Producto']}"):
+                    if st.button(t['actions'][1], key=f"d{i}"):
+                        cell = sheet_sales.find(str(r['Fecha_Registro']))
+                        sheet_sales.delete_rows(cell.row)
                         st.success(t['msgs'][1]); time.sleep(1); st.rerun()
 
     # 4. LOG
@@ -366,11 +398,7 @@ def main():
             if not h_dt.empty:
                 show_log = h_dt.copy()
                 if "Accion" in show_log.columns:
-                    # Mapeo de Emojis extendido
-                    emoji_map = t['val_map'].copy()
-                    emoji_map["STOCK_ADD"] = "📦 Entrada Stock" # Nuevo Emoji
-                    show_log["Accion"] = show_log["Accion"].replace(emoji_map)
-                
+                    show_log["Accion"] = show_log["Accion"].replace(t['val_map'])
                 show_log = show_log.rename(columns=t['col_map'])
                 st.dataframe(show_log.iloc[::-1], use_container_width=True)
         except: st.write("Log vacío")
