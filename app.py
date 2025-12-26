@@ -7,7 +7,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 import time
 import io
 import xlsxwriter
-from PIL import Image # Necesario para procesar el icono si es complejo
+from PIL import Image
 
 # INTENTO DE IMPORTAR FPDF
 try:
@@ -20,27 +20,39 @@ except ImportError:
 # 🎨 ZONA DE PERSONALIZACIÓN
 # ==========================================
 NOMBRE_EMPRESA = "Xingu CEO"
-ICONO_ARCHIVO = "logo.png" # DEBE EXISTIR ESTE ARCHIVO
+ICONO_ARCHIVO = "logo.png" # <--- DEBES SUBIR TU IMAGEN CON ESTE NOMBRE EXACTO
 CONTRASEÑA_MAESTRA = "Julio777" 
 # ==========================================
 
-# CONFIGURACIÓN DE PÁGINA E ICONO
-# Intentamos cargar la imagen para el icono. Si falla, usamos un emoji de uva.
+# --- CONFIGURACIÓN DE PÁGINA E ICONO ---
+# Intenta cargar logo.png. Si no existe, usa una uva 🍇 para evitar errores.
 try:
     img_icon = Image.open(ICONO_ARCHIVO)
     st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon=img_icon, layout="wide")
 except:
-    # Si no encuentra logo.png, usa la uva para que no salga la corona roja por defecto
     st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon="🍇", layout="wide")
 
+# --- ESTILOS CSS (DASHBOARD PRO) ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+    
+    /* ESTILO TARJETAS KPI */
     div[data-testid="stMetric"] {
-        background-color: #1E1E1E; border-radius: 10px; padding: 15px;
-        border: 1px solid #333; box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+        background-color: #262730;
+        border: 1px solid #464b5f;
+        padding: 15px 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        transition: transform 0.2s;
     }
+    div[data-testid="stMetric"]:hover {
+        transform: translateY(-2px);
+        border-color: #ff4b4b;
+    }
+    
+    /* BOTONES */
     .stButton>button {
         width: 100%; border-radius: 8px; height: 3em; font-weight: 700; border: none; transition: 0.3s;
     }
@@ -65,7 +77,6 @@ def check_password():
     
     c1, c2, c3 = st.columns([1,2,1])
     with c2:
-        # Intenta mostrar el logo, si no hay, muestra título
         try: st.image(ICONO_ARCHIVO, width=150)
         except: st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA}</h1>", unsafe_allow_html=True)
         st.write("")
@@ -95,7 +106,7 @@ if PDF_AVAILABLE:
         pdf.cell(100, 10, f"{prod}", 1); pdf.cell(40, 10, f"{kg}", 1); pdf.cell(50, 10, f"R$ {val:,.2f}", 1)
         return pdf.output(dest='S').encode('latin-1')
 
-# --- DICCIONARIO ---
+# --- TRADUCCIONES ---
 MESES_PT = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto", 9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"}
 MONTHS_UI = {
     "Português": MESES_PT,
@@ -116,7 +127,7 @@ TR = {
         "actions": ["Salvar", "DELETAR", "Buscar...", "✨ Novo...", "🗑️ Apagar Seleção"],
         "bulk_label": "Gestão em Massa (Apagar Vários)",
         "clean_hist_label": "Limpeza de Histórico",
-        "dl_excel": "📗 Baixar Relatório (Pro)",
+        "dl_excel": "📗 Baixar Relatório (Excel Dashboard)",
         "logout": "🔒 Sair",
         "goal_lbl": "🎯 Meta de", "goal_btn": "💾 Salvar Meta",
         "new_labels": ["Nome Cliente:", "Nome Produto:"],
@@ -146,13 +157,13 @@ TR = {
     },
     "Español": {
         "tabs": [f"📊 Dashboard", "➕ Nueva Venta", "📦 Stock", "💰 Admin Ventas", "📜 Log"],
-        "headers": ["Dashboard", "Registrar Venta", "Gestión", "Auditoría"],
-        "metrics": ["Facturación", "Volumen Vendido", "Comisión", "Ticket Medio", "Top Cliente"],
-        "charts": ["Tendencia", "Mix Productos", "Por Empresa"],
+        "headers": ["Dashboard Ejecutivo", "Registrar Venta", "Gestión", "Auditoría"],
+        "metrics": ["Facturación Total", "Volumen (Kg)", "Comisión", "Ticket Medio", "Top Cliente"],
+        "charts": ["Tendencia de Ventas", "Mix de Productos", "Top Empresas"],
         "stock_add_title": "📦 Añadir Stock (Entradas)",
         "stock_btn": "➕ Sumar",
         "stock_alert": "Stock Actual (Entradas - Ventas)",
-        "table_title": "Detalles",
+        "table_title": "Detalle de Ventas",
         "forms": ["Cliente", "Producto", "Kg", "Valor ($)", "✅ Confirmar Venta"],
         "actions": ["Guardar", "BORRAR", "Buscar...", "✨ Nuevo...", "🗑️ Borrar Selección"],
         "bulk_label": "Gestión Masiva (Borrar Varios)",
@@ -187,13 +198,13 @@ TR = {
     },
     "English": {
         "tabs": [f"📊 Dashboard", "➕ New Sale", "📦 Stock", "💰 Admin Sales", "📜 Log"],
-        "headers": ["Dashboard", "New Sale", "Stock Mgmt", "Log"],
-        "metrics": ["Revenue", "Volume Sold", "Commission", "Avg Ticket", "Top Client"],
-        "charts": ["Trend", "Mix", "By Company"],
+        "headers": ["Executive Dashboard", "New Sale", "Stock Mgmt", "Log"],
+        "metrics": ["Total Revenue", "Volume (Kg)", "Commission", "Avg Ticket", "Top Client"],
+        "charts": ["Sales Trend", "Product Mix", "Top Companies"],
         "stock_add_title": "📦 Add Stock (Inputs)",
         "stock_btn": "➕ Add",
         "stock_alert": "Current Stock (Inputs - Sales)",
-        "table_title": "Details",
+        "table_title": "Sales Details",
         "forms": ["Client", "Product", "Kg", "Value", "✅ Confirm Sale"],
         "actions": ["Save", "DELETE", "Search...", "✨ New...", "🗑️ Delete Selection"],
         "bulk_label": "Bulk Management",
@@ -314,10 +325,14 @@ def render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, la
 
         if df_fil.empty: st.warning(t['msgs'][2])
         else:
+            total_val = df_fil['Valor_BRL'].sum() * r
+            total_kg = df_fil['Kg'].sum()
+            total_com = total_val * 0.02
+            
             k1, k2, k3 = st.columns(3)
-            k1.metric(t['metrics'][0], f"{s} {(df_fil['Valor_BRL'].sum() * r):,.0f}")
-            k2.metric(t['metrics'][1], f"{df_fil['Kg'].sum():,.0f} kg")
-            k3.metric(t['metrics'][2], f"{s} {(df_fil['Valor_BRL'].sum()*0.02*r):,.0f}")
+            k1.metric(t['metrics'][0], f"{s} {total_val:,.0f}", delta=None) 
+            k2.metric(t['metrics'][1], f"{total_kg:,.0f} kg", delta=None) 
+            k3.metric(t['metrics'][2], f"{s} {total_com:,.0f}", delta=None) 
             
             st.divider()
             
@@ -353,24 +368,24 @@ def render_dashboard(t, df_sales, stock_real, prods_stock, prods_sales, s, r, la
                         else: c_s2.success("✅")
             
             st.divider()
+            
+            c_chart1, c_chart2 = st.columns(2)
+            with c_chart1:
+                df_tr = df_fil.groupby(df_fil['Fecha_DT'].dt.date)['Valor_BRL'].sum().reset_index()
+                df_tr.columns = ['Fecha', 'Venta']
+                df_tr['Venta'] = df_tr['Venta'] * r
+                fig_area = px.area(df_tr, x='Fecha', y='Venta', title=t['charts'][0], markers=True)
+                fig_area.update_layout(plot_bgcolor="rgba(0,0,0,0)", xaxis_showgrid=False)
+                fig_area.update_traces(line_color='#FF4B4B', fill_color='rgba(255, 75, 75, 0.2)')
+                st.plotly_chart(fig_area, use_container_width=True)
+            with c_chart2:
+                fig_donut = px.pie(df_fil, names='Producto', values='Kg', hole=0.6, title=t['charts'][1])
+                st.plotly_chart(fig_donut, use_container_width=True)
+
             st.subheader(t['table_title'])
             df_show = df_fil[['Fecha_Registro', 'Mes_Lang', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']].copy()
             cols_view = {'Fecha_Registro': t['col_map']['Fecha_Hora'], 'Mes_Lang': t['dash_cols']['mes'], 'Empresa': t['dash_cols']['emp'], 'Producto': t['dash_cols']['prod'], 'Kg': t['dash_cols']['kg'], 'Valor_BRL': t['dash_cols']['val'], 'Comissao_BRL': t['dash_cols']['com']}
             st.dataframe(df_show.rename(columns=cols_view).iloc[::-1], use_container_width=True, hide_index=True, column_config={t['dash_cols']['val']: st.column_config.NumberColumn(format=f"{s} %.2f"), t['dash_cols']['com']: st.column_config.NumberColumn(format=f"{s} %.2f"), t['dash_cols']['kg']: st.column_config.NumberColumn(format="%.1f kg")})
-            
-            st.divider()
-            c_izq, c_der = st.columns([2, 1])
-            with c_izq:
-                df_tr = df_fil.groupby(df_fil['Fecha_DT'].dt.date)['Valor_BRL'].sum().reset_index()
-                df_tr.columns = ['Fecha', 'Venta']
-                df_tr['Venta'] = df_tr['Venta'] * r
-                fig = px.line(df_tr, x='Fecha', y='Venta', markers=True, title=t['charts'][0])
-                fig.update_traces(line_color='#FF4B4B')
-                st.plotly_chart(fig, use_container_width=True)
-            with c_der:
-                fig2 = px.pie(df_fil, names='Producto', values='Kg', hole=0.5, title=t['charts'][1])
-                fig2.update_layout(showlegend=False)
-                st.plotly_chart(fig2, use_container_width=True)
 
 @st.fragment
 def render_new_sale(t, empresas, productos_all, stock_real, df_sales, s):
@@ -485,7 +500,7 @@ def render_stock_management(t, productos_all, df_stock_in):
                 c_btn_s1, c_btn_s2 = st.columns(2)
                 if c_btn_s1.button(t['save_changes'], key=f"sav_stk_{i}"):
                     bk = get_book_direct()
-                    sh_sl = bk.worksheet("Estoque")
+                    sh_stk = bk.worksheet("Estoque")
                     try:
                         cell = sh_stk.find(str(r['Data']))
                         def do_stk_update():
@@ -632,7 +647,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
         t["tabs"] = [t['tabs'][0], t['tabs'][1], t['tabs'][2], t['tabs'][3], t['tabs'][4]]
-        st.caption("v81.0 Icon Fix")
+        st.caption("v81.0 Final")
         if st.button("🔄"):
             st.cache_data.clear()
             st.rerun()
@@ -732,12 +747,11 @@ def main():
                     ws.write(lr, 5, data_final['Valor_BRL'].sum(), fmt_total)
                     ws.write(lr, 6, data_final['Comissao_BRL'].sum(), fmt_total)
 
-                    # --- EXCEL CHART (GRÁFICO) ---
                     chart = workbook.add_chart({'type': 'column'})
                     chart.add_series({
                         'name':       'Vendas por Produto',
-                        'categories': [sheet_name, 5, 3, lr-1, 3], # Columna Producto
-                        'values':     [sheet_name, 5, 5, lr-1, 5], # Columna Valor
+                        'categories': [sheet_name, 5, 3, lr-1, 3],
+                        'values':     [sheet_name, 5, 5, lr-1, 5],
                     })
                     chart.set_title({'name': 'Vendas vs Produto'})
                     chart.set_style(10)
