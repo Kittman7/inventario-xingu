@@ -107,7 +107,7 @@ TR = {
         "actions": ["Salvar", "DELETAR", "Buscar...", "✨ Novo...", "🗑️ Apagar Seleção"],
         "bulk_label": "Gestão em Massa (Apagar Vários)",
         "clean_hist_label": "Limpeza de Histórico",
-        "dl_excel": "📗 Baixar Relatório (Pro)",
+        "dl_excel": "📗 Baixar Relatório (Excel Dashboard)",
         "logout": "🔒 Sair",
         "goal_lbl": "🎯 Meta de", "goal_btn": "💾 Salvar Meta",
         "new_labels": ["Nome Cliente:", "Nome Produto:"],
@@ -148,7 +148,7 @@ TR = {
         "actions": ["Guardar", "BORRAR", "Buscar...", "✨ Nuevo...", "🗑️ Borrar Selección"],
         "bulk_label": "Gestión Masiva (Borrar Varios)",
         "clean_hist_label": "Limpieza de Historial",
-        "dl_excel": "📗 Bajar Reporte (Pro)",
+        "dl_excel": "📗 Bajar Reporte (Excel Dashboard)",
         "logout": "🔒 Salir",
         "goal_lbl": "🎯 Meta de", "goal_btn": "💾 Salvar Meta",
         "new_labels": ["Nombre Cliente:", "Nombre Producto:"],
@@ -189,7 +189,7 @@ TR = {
         "actions": ["Save", "DELETE", "Search...", "✨ New...", "🗑️ Delete Selection"],
         "bulk_label": "Bulk Management",
         "clean_hist_label": "Clear History",
-        "dl_excel": "📗 Download Report (Pro)",
+        "dl_excel": "📗 Download Report (Excel Dashboard)",
         "logout": "🔒 Logout",
         "goal_lbl": "🎯 Goal for", "goal_btn": "💾 Save Goal",
         "new_labels": ["Client Name:", "Product Name:"],
@@ -266,14 +266,12 @@ def log_action(book, action, detail):
         book.worksheet("Historial").append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), action, f"{detail} ({u})"])
     except: pass
 
-# --- CONFIGURACIÓN PERSISTENTE ---
 def get_config(book):
     try:
         sh = book.worksheet("Config")
     except:
         sh = book.add_worksheet("Config", 100, 2)
         sh.append_row(["Key", "Value"])
-    
     records = sh.get_all_values()
     cfg = {}
     for r in records[1:]:
@@ -625,7 +623,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
         t["tabs"] = [t['tabs'][0], t['tabs'][1], t['tabs'][2], t['tabs'][3], t['tabs'][4]]
-        st.caption("v78.0 Minimalist Excel")
+        st.caption("v80.0 Excel Dashboard")
         if st.button("🔄"):
             st.cache_data.clear()
             st.rerun()
@@ -688,20 +686,16 @@ def main():
         if not df_sales.empty:
             try:
                 buffer = io.BytesIO()
-                # --- EXCEL MINIMALISTA ---
                 with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
                     df_ex = df_sales.copy()
                     df_ex['Fecha_Clean'] = df_ex['Fecha_DT'].dt.strftime('%d/%m/%Y %H:%M')
                     data_final = df_ex[['Fecha_Clean', 'Mes_Lang', 'Empresa', 'Producto', 'Kg', 'Valor_BRL', 'Comissao_BRL']].copy()
                     sheet_name = 'Reporte'
                     
-                    # Escribir solo datos desde fila 5 para dejar espacio al KPI
                     data_final.to_excel(writer, index=False, sheet_name=sheet_name, startrow=5, header=False)
-                    
                     workbook = writer.book; ws = writer.sheets[sheet_name]
-                    ws.hide_gridlines(2) # Ocultar Gridlines
+                    ws.hide_gridlines(2)
                     
-                    # FORMATOS MINIMALISTAS
                     fmt_kpi_label = workbook.add_format({'font_name': 'Calibri', 'font_size': 10, 'font_color': '#718096'})
                     fmt_kpi_num = workbook.add_format({'font_name': 'Calibri', 'font_size': 14, 'bold': True, 'font_color': '#2B6CB0'})
                     fmt_head = workbook.add_format({'bold': True, 'bg_color': '#F7FAFC', 'font_color': '#4A5568', 'bottom': 1, 'bottom_color': '#E2E8F0', 'align': 'center'})
@@ -710,7 +704,6 @@ def main():
                     fmt_num = workbook.add_format({'num_format': '0.0', 'font_name': 'Calibri', 'align': 'center'})
                     fmt_total = workbook.add_format({'bold': True, 'top': 1, 'top_color': '#CBD5E0', 'font_color': '#2D3748'})
                     
-                    # KPIS HEADER
                     ws.write(1, 1, "Vendas Totais", fmt_kpi_label)
                     ws.write(2, 1, f"R$ {data_final['Valor_BRL'].sum():,.2f}", fmt_kpi_num)
                     ws.write(1, 3, "Volume (Kg)", fmt_kpi_label)
@@ -718,22 +711,30 @@ def main():
                     ws.write(1, 5, "Comissao", fmt_kpi_label)
                     ws.write(2, 5, f"R$ {data_final['Comissao_BRL'].sum():,.2f}", fmt_kpi_num)
 
-                    # HEADERS TABLA
                     xls_headers = t.get('xls_head', ["Fecha", "Mes", "Empresa", "Producto", "Kg", "Valor", "Comisión"])
                     for col_num, h in enumerate(xls_headers): ws.write(4, col_num, h, fmt_head)
                     
-                    # COLUMNS WIDTH & FORMAT
                     ws.set_column('A:A', 18, fmt_data); ws.set_column('B:B', 12, fmt_data); ws.set_column('C:D', 22, fmt_data)
                     ws.set_column('E:E', 12, fmt_num); ws.set_column('F:G', 18, fmt_money)
                     
-                    # TOTAL FINAL
                     lr = len(data_final) + 5
                     ws.write(lr, 3, t.get('xls_tot', "TOTAL:"), fmt_total)
                     ws.write(lr, 4, data_final['Kg'].sum(), fmt_total)
                     ws.write(lr, 5, data_final['Valor_BRL'].sum(), fmt_total)
                     ws.write(lr, 6, data_final['Comissao_BRL'].sum(), fmt_total)
 
-                st.download_button(t['dl_excel'], data=buffer, file_name=f"Reporte_Minimal_{datetime.now().strftime('%Y-%m-%d')}.xlsx", mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+                    # --- EXCEL CHART (GRÁFICO) ---
+                    chart = workbook.add_chart({'type': 'column'})
+                    chart.add_series({
+                        'name':       'Vendas por Produto',
+                        'categories': [sheet_name, 5, 3, lr-1, 3], # Columna Producto
+                        'values':     [sheet_name, 5, 5, lr-1, 5], # Columna Valor
+                    })
+                    chart.set_title({'name': 'Vendas vs Produto'})
+                    chart.set_style(10)
+                    ws.insert_chart('H2', chart)
+
+                st.download_button(t['dl_excel'], data=buffer, file_name=f"Reporte_Dashboard_{datetime.now().strftime('%Y-%m-%d')}.xlsx", mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             except Exception as ex: st.warning(f"⚠️ ({ex})")
 
     # TABS
