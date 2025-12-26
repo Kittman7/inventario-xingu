@@ -208,7 +208,7 @@ TR = {
             "backup_load": "Gerando arquivo de segurança...",
             "last_sales": "📋 Últimas vendas registradas (Top 3):",
             "tot_sold": "Tot. Vendido",
-            "excel_edit_mode": "📝 Modo Edição Excel (Pode editar Nomes, Kg e Preço)",
+            "excel_edit_mode": "📝 Modo Edição Excel",
             "save_table": "💾 Salvar Alterações da Tabela",
             "show_all": "👁️ Ver Todo o Histórico",
             "lazy_msg": "Mostrando as últimas 50 entradas para velocidade.",
@@ -273,7 +273,7 @@ TR = {
             "backup_load": "Generando archivo de seguridad...",
             "last_sales": "📋 Últimas ventas registradas (Top 3):",
             "tot_sold": "Tot. Vendido",
-            "excel_edit_mode": "📝 Modo Edición Excel (Nombres, Kg y Precios)",
+            "excel_edit_mode": "📝 Modo Edición Excel",
             "save_table": "💾 Guardar Cambios de la Tabla",
             "show_all": "👁️ Ver Todo el Historial",
             "lazy_msg": "Mostrando las últimas 50 entradas para velocidad.",
@@ -338,7 +338,7 @@ TR = {
             "backup_load": "Generating security file...",
             "last_sales": "📋 Latest Sales (Top 3):",
             "tot_sold": "Tot. Sold",
-            "excel_edit_mode": "📝 Excel Edit Mode (All Fields)",
+            "excel_edit_mode": "📝 Excel Edit Mode",
             "save_table": "💾 Save Table Changes",
             "show_all": "👁️ Show Full History",
             "lazy_msg": "Showing last 50 entries for speed.",
@@ -413,6 +413,29 @@ def save_conf(book, key, val):
         sh.update_cell(cell.row, 2, str(val))
     except:
         sh.append_row([key, str(val)])
+
+# --- FUNCIÓN DE BÚSQUEDA ROBUSTA (FIX NO ENCONTRADO) ---
+def find_row_by_date(sheet, date_str):
+    """Busca una fila por la fecha (col 1), intentando ser robusto ante formatos."""
+    # 1. Intento directo
+    try:
+        return sheet.find(date_str)
+    except:
+        pass
+    
+    # 2. Intento manual (recorrer columna 1)
+    try:
+        col_values = sheet.col_values(1)
+        # Buscamos coincidencia exacta de string
+        if date_str in col_values:
+            row_idx = col_values.index(date_str) + 1
+            # Mock cell object para compatibilidad
+            class MockCell:
+                def __init__(self, r): self.row = r
+            return MockCell(row_idx)
+    except: pass
+    
+    return None
 
 # ==========================================
 # 🧩 FRAGMENTOS
@@ -665,13 +688,13 @@ def render_stock_management(t, productos_all, df_stock_in):
                 sh_stk = bk.worksheet("Estoque")
                 updated_count = 0
                 for index, row in edited_df.iterrows():
-                    try:
-                        cell = sh_stk.find(str(row['Data']))
+                    # Usamos nuestra funcion de busqueda robusta
+                    cell = find_row_by_date(sh_stk, str(row['Data']))
+                    if cell:
                         sh_stk.update_cell(cell.row, 2, row['Produto'])
                         sh_stk.update_cell(cell.row, 3, row['Kg'])
                         sh_stk.update_cell(cell.row, 4, row['Usuario'])
                         updated_count += 1
-                    except: pass
                 
                 if updated_count > 0:
                     log_action(bk, "EDIT_STOCK_TABLE", f"Modificados {updated_count} registros via Tabela")
@@ -691,7 +714,6 @@ def render_stock_management(t, productos_all, df_stock_in):
             row_label = f"📦 {r.get('Produto', '?')} | {r.get('Data', '?')} | {r.get('Kg', 0)}kg"
             with st.expander(row_label):
                 c_esk1, c_esk2 = st.columns(2)
-                # Inputs para editar individualmente
                 new_stk_prod = c_esk1.text_input(t['forms'][1], value=str(r.get('Produto', '')), key=f"ed_stk_p_{i}")
                 new_stk_kg = c_esk2.number_input("Kg", value=float(r.get('Kg', 0)), step=1.0, key=f"ed_stk_k_{i}")
                 
@@ -701,27 +723,34 @@ def render_stock_management(t, productos_all, df_stock_in):
                     with st.spinner(f"{t['alerts']['updating']}"):
                         bk = get_book_direct()
                         sh_stk = bk.worksheet("Estoque")
-                        try:
-                            cell = sh_stk.find(str(r['Data']))
+                        cell = find_row_by_date(sh_stk, str(r['Data']))
+                        if cell:
                             def do_stk_update():
                                 sh_stk.update_cell(cell.row, 2, new_stk_prod) 
                                 sh_stk.update_cell(cell.row, 3, new_stk_kg)   
                             success, err = safe_api_action(do_stk_update)
                             if success: 
-                                log_action(bk, "EDIT_STOCK", f"Editado: {r['Data']} | {r['Produto']} -> {new_stk_prod} | {r['Kg']}kg -> {new_stk_kg}kg")
+                                # DETALLE DE CAMBIOS
+                                diffs = []
+                                if str(r['Produto']) != str(new_stk_prod): diffs.append(f"Prod: {r['Produto']}->{new_stk_prod}")
+                                if float(r['Kg']) != float(new_stk_kg): diffs.append(f"Kg: {r['Kg']}->{new_stk_kg}")
+                                
+                                log_msg = f"Editado Stock: {r['Data']} | " + " | ".join(diffs)
+                                log_action(bk, "EDIT_STOCK", log_msg)
+                                
                                 st.cache_data.clear()
                                 st.toast(t['msgs'][3], icon="💾")
                                 time.sleep(0.5)
                                 st.rerun()
                             else: st.error(f"Error: {err}")
-                        except: st.error("No encontré la fila.")
+                        else: st.error("No encontré la fila (Error de formato de fecha).")
 
                 if c_btn_s2.button(t['del_entry'], key=f"del_stk_{i}", type="secondary"):
                     with st.spinner(f"{t['alerts']['deleting']}"):
                         bk = get_book_direct()
                         sh_stk = bk.worksheet("Estoque")
-                        try:
-                            cell = sh_stk.find(str(r['Data']))
+                        cell = find_row_by_date(sh_stk, str(r['Data']))
+                        if cell:
                             def do_stk_del(): sh_stk.delete_rows(cell.row)
                             success, err = safe_api_action(do_stk_del)
                             if success: 
@@ -731,7 +760,7 @@ def render_stock_management(t, productos_all, df_stock_in):
                                 time.sleep(0.5)
                                 st.rerun()
                             else: st.error(f"Error: {err}")
-                        except: st.error("Error.")
+                        else: st.error("Error: No se encuentra la fila.")
 
     else:
         st.info(t['msgs'][2])
@@ -758,6 +787,7 @@ def render_sales_management(t, df_sales, s):
         st.caption(f"{t['alerts']['excel_edit_mode']}")
         df_editor_sales = df_filtered.iloc[::-1].copy()
         
+        # PERMITIMOS EDITAR EMPRESA Y PRODUCTO
         edited_sales = st.data_editor(
             df_editor_sales,
             use_container_width=True,
@@ -775,15 +805,15 @@ def render_sales_management(t, df_sales, s):
                 sh_sl = bk.get_worksheet(0)
                 updated_count = 0
                 for index, row in edited_sales.iterrows():
-                    try:
-                        cell = sh_sl.find(str(row['Fecha_Registro']))
+                    # Usamos busqueda robusta
+                    cell = find_row_by_date(sh_sl, str(row['Fecha_Registro']))
+                    if cell:
                         sh_sl.update_cell(cell.row, 1, row['Empresa'])
                         sh_sl.update_cell(cell.row, 2, row['Producto'])
                         sh_sl.update_cell(cell.row, 3, row['Kg'])
                         sh_sl.update_cell(cell.row, 4, row['Valor_BRL'])
                         sh_sl.update_cell(cell.row, 5, float(row['Valor_BRL']) * 0.02)
                         updated_count += 1
-                    except: pass
                 
                 if updated_count > 0:
                     log_action(bk, "EDIT_SALES_TABLE", f"Modificados {updated_count} vendas via Tabela")
@@ -793,7 +823,7 @@ def render_sales_management(t, df_sales, s):
                 time.sleep(1)
                 st.rerun()
         
-        # LISTA INDIVIDUAL
+        # LISTA INDIVIDUAL RESTAURADA PARA VENTAS TAMBIÉN
         st.write("---")
         st.caption(f"{t['alerts']['manual_mode']}")
         
@@ -809,34 +839,48 @@ def render_sales_management(t, df_sales, s):
                 c_ed1, c_ed2 = st.columns(2)
                 new_kg = c_ed1.number_input("Kg", value=float(r['Kg']), key=f"k_{i}")
                 new_val = c_ed2.number_input("Valor", value=float(r['Valor_BRL']), key=f"v_{i}")
+                
+                # Agregamos edicion de nombre para que sea completo
+                new_emp = st.text_input("Empresa/Cliente", value=r['Empresa'], key=f"emp_{i}")
+                
                 c_btn1, c_btn2 = st.columns(2)
                 
                 if c_btn1.button(t['save_changes'], key=f"save_{i}"):
                     with st.spinner(f"{t['alerts']['updating']}"):
                         bk = get_book_direct()
                         sh_sl = bk.get_worksheet(0)
-                        try:
-                            cell = sh_sl.find(str(r['Fecha_Registro']))
+                        
+                        cell = find_row_by_date(sh_sl, str(r['Fecha_Registro']))
+                        if cell:
                             def do_update():
+                                sh_sl.update_cell(cell.row, 1, new_emp)
                                 sh_sl.update_cell(cell.row, 3, new_kg)
                                 sh_sl.update_cell(cell.row, 4, new_val)
                                 sh_sl.update_cell(cell.row, 5, new_val*0.02)
                             success, err = safe_api_action(do_update)
                             if success: 
-                                log_action(bk, "EDIT_SALE", f"Editado: {r['Fecha_Registro']} | {r['Empresa']} | {r['Kg']}kg -> {new_kg}kg")
+                                # LOG DETALLADO
+                                diffs = []
+                                if r['Empresa'] != new_emp: diffs.append(f"Cli: {r['Empresa']}->{new_emp}")
+                                if float(r['Kg']) != float(new_kg): diffs.append(f"Kg: {r['Kg']}->{new_kg}")
+                                if float(r['Valor_BRL']) != float(new_val): diffs.append(f"$: {r['Valor_BRL']}->{new_val}")
+                                
+                                log_msg = f"Edit Venda: {r['Fecha_Registro']} | " + " | ".join(diffs)
+                                log_action(bk, "EDIT_SALE", log_msg)
+                                
                                 st.cache_data.clear()
                                 st.toast(t['msgs'][3], icon="💾")
                                 time.sleep(0.5)
                                 st.rerun()
                             else: st.error(f"Error: {err}")
-                        except: st.error("No encontrado.")
+                        else: st.error("No encontrado (Error fecha).")
                 
                 if c_btn2.button(t['del_entry'], key=f"del_{i}", type="secondary"):
                     with st.spinner(f"{t['alerts']['deleting']}"):
                         bk = get_book_direct()
                         sh_sl = bk.get_worksheet(0)
-                        try:
-                            cell = sh_sl.find(str(r['Fecha_Registro']))
+                        cell = find_row_by_date(sh_sl, str(r['Fecha_Registro']))
+                        if cell:
                             def do_del(): sh_sl.delete_rows(cell.row)
                             success, err = safe_api_action(do_del)
                             if success: 
@@ -846,7 +890,7 @@ def render_sales_management(t, df_sales, s):
                                 time.sleep(0.5)
                                 st.rerun()
                             else: st.error(f"Error: {err}")
-                        except: st.error("No encontrado.")
+                        else: st.error("No encontrado.")
         
         st.write("")
         with st.expander(t['wipe_sales_title']):
@@ -947,8 +991,17 @@ def render_log(t):
                     # Intentar extraer algo útil (Nombre o Producto)
                     # Formato usual: "Editado: [Fecha] | [Empresa] | [Cambio]"
                     parts = details.split('|')
+                    possible_filter = ""
                     if len(parts) > 1:
-                        possible_filter = parts[1].strip() # La empresa o producto suele estar en la parte 2
+                        # Parte 1 suele ser la Empresa o Producto
+                        possible_filter = parts[1].strip().split('->')[0].replace("Cli: ", "").replace("Prod: ", "").strip()
+                    else:
+                        # Si no hay pipes, intentamos con guiones
+                        parts_dash = details.split('-')
+                        if len(parts_dash) > 1:
+                             possible_filter = parts_dash[-1].strip()
+
+                    if possible_filter:
                         st.info(f"Seleccionado: {possible_filter}")
                         if st.button(f"🔍 Filtrar historial por '{possible_filter}'"):
                             st.session_state.log_filter_override = possible_filter
