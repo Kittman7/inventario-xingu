@@ -19,7 +19,7 @@ except ImportError:
 # 🎨 ZONA DE PERSONALIZACIÓN
 # ==========================================
 NOMBRE_EMPRESA = "Xingu CEO"
-ICONO_APP = "logo.png" # Asegúrate de que logo.png esté en GitHub
+ICONO_APP = "logo.png"
 CONTRASEÑA_MAESTRA = "Julio777" 
 # ==========================================
 
@@ -40,7 +40,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- LOGIN SIMPLE ---
+# --- LOGIN ---
 def check_password():
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
@@ -57,13 +57,11 @@ def check_password():
         with st.form("login_form"):
             input_pass = st.text_input("Senha / Contraseña", type="password")
             submit_btn = st.form_submit_button("Entrar", type="primary")
-        
         if submit_btn:
             if input_pass.strip() == CONTRASEÑA_MAESTRA:
                 st.session_state.authenticated = True
                 st.rerun()
-            else:
-                st.error("🚫 Incorrecto")
+            else: st.error("🚫 Incorrecto")
     return False
 
 # --- PDF ---
@@ -82,15 +80,13 @@ if PDF_AVAILABLE:
         pdf.cell(100, 10, f"{prod}", 1); pdf.cell(40, 10, f"{kg}", 1); pdf.cell(50, 10, f"R$ {val:,.2f}", 1)
         return pdf.output(dest='S').encode('latin-1')
 
-# --- MAPA DE MESES ---
+# --- DICCIONARIO ---
 MESES_PT = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto", 9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"}
 MONTHS_UI = {
     "Português": MESES_PT,
     "Español": {1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril", 5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto", 9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"},
     "English": {1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June", 7: "July", 8: "August", 9: "September", 10: "October", 11: "November", 12: "December"}
 }
-
-# --- DICCIONARIO ---
 TR = {
     "Português": {
         "tabs": [f"📊 {NOMBRE_EMPRESA}", "➕ Nova Venda", "🛠️ Admin (Stock)", "📜 Log"],
@@ -177,19 +173,38 @@ TR = {
 RATES = { "Português": {"s": "R$", "r": 1.0}, "Español": {"s": "$", "r": 165.0}, "English": {"s": "USD", "r": 0.18} }
 MESES_UI_SIDEBAR = {1: "Jan", 2: "Feb", 3: "Mar", 4: "Abr", 5: "Mai", 6: "Jun", 7: "Jul", 8: "Ago", 9: "Set", 10: "Out", 11: "Nov", 12: "Dez"}
 
-# --- DATA CONNECTION (CACHEADA) ---
-# Usamos caché para no saturar a Google (Error 429)
-@st.cache_resource(ttl=600) 
+# --- CONEXIÓN CACHEADA (EVITA EL ERROR 429) ---
+@st.cache_resource(ttl=3600) # El login dura 1 hora
 def get_connection():
     scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
     creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["google_credentials"], scope)
     client = gspread.authorize(creds)
     return client
 
-def get_data():
+# --- DATOS CACHEADOS (AQUÍ ESTÁ LA MAGIA) ---
+# Esto guarda los datos por 600 segundos (10 min) para no molestar a Google
+@st.cache_data(ttl=600)
+def load_cached_data():
     client = get_connection()
-    book = client.open("Inventario_Xingu_DB")
-    return book
+    try:
+        book = client.open("Inventario_Xingu_DB")
+        sheet_sales = book.get_worksheet(0) # Siempre hoja 1
+        df_sales = pd.DataFrame(sheet_sales.get_all_records())
+        
+        try:
+            sheet_stock = book.worksheet("Estoque")
+            df_stock = pd.DataFrame(sheet_stock.get_all_records())
+        except:
+            df_stock = pd.DataFrame(columns=["Data", "Produto", "Kg", "Usuario"])
+            
+        return df_sales, df_stock
+    except Exception as e:
+        return None, None
+
+# Helpers directos para escribir (no se cachean)
+def get_book_direct():
+    client = get_connection()
+    return client.open("Inventario_Xingu_DB")
 
 def log_action(book, action, detail):
     try:
@@ -218,38 +233,27 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         
         t = TR.get(lang, TR["Português"]) 
-        st.caption("v60.0 Anti-Block")
+        st.caption("v61.0 Anti-Bloqueo")
+        
+        # BOTÓN RECARGA MANUAL
+        if st.button("🔄 Actualizar Datos"):
+            st.cache_data.clear()
+            st.rerun()
+            
         if st.button(t['logout']): st.session_state.authenticated = False; st.rerun()
     
     s = RATES[lang]["s"]; r = RATES[lang]["r"]
 
-    # --- DATA LOADING (LIGERO) ---
-    df_sales = pd.DataFrame()
-    df_stock_in = pd.DataFrame()
-    book = None
-    sheet_sales = None
-    sheet_stock = None
-
-    try:
-        book = get_data()
-        sheet_sales = book.get_worksheet(0) 
-        df_sales = pd.DataFrame(sheet_sales.get_all_records())
-    except Exception as e:
-        # Si falla, es probable que sea el error de cuota o permisos
-        st.error("⚠️ Error de Conexión: Google está saturado o falta permiso.")
-        st.info("Espera 1 minuto y recarga. Si sigue fallando, verifica el correo del robot.")
-        if "429" in str(e):
-            st.warning("⏳ Has excedido el límite de velocidad de Google. ¡Espera un poco!")
+    # --- CARGA DE DATOS INTELIGENTE ---
+    df_sales, df_stock_in = load_cached_data()
+    
+    if df_sales is None:
+        st.error("⏳ Google está descansando (Error de Cuota).")
+        st.warning("Espera 1 minuto y dale al botón '🔄 Actualizar Datos' en el menú.")
         st.stop()
 
-    try:
-        sheet_stock = book.worksheet("Estoque")
-        df_stock_in = pd.DataFrame(sheet_stock.get_all_records())
-    except:
-        st.warning("⚠️ Crea la hoja 'Estoque' para gestionar inventario.")
-        df_stock_in = pd.DataFrame(columns=["Data", "Produto", "Kg", "Usuario"]) 
-
     # --- PROCESAMIENTO ---
+    # 1. Ventas
     if not df_sales.empty:
         for c in ['Valor_BRL', 'Kg', 'Comissao_BRL']:
             if c in df_sales.columns: df_sales[c] = pd.to_numeric(df_sales[c], errors='coerce').fillna(0)
@@ -261,14 +265,16 @@ def main():
         empresas, prods_sales = [], []
         df_sales = pd.DataFrame(columns=['Producto', 'Kg', 'Valor_BRL', 'Fecha_Registro', 'Empresa', 'Comissao_BRL'])
 
+    # 2. Stock
     if not df_stock_in.empty:
         df_stock_in['Kg'] = pd.to_numeric(df_stock_in['Kg'], errors='coerce').fillna(0)
         prods_stock = list(set(df_stock_in['Produto'].astype(str)))
-    else: prods_stock = []
+    else:
+        prods_stock = []
 
     productos_all = sorted(list(set(["AÇAI MÉDIO", "AÇAI POP", "CUPUAÇU"] + prods_sales + prods_stock)))
 
-    # Stock calc
+    # 3. Calculo Stock
     stock_real = {}
     for p in productos_all:
         total_in = df_stock_in[df_stock_in['Produto'] == p]['Kg'].sum() if not df_stock_in.empty else 0
@@ -279,11 +285,22 @@ def main():
     ahora = datetime.now(); periodo_clave = ahora.strftime("%Y-%m")
     with st.sidebar:
         st.write(f"**{t['goal_lbl']} {MESES_UI_SIDEBAR[ahora.month]}**")
-        db_goal = get_goal(book, periodo_clave)
-        meta = st.number_input("Meta", value=db_goal, step=1000.0, label_visibility="collapsed")
+        # Leemos la meta directamente solo si es necesario (evitar llamadas)
+        if "meta_cache" not in st.session_state:
+            try: 
+                b_meta = get_book_direct()
+                st.session_state.meta_cache = get_goal(b_meta, periodo_clave)
+            except: st.session_state.meta_cache = 0.0
+            
+        meta = st.number_input("Meta", value=st.session_state.meta_cache, step=1000.0, label_visibility="collapsed")
+        
         if st.button(t['goal_btn']):
-            log_action(book, "META_UPDATE", f"{periodo_clave}|{meta}")
-            st.success("OK!"); time.sleep(1); st.rerun()
+            try:
+                bk = get_book_direct()
+                log_action(bk, "META_UPDATE", f"{periodo_clave}|{meta}")
+                st.session_state.meta_cache = meta
+                st.success("OK!")
+            except: st.error("Error al guardar meta")
         
         val_mes = df_sales[df_sales['Fecha_Registro'].str.contains(periodo_clave, na=False)]['Valor_BRL'].sum() * r if not df_sales.empty else 0
         if meta > 0:
@@ -382,16 +399,25 @@ def main():
             st.markdown("<br>", unsafe_allow_html=True)
             if st.button(t['forms'][4], type="primary"):
                 if emp and prod:
-                    row = [emp, prod, kg, val, val*0.02, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Auto"]
-                    sheet_sales.append_row(row)
-                    log_action(book, "VENTA", f"{emp} | {kg}kg | {prod}")
-                    st.success(t['msgs'][0])
-                    if PDF_AVAILABLE:
-                        try:
-                            pdf_data = create_pdf(emp, prod, kg, val, st.session_state.username)
-                            st.download_button(t['pdf'], data=pdf_data, file_name=f"Recibo.pdf", mime="application/pdf")
-                        except: pass
-                    time.sleep(2); st.rerun()
+                    try:
+                        bk = get_book_direct() # Llamada directa para escribir
+                        sheet = bk.get_worksheet(0)
+                        row = [emp, prod, kg, val, val*0.02, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Auto"]
+                        sheet.append_row(row)
+                        log_action(bk, "VENTA", f"{emp} | {kg}kg | {prod}")
+                        
+                        st.success(t['msgs'][0])
+                        # LIMPIAR CACHE PARA QUE SE VEA EL CAMBIO
+                        st.cache_data.clear()
+                        
+                        if PDF_AVAILABLE:
+                            try:
+                                pdf_data = create_pdf(emp, prod, kg, val, st.session_state.username)
+                                st.download_button(t['pdf'], data=pdf_data, file_name=f"Recibo.pdf", mime="application/pdf")
+                            except: pass
+                        time.sleep(2); st.rerun()
+                    except Exception as e:
+                        st.error(f"Error al guardar: {e}")
 
     # 3. ADMIN
     with tab3:
@@ -402,12 +428,15 @@ def main():
             if prod_stock == "✨ Novo...": prod_stock = c_st1.text_input("Nome", key="stock_prod_new")
             kg_stock = c_st2.number_input("Kg (+)", step=10.0, key="stock_kg")
             if c_st3.button(t['stock_btn'], type="primary"):
-                if prod_stock and kg_stock > 0 and sheet_stock:
+                try:
+                    bk = get_book_direct()
+                    sh_stk = bk.worksheet("Estoque")
                     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    sheet_stock.append_row([now, prod_stock, kg_stock, st.session_state.username])
-                    log_action(book, "STOCK_ADD", f"{prod_stock} | +{kg_stock}kg")
+                    sh_stk.append_row([now, prod_stock, kg_stock, st.session_state.username])
+                    log_action(bk, "STOCK_ADD", f"{prod_stock} | +{kg_stock}kg")
+                    st.cache_data.clear()
                     st.success(t['stock_msg']); time.sleep(1.5); st.rerun()
-                elif not sheet_stock: st.error("Error: Hoja 'Estoque' missing.")
+                except: st.error("Error al guardar stock.")
 
         st.divider()
         st.subheader("Admin Ventas")
@@ -427,14 +456,26 @@ def main():
                     new_kg = c_ed1.number_input("Kg", value=float(r['Kg']), key=f"k_{i}")
                     new_val = c_ed2.number_input("Valor", value=float(r['Valor_BRL']), key=f"v_{i}")
                     c_btn1, c_btn2 = st.columns(2)
+                    
                     if c_btn1.button("💾 Guardar", key=f"save_{i}"):
-                        cell = sheet_sales.find(str(r['Fecha_Registro']))
-                        sheet_sales.update_cell(cell.row, 3, new_kg); sheet_sales.update_cell(cell.row, 4, new_val); sheet_sales.update_cell(cell.row, 5, new_val*0.02)
-                        st.success("Editado!"); time.sleep(1); st.rerun()
+                        try:
+                            bk = get_book_direct()
+                            sh_sl = bk.get_worksheet(0)
+                            cell = sh_sl.find(str(r['Fecha_Registro']))
+                            sh_sl.update_cell(cell.row, 3, new_kg); sh_sl.update_cell(cell.row, 4, new_val); sh_sl.update_cell(cell.row, 5, new_val*0.02)
+                            st.cache_data.clear()
+                            st.success("Editado!"); time.sleep(1); st.rerun()
+                        except: st.error("Error al editar")
+                        
                     if c_btn2.button(t['actions'][1], key=f"del_{i}", type="secondary"):
-                        cell = sheet_sales.find(str(r['Fecha_Registro']))
-                        sheet_sales.delete_rows(cell.row)
-                        st.success(t['msgs'][1]); time.sleep(1); st.rerun()
+                        try:
+                            bk = get_book_direct()
+                            sh_sl = bk.get_worksheet(0)
+                            cell = sh_sl.find(str(r['Fecha_Registro']))
+                            sh_sl.delete_rows(cell.row)
+                            st.cache_data.clear()
+                            st.success(t['msgs'][1]); time.sleep(1); st.rerun()
+                        except: st.error("Error al borrar")
             
             st.divider()
             with st.expander(t['bulk_label']):
@@ -443,21 +484,27 @@ def main():
                 sels = st.multiselect(t['msgs'][4], opc)
                 if st.button(t['actions'][4], type="primary"):
                     if sels:
-                        dates = [x.split(" | ")[-1] for x in sels]
-                        rows_to_del = []
-                        all_recs = sheet_sales.get_all_records()
-                        for i, r in enumerate(all_recs):
-                            if str(r['Fecha_Registro']) in dates: rows_to_del.append(i + 2)
-                        rows_to_del.sort(reverse=True)
-                        for rw in rows_to_del: sheet_sales.delete_rows(rw)
-                        log_action(book, "BORRADO_MASIVO", f"{len(rows_to_del)}")
-                        st.success(t['msgs'][1]); time.sleep(1); st.rerun()
+                        try:
+                            dates = [x.split(" | ")[-1] for x in sels]
+                            rows_to_del = []
+                            bk = get_book_direct()
+                            sh_sl = bk.get_worksheet(0)
+                            all_recs = sh_sl.get_all_records()
+                            for i, r in enumerate(all_recs):
+                                if str(r['Fecha_Registro']) in dates: rows_to_del.append(i + 2)
+                            rows_to_del.sort(reverse=True)
+                            for rw in rows_to_del: sh_sl.delete_rows(rw)
+                            log_action(bk, "BORRADO_MASIVO", f"{len(rows_to_del)}")
+                            st.cache_data.clear()
+                            st.success(t['msgs'][1]); time.sleep(1); st.rerun()
+                        except: st.error("Error borrado masivo")
 
     # 4. LOG
     with tab4:
         st.title(t['headers'][3])
         try:
-            sh_log = book.worksheet("Historial")
+            bk = get_book_direct()
+            sh_log = bk.worksheet("Historial")
             h_dt = pd.DataFrame(sh_log.get_all_records())
             if not h_dt.empty:
                 show_log = h_dt.copy()
