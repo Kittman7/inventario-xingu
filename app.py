@@ -188,7 +188,7 @@ TR = {
         "col_map": {"Fecha_Hora": "📅 Data", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"},
         "xls_head": ["Data", "Mês", "Empresa", "Produto", "Kg", "Valor (R$)", "Comissão (R$)"],
         "xls_tot": "TOTAL GERAL:",
-        "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edição", "BORRAR": "🗑️ Apagado", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"},
+        "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edição", "BORRAR": "🗑️ Apagado", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta", "EDIT_TABLE_STOCK": "✏️ Tbl Stock", "EDIT_TABLE_SALES": "✏️ Tbl Vendas"},
         "alerts": {
             "stock_out": "Estoque Esgotado",
             "stock_low": "Estoque Baixo",
@@ -207,7 +207,7 @@ TR = {
             "backup_load": "Gerando arquivo de segurança...",
             "last_sales": "📋 Últimas vendas registradas (Top 3):",
             "tot_sold": "Tot. Vendido",
-            "excel_edit_mode": "📝 Modo Edição Rápida (Excel)",
+            "excel_edit_mode": "📝 Modo Edição Excel",
             "save_table": "💾 Salvar Alterações da Tabela",
             "show_all": "👁️ Ver Todo o Histórico",
             "lazy_msg": "Mostrando as últimas 50 entradas para velocidade.",
@@ -253,7 +253,7 @@ TR = {
         "col_map": {"Fecha_Hora": "📅 Fecha", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"},
         "xls_head": ["Fecha", "Mes", "Empresa", "Producto", "Kg", "Valor ($)", "Comisión ($)"],
         "xls_tot": "TOTAL GENERAL:",
-        "val_map": {"NEW": "🆕 Nuevo", "VENTA": "💰 Venta", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Masa", "CREAR": "✨ Crear", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"},
+        "val_map": {"NEW": "🆕 Nuevo", "VENTA": "💰 Venta", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Masa", "CREAR": "✨ Crear", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta", "EDIT_TABLE_STOCK": "✏️ Tbl Stock", "EDIT_TABLE_SALES": "✏️ Tbl Ventas"},
         "alerts": {
             "stock_out": "Stock Agotado",
             "stock_low": "Stock Bajo",
@@ -272,7 +272,7 @@ TR = {
             "backup_load": "Generando archivo de seguridad...",
             "last_sales": "📋 Últimas ventas registradas (Top 3):",
             "tot_sold": "Tot. Vendido",
-            "excel_edit_mode": "📝 Modo Edición Rápida (Excel)",
+            "excel_edit_mode": "📝 Modo Edición Excel",
             "save_table": "💾 Guardar Cambios de la Tabla",
             "show_all": "👁️ Ver Todo el Historial",
             "lazy_msg": "Mostrando las últimas 50 entradas para velocidad.",
@@ -318,7 +318,7 @@ TR = {
         "col_map": {"Fecha_Hora": "📅 Date", "Accion": "⚡ Action", "Detalles": "📝 Details"},
         "xls_head": ["Date", "Month", "Company", "Product", "Kg", "Value", "Commission"],
         "xls_tot": "GRAND TOTAL:",
-        "val_map": {"NEW": "🆕 New", "VENTA": "💰 Sale", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Deleted", "BORRADO_MASIVO": "🔥 Bulk", "CREAR": "✨ Create", "HIST_DEL": "🧹 Clean", "META_UPDATE": "🎯 Goal"},
+        "val_map": {"NEW": "🆕 New", "VENTA": "💰 Sale", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Deleted", "BORRADO_MASIVO": "🔥 Bulk", "CREAR": "✨ Create", "HIST_DEL": "🧹 Clean", "META_UPDATE": "🎯 Goal", "EDIT_TABLE_STOCK": "✏️ Tbl Stock", "EDIT_TABLE_SALES": "✏️ Tbl Sales"},
         "alerts": {
             "stock_out": "Out of Stock",
             "stock_low": "Low Stock",
@@ -626,7 +626,6 @@ def render_stock_management(t, productos_all, df_stock_in):
     st.write("")
     st.divider()
     
-    # --- ZONA DE HISTÓRICO Y EDICIÓN ---
     c_laz1, c_laz2 = st.columns([3,1])
     c_laz1.subheader(t['hist_entries'])
     use_all = c_laz2.checkbox(t['alerts']['show_all'], value=False)
@@ -634,7 +633,6 @@ def render_stock_management(t, productos_all, df_stock_in):
     filtro_stock = st.text_input(t['search_stk'], key="search_stk")
     
     if not df_stock_in.empty:
-        # Lógica de visualización (Ultimos 50 o Todo)
         if not use_all and not filtro_stock:
             df_view = df_stock_in.tail(50)
             st.caption(f"⚡ {t['alerts']['lazy_msg']}")
@@ -668,6 +666,10 @@ def render_stock_management(t, productos_all, df_stock_in):
                         sh_stk.update_cell(cell.row, 4, row['Usuario'])
                         updated_count += 1
                     except: pass
+                
+                if updated_count > 0:
+                    log_action(bk, "EDIT_STOCK_TABLE", f"Modificados {updated_count} registros via Tabela")
+
                 st.cache_data.clear()
                 st.toast(f"{t['msgs'][3]} ({updated_count})", icon="💾")
                 time.sleep(1)
@@ -773,6 +775,9 @@ def render_sales_management(t, df_sales, s):
                         updated_count += 1
                     except: pass
                 
+                if updated_count > 0:
+                    log_action(bk, "EDIT_SALES_TABLE", f"Modificados {updated_count} vendas via Tabela")
+
                 st.cache_data.clear()
                 st.toast(f"{t['msgs'][3]} ({updated_count})", icon="💾")
                 time.sleep(1)
@@ -784,6 +789,11 @@ def render_sales_management(t, df_sales, s):
         
         to_edit_sales = df_filtered.iloc[::-1]
         
+        # Si NO hay filtro y NO es "Ver Todo", mostramos solo 20 para no colgar la página
+        if not filtro and not use_all and len(to_edit_sales) > 20:
+             st.info("Mostrando últimos 20 para edición manual. Use el buscador para más.")
+             to_edit_sales = to_edit_sales.head(20)
+
         for i, r in to_edit_sales.iterrows():
             with st.expander(f"💰 {r['Empresa']} | {r['Producto']} | {r['Fecha_Registro']}"):
                 c_ed1, c_ed2 = st.columns(2)
@@ -876,7 +886,12 @@ def render_sales_management(t, df_sales, s):
 
 @st.fragment
 def render_log(t):
-    st.title(t['headers'][3])
+    c_log1, c_log2 = st.columns([3, 1])
+    c_log1.title(t['headers'][3])
+    
+    # Ojo de limitaciones (Lazy Loading) para el Log también
+    use_all_log = c_log2.checkbox(t['alerts']['show_all'], value=False, key="chk_log_all")
+    
     col_btn, col_info = st.columns([1, 2])
     if col_btn.button("🔄 Cargar/Ocultar Historial", type="secondary"):
         st.session_state.show_log = not st.session_state.show_log
@@ -893,6 +908,12 @@ def render_log(t):
                     emoji_map = t['val_map'].copy()
                     show_log["Accion"] = show_log["Accion"].replace(emoji_map)
                 show_log = show_log.rename(columns=t['col_map'])
+                
+                # APLICAR LÍMITE DE VELOCIDAD
+                if not use_all_log:
+                    show_log = show_log.tail(50)
+                    st.caption(f"⚡ {t['alerts']['lazy_msg']}")
+                
                 st.dataframe(show_log.iloc[::-1], use_container_width=True)
                 st.divider()
                 st.markdown("### 🗑️")
@@ -960,7 +981,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
         t["tabs"] = [t['tabs'][0], t['tabs'][1], t['tabs'][2], t['tabs'][3], t['tabs'][4]]
-        st.caption("v94.0 Hybrid Pro")
+        st.caption("v95.0 Audit + Speed")
         if st.button("🔄"):
             st.cache_data.clear()
             st.rerun()
