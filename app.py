@@ -131,13 +131,14 @@ if PDF_AVAILABLE:
         pdf.cell(100, 10, f"{prod}", 1); pdf.cell(40, 10, f"{kg}", 1); pdf.cell(50, 10, f"R$ {val:,.2f}", 1)
         return pdf.output(dest='S').encode('latin-1')
 
-# --- TRADUCCIONES ---
+# --- TRADUCCIONES COMPLETAS ---
 MESES_PT = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto", 9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"}
 MONTHS_UI = {
     "Português": MESES_PT,
     "Español": {1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril", 5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto", 9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"},
     "English": {1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June", 7: "July", 8: "August", 9: "September", 10: "October", 11: "November", 12: "December"}
 }
+
 TR = {
     "Português": {
         "tabs": [f"📊 Dashboard", "➕ Nova Venda", "📦 Estoque", "💰 Admin Vendas", "📜 Log"],
@@ -146,24 +147,24 @@ TR = {
         "charts": ["Tendência", "Mix Produtos", "Por Empresa"],
         "stock_add_title": "📦 Adicionar Estoque (Entradas)",
         "stock_btn": "➕ Adicionar",
-        "stock_alert": "Estoque Atual (Entradas - Vendas)",
+        "stock_alert": "Monitoramento de Estoque",
         "table_title": "Detalhes",
         "forms": ["Cliente", "Produto", "Kg", "Valor (R$)", "✅ Confirmar Venda"],
         "actions": ["Salvar", "DELETAR", "Buscar...", "✨ Novo...", "🗑️ Apagar Seleção"],
-        "bulk_label": "Gestão em Massa (Apagar Vários)",
+        "bulk_label": "Gestão em Massa",
         "clean_hist_label": "Limpeza de Histórico",
         "dl_excel": "📗 Baixar Relatório (Excel Dashboard)",
         "logout": "🔒 Sair",
         "goal_lbl": "🎯 Meta de", "goal_btn": "💾 Salvar Meta",
         "new_labels": ["Nome Cliente:", "Nome Produto:"],
         "dash_cols": {"val": "Valor", "com": "Comissão", "kg": "Kg", "emp": "Empresa", "prod": "Produto", "mes": "Mês"},
-        "msgs": ["Sucesso!", "Apagado!", "Sem dados", "Atualizado!", "Seleccione items"],
+        "msgs": ["Sucesso!", "Apagado!", "Sem dados", "Atualizado!", "Selecione items"],
         "stock_msg": "Estoque Adicionado!",
         "user_lbl": "Usuário / Responsável",
         "filter_viz": "👁️ Ver apenas estes produtos:",
         "save_view": "💾 Salvar Vista Padrão",
         "hist_entries": "Histórico de Entradas",
-        "search_stk": "🔍 Buscar no histórico de estoque:",
+        "search_stk": "🔍 Buscar no histórico:",
         "edit_del_stk": "Editar ou Apagar Entrada",
         "save_changes": "💾 Salvar Alterações",
         "del_entry": "🗑️ Apagar Entrada",
@@ -178,7 +179,27 @@ TR = {
         "col_map": {"Fecha_Hora": "📅 Data", "Accion": "⚡ Ação", "Detalles": "📝 Detalhes"},
         "xls_head": ["Data", "Mês", "Empresa", "Produto", "Kg", "Valor (R$)", "Comissão (R$)"],
         "xls_tot": "TOTAL GERAL:",
-        "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edição", "BORRAR": "🗑️ Apagado", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"}
+        "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edição", "BORRAR": "🗑️ Apagado", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"},
+        # --- NUEVOS MENSAJES DINÁMICOS ---
+        "alerts": {
+            "stock_out": "Estoque Esgotado",
+            "stock_low": "Estoque Baixo",
+            "stock_ok": "Estoque Disponível",
+            "err_stock": "Erro: Estoque insuficiente. Você tem",
+            "try_sell": "kg e tenta vender",
+            "saving": "Salvando venda...",
+            "sold_ok": "Venda registrada com sucesso!",
+            "adding": "Adicionando estoque...",
+            "deleting": "Apagando...",
+            "wiping": "Excluindo TUDO...",
+            "updating": "Atualizando...",
+            "backup_title": "🛡️ Área de Segurança (Backup)",
+            "backup_desc": "Baixe uma cópia completa de todo o banco de dados.",
+            "backup_btn": "📦 Baixar Backup Completo",
+            "backup_load": "Gerando arquivo de segurança...",
+            "last_sales": "📋 Últimas vendas registradas (Top 3):",
+            "tot_sold": "Tot. Vendido"
+        }
     },
     "Español": {
         "tabs": [f"📊 Dashboard", "➕ Nueva Venta", "📦 Stock", "💰 Admin Ventas", "📜 Log"],
@@ -187,11 +208,11 @@ TR = {
         "charts": ["Tendencia de Ventas", "Mix de Productos", "Top Empresas"],
         "stock_add_title": "📦 Añadir Stock (Entradas)",
         "stock_btn": "➕ Sumar",
-        "stock_alert": "Stock Actual (Entradas - Ventas)",
+        "stock_alert": "Monitor de Stock",
         "table_title": "Detalle de Ventas",
         "forms": ["Cliente", "Producto", "Kg", "Valor ($)", "✅ Confirmar Venta"],
         "actions": ["Guardar", "BORRAR", "Buscar...", "✨ Nuevo...", "🗑️ Borrar Selección"],
-        "bulk_label": "Gestión Masiva (Borrar Varios)",
+        "bulk_label": "Gestión Masiva",
         "clean_hist_label": "Limpieza de Historial",
         "dl_excel": "📗 Bajar Reporte (Excel Dashboard)",
         "logout": "🔒 Salir",
@@ -204,7 +225,7 @@ TR = {
         "filter_viz": "👁️ Ver solo estos productos:",
         "save_view": "💾 Guardar Vista Predeterminada",
         "hist_entries": "Historial de Entradas",
-        "search_stk": "🔍 Buscar en historial de stock:",
+        "search_stk": "🔍 Buscar en historial:",
         "edit_del_stk": "Editar o Borrar Entrada",
         "save_changes": "💾 Guardar Cambios",
         "del_entry": "🗑️ Borrar Entrada",
@@ -219,7 +240,27 @@ TR = {
         "col_map": {"Fecha_Hora": "📅 Fecha", "Accion": "⚡ Acción", "Detalles": "📝 Detalles"},
         "xls_head": ["Fecha", "Mes", "Empresa", "Producto", "Kg", "Valor ($)", "Comisión ($)"],
         "xls_tot": "TOTAL GENERAL:",
-        "val_map": {"NEW": "🆕 Nuevo", "VENTA": "💰 Venta", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Masa", "CREAR": "✨ Crear", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"}
+        "val_map": {"NEW": "🆕 Nuevo", "VENTA": "💰 Venta", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Masa", "CREAR": "✨ Crear", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta"},
+        # --- NUEVOS MENSAJES DINÁMICOS ---
+        "alerts": {
+            "stock_out": "Stock Agotado",
+            "stock_low": "Stock Bajo",
+            "stock_ok": "Stock Disponible",
+            "err_stock": "Error: Stock insuficiente. Tienes",
+            "try_sell": "kg e intentas vender",
+            "saving": "Guardando venta...",
+            "sold_ok": "¡Venta registrada con éxito!",
+            "adding": "Sumando stock...",
+            "deleting": "Borrando...",
+            "wiping": "Eliminando TODO...",
+            "updating": "Actualizando...",
+            "backup_title": "🛡️ Zona de Seguridad (Backup)",
+            "backup_desc": "Descarga una copia completa de toda la base de datos.",
+            "backup_btn": "📦 Descargar Backup Completo",
+            "backup_load": "Generando archivo de seguridad...",
+            "last_sales": "📋 Últimas ventas registradas (Top 3):",
+            "tot_sold": "Tot. Vendido"
+        }
     },
     "English": {
         "tabs": [f"📊 Dashboard", "➕ New Sale", "📦 Stock", "💰 Admin Sales", "📜 Log"],
@@ -228,7 +269,7 @@ TR = {
         "charts": ["Sales Trend", "Product Mix", "Top Companies"],
         "stock_add_title": "📦 Add Stock (Inputs)",
         "stock_btn": "➕ Add",
-        "stock_alert": "Current Stock (Inputs - Sales)",
+        "stock_alert": "Stock Monitor",
         "table_title": "Sales Details",
         "forms": ["Client", "Product", "Kg", "Value", "✅ Confirm Sale"],
         "actions": ["Save", "DELETE", "Search...", "✨ New...", "🗑️ Delete Selection"],
@@ -260,7 +301,27 @@ TR = {
         "col_map": {"Fecha_Hora": "📅 Date", "Accion": "⚡ Action", "Detalles": "📝 Details"},
         "xls_head": ["Date", "Month", "Company", "Product", "Kg", "Value", "Commission"],
         "xls_tot": "GRAND TOTAL:",
-        "val_map": {"NEW": "🆕 New", "VENTA": "💰 Sale", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Deleted", "BORRADO_MASIVO": "🔥 Bulk", "CREAR": "✨ Create", "HIST_DEL": "🧹 Clean", "META_UPDATE": "🎯 Goal"}
+        "val_map": {"NEW": "🆕 New", "VENTA": "💰 Sale", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Deleted", "BORRADO_MASIVO": "🔥 Bulk", "CREAR": "✨ Create", "HIST_DEL": "🧹 Clean", "META_UPDATE": "🎯 Goal"},
+        # --- NUEVOS MENSAJES DINÁMICOS ---
+        "alerts": {
+            "stock_out": "Out of Stock",
+            "stock_low": "Low Stock",
+            "stock_ok": "Stock Available",
+            "err_stock": "Error: Insufficient stock. You have",
+            "try_sell": "kg and try to sell",
+            "saving": "Saving sale...",
+            "sold_ok": "Sale registered successfully!",
+            "adding": "Adding stock...",
+            "deleting": "Deleting...",
+            "wiping": "Wiping ALL...",
+            "updating": "Updating...",
+            "backup_title": "🛡️ Security Zone (Backup)",
+            "backup_desc": "Download a full copy of the entire database.",
+            "backup_btn": "📦 Download Full Backup",
+            "backup_load": "Generating security file...",
+            "last_sales": "📋 Latest Sales (Top 3):",
+            "tot_sold": "Tot. Sold"
+        }
     }
 }
 RATES = { "Português": {"s": "R$", "r": 1.0}, "Español": {"s": "$", "r": 165.0}, "English": {"s": "USD", "r": 0.18} }
@@ -374,7 +435,7 @@ def render_dashboard(t, df_sales, stock_real, sales_real, prods_stock, prods_sal
                 bk = get_book_direct()
                 val_to_save = ",".join(selected_view)
                 save_conf(bk, "stock_view_pref", val_to_save)
-                st.toast("✅ Visualização salva", icon="💾")
+                st.toast(f"✅ {t['msgs'][3]}", icon="💾")
             
             if stock_real:
                 items_to_show = {k: v for k, v in stock_real.items() if k in selected_view} if selected_view else stock_real
@@ -387,7 +448,7 @@ def render_dashboard(t, df_sales, stock_real, sales_real, prods_stock, prods_sal
                         kg_sold_total = sales_real.get(p, 0.0)
                         c_s1, c_s2 = st.columns([3, 1])
                         pct = max(0.0, min(kg_left / 1000.0, 1.0))
-                        c_s1.progress(pct, text=f"📦 **{p}**: {kg_left:,.1f} kg  •  📉 Tot. Vendido: {kg_sold_total:,.1f} kg")
+                        c_s1.progress(pct, text=f"📦 **{p}**: {kg_left:,.1f} kg  •  📉 {t['alerts']['tot_sold']}: {kg_sold_total:,.1f} kg")
                         if kg_left < 0: c_s2.error(f"⚠️ ({kg_left})")
                         elif kg_left < 50: c_s2.warning("⚠️")
                         else: c_s2.success("✅")
@@ -428,14 +489,14 @@ def render_new_sale(t, empresas, productos_all, stock_real, df_sales, s):
         
         current_stock = stock_real.get(prod, 0.0) if prod in stock_real else 0.0
         
-        # --- ALERTA DE STOCK (100% PORTUGUÊS) ---
+        # --- ALERTA DE STOCK DINÁMICA ---
         if prod in stock_real: 
             if current_stock <= 0: 
-                st.error(f"⚠️ Estoque Esgotado: {current_stock:.1f} kg")
+                st.error(f"⚠️ {t['alerts']['stock_out']}: {current_stock:.1f} kg")
             elif current_stock < 20: 
-                st.warning(f"🟠 Estoque Baixo: {current_stock:.1f} kg (Repor!)")
+                st.warning(f"🟠 {t['alerts']['stock_low']}: {current_stock:.1f} kg")
             else: 
-                st.success(f"✅ Estoque Disponível: {current_stock:.1f} kg")
+                st.success(f"✅ {t['alerts']['stock_ok']}: {current_stock:.1f} kg")
                 
         st.markdown("<br>", unsafe_allow_html=True)
         
@@ -444,9 +505,9 @@ def render_new_sale(t, empresas, productos_all, stock_real, df_sales, s):
         if st.button(t['forms'][4], type="primary"):
             if emp and prod:
                 if kg > current_stock:
-                    st.error(f"🚫 Erro: Estoque insuficiente. Você tem {current_stock:.1f} kg e tenta vender {kg:.1f} kg.")
+                    st.error(f"🚫 {t['alerts']['err_stock']} {current_stock:.1f} kg {t['alerts']['try_sell']} {kg:.1f} kg.")
                 else:
-                    with st.spinner("⏳ Salvando venda..."):
+                    with st.spinner(f"⏳ {t['alerts']['saving']}"):
                         bk = get_book_direct()
                         sheet = bk.get_worksheet(0)
                         row = [emp, prod, kg, val, val*0.02, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Auto"]
@@ -462,15 +523,15 @@ def render_new_sale(t, empresas, productos_all, stock_real, df_sales, s):
                                     st.download_button(t['pdf'], data=pdf_data, file_name=f"Recibo.pdf", mime="application/pdf")
                                 except: pass
                             success_flag = True
-                        else: st.error(f"Erro: {error}")
+                        else: st.error(f"Error: {error}")
         
         if success_flag:
-            st.toast("Venda registrada com sucesso!", icon="✅")
+            st.toast(t['alerts']['sold_ok'], icon="✅")
             time.sleep(0.5)
             st.rerun()
 
     st.divider()
-    st.caption("📋 Últimas vendas registradas (Top 3):")
+    st.caption(t['alerts']['last_sales'])
     if not df_sales.empty:
         df_mini = df_sales[['Fecha_Registro', 'Empresa', 'Producto', 'Kg', 'Valor_BRL']].iloc[::-1].head(3)
         st.dataframe(df_mini, use_container_width=True, hide_index=True, column_config={
@@ -493,7 +554,7 @@ def render_stock_management(t, productos_all, df_stock_in):
         success_stock = False
         
         if c_st4.button(t['stock_btn'], type="primary"):
-            with st.spinner("📦 Adicionando estoque..."):
+            with st.spinner(f"{t['alerts']['adding']}"):
                 bk = get_book_direct()
                 try:
                     try: sh_stk = bk.worksheet("Estoque")
@@ -522,7 +583,7 @@ def render_stock_management(t, productos_all, df_stock_in):
         if check_wipe_stk:
             wipe_success = False
             if st.button(t['wipe_stk_btn'], type="primary"):
-                with st.spinner("🔥 Excluindo tudo..."):
+                with st.spinner(f"{t['alerts']['wiping']}"):
                     bk = get_book_direct()
                     try:
                         sh_stk = bk.worksheet("Estoque")
@@ -565,7 +626,7 @@ def render_stock_management(t, productos_all, df_stock_in):
                 del_success = False
                 
                 if c_btn_s1.button(t['save_changes'], key=f"sav_stk_{i}"):
-                    with st.spinner("Salvando alterações..."):
+                    with st.spinner(f"{t['alerts']['updating']}"):
                         bk = get_book_direct()
                         sh_stk = bk.worksheet("Estoque")
                         
@@ -584,7 +645,7 @@ def render_stock_management(t, productos_all, df_stock_in):
                             else: st.error(f"Error: {err}")
 
                 if c_btn_s2.button(t['del_entry'], key=f"del_stk_{i}", type="secondary"):
-                    with st.spinner("Apagando..."):
+                    with st.spinner(f"{t['alerts']['deleting']}"):
                         bk = get_book_direct()
                         sh_stk = bk.worksheet("Estoque")
                         
@@ -641,7 +702,7 @@ def render_sales_management(t, df_sales, s):
                 del_flag = False
                 
                 if c_btn1.button(t['save_changes'], key=f"save_{i}"):
-                    with st.spinner("Atualizando..."):
+                    with st.spinner(f"{t['alerts']['updating']}"):
                         bk = get_book_direct()
                         sh_sl = bk.get_worksheet(0)
                         try:
@@ -658,7 +719,7 @@ def render_sales_management(t, df_sales, s):
                         except: st.error("No encontrado.")
                 
                 if c_btn2.button(t['del_entry'], key=f"del_{i}", type="secondary"):
-                    with st.spinner("Excluindo..."):
+                    with st.spinner(f"{t['alerts']['deleting']}"):
                         bk = get_book_direct()
                         sh_sl = bk.get_worksheet(0)
                         try:
@@ -687,7 +748,7 @@ def render_sales_management(t, df_sales, s):
             if check_wipe_sales:
                 wipe_sales_flag = False
                 if st.button(t['wipe_sales_btn'], type="primary"):
-                    with st.spinner("Excluindo TUDO..."):
+                    with st.spinner(f"{t['alerts']['wiping']}"):
                         bk = get_book_direct()
                         sh_sl = bk.get_worksheet(0)
                         def do_wipe_sales():
@@ -705,10 +766,10 @@ def render_sales_management(t, df_sales, s):
         
         # --- ZONA DE BACKUP (NUEVA) ---
         st.divider()
-        with st.expander("🛡️ Área de Segurança (Backup)"):
-            st.info("Baixe uma cópia completa de todo o banco de dados (Vendas, Estoque e Histórico).")
-            if st.button("📦 Preparar Backup Completo"):
-                with st.spinner("Gerando arquivo de segurança..."):
+        with st.expander(t['alerts']['backup_title']):
+            st.info(t['alerts']['backup_desc'])
+            if st.button(t['alerts']['backup_btn']):
+                with st.spinner(t['alerts']['backup_load']):
                     bk = get_book_direct()
                     # LEER TODAS LAS HOJAS
                     d_sales = pd.DataFrame(bk.get_worksheet(0).get_all_records())
@@ -722,7 +783,7 @@ def render_sales_management(t, df_sales, s):
                         d_hist.to_excel(writer, sheet_name='Historial', index=False)
                     
                     st.download_button(
-                        label="📥 Baixar Arquivo de Segurança",
+                        label="📥 Download",
                         data=buffer,
                         file_name=f"Backup_Xingu_{datetime.now().strftime('%Y-%m-%d')}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -758,7 +819,7 @@ def render_log(t):
                     del_log_flag = False
                     if st.button(t['actions'][4], key="btn_h", type="primary"):
                         if sel_h:
-                            with st.spinner("Apagando registros..."):
+                            with st.spinner(f"{t['alerts']['deleting']}"):
                                 dts_h = [x.split(" | ")[0] for x in sel_h]
                                 all_vals = sh_log.get_all_values()
                                 dels = []
@@ -785,7 +846,7 @@ def render_log(t):
                 if check_danger:
                     wipe_log_flag = False
                     if col_danger2.button("🔥 BORRAR LOG", type="primary"):
-                        with st.spinner("Limpando histórico..."):
+                        with st.spinner(f"{t['alerts']['wiping']}"):
                             def do_wipe():
                                 sh_log.clear()
                                 sh_log.append_row(["Fecha_Hora", "Accion", "Detalles"])
@@ -814,7 +875,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
         t["tabs"] = [t['tabs'][0], t['tabs'][1], t['tabs'][2], t['tabs'][3], t['tabs'][4]]
-        st.caption("v89.0 100% PT-BR")
+        st.caption("v90.0 Multi-Lang Pro")
         if st.button("🔄"):
             st.cache_data.clear()
             st.rerun()
