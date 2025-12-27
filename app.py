@@ -33,10 +33,10 @@ except:
 # ==========================================
 
 # --- CONFIGURACIÓN BÁSICA ---
+# Intentamos cargar el icono para la pestaña del navegador
 try:
-    # Cargamos imagen solo para el favicon (pestaña del navegador)
-    img_favicon = Image.open(ICONO_ARCHIVO)
-    st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon=img_favicon, layout="wide", initial_sidebar_state="collapsed")
+    favicon = Image.open(ICONO_ARCHIVO)
+    st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon=favicon, layout="wide", initial_sidebar_state="collapsed")
 except:
     st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon="🍇", layout="wide", initial_sidebar_state="collapsed")
 
@@ -69,13 +69,13 @@ def inject_mobile_icon():
 
 inject_mobile_icon()
 
-# --- ESTILOS CSS OPTIMIZADOS PARA MÓVIL (SIN USO DE PYTHON DEPRECADO) ---
+# --- ESTILOS CSS OPTIMIZADOS PARA MÓVIL ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     
-    /* Métricas estilo tarjeta oscura */
+    /* Métricas estilo tarjeta */
     div[data-testid="stMetric"] {
         background-color: #1E1E1E;
         border: 1px solid #333;
@@ -84,22 +84,19 @@ st.markdown("""
         box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
     
-    /* FUERZA BRUTA: Hacer TODOS los botones anchos por defecto (Estilo Móvil) */
+    /* Botones grandes para dedos */
     .stButton > button {
-        width: 100% !important;
-        border-radius: 10px !important;
-        height: 3.5em !important;
-        font-weight: 600 !important;
-        font-size: 16px !important;
-        border: none !important;
-        transition: 0.2s !important;
+        width: 100%;
+        border-radius: 10px;
+        height: 3.5em;
+        font-weight: 600;
+        font-size: 16px;
+        border: none;
+        transition: 0.2s;
     }
-    .stButton > button:hover { 
-        transform: scale(1.01); 
-        filter: brightness(1.1);
-    }
+    .stButton > button:hover { transform: scale(1.01); }
     
-    /* Ajustes extra para móviles */
+    /* Ajustes móviles */
     @media only screen and (max-width: 600px) {
         .block-container {
             padding-top: 2rem !important;
@@ -129,18 +126,15 @@ def check_password():
     with c2:
         st.write("")
         st.write("")
-        # FIX CRÍTICO: Usar nombre de archivo STRING, no objeto PIL, para evitar KeyError en Cloud
-        try: 
-            st.image(ICONO_ARCHIVO, use_column_width=True) 
-        except: 
-            st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA}</h1>", unsafe_allow_html=True)
+        # FIX CRÍTICO: Usar string directo para evitar error de memoria
+        try: st.image(ICONO_ARCHIVO, use_column_width=True)
+        except: st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA}</h1>", unsafe_allow_html=True)
         
         st.write("")
         if not USING_SECRETS:
             st.caption("⚠️ Modo Demo")
         with st.form("login_form"):
             input_pass = st.text_input("Senha / Contraseña", type="password")
-            # CSS se encarga del ancho, no usamos argumentos deprecados
             submit_btn = st.form_submit_button("Entrar / Login", type="primary")
         if submit_btn:
             if input_pass.strip() == CONTRASEÑA_MAESTRA:
@@ -1049,16 +1043,16 @@ def main():
         st.markdown(f"<h3 style='text-align: center;'>{NOMBRE_EMPRESA}</h3>", unsafe_allow_html=True)
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         
-        # FIX: Ensure TR has keys before accessing
+        # FIX: Asegurar que TR tiene las claves antes de acceder
         t = TR.get(lang, TR["Português"]) 
         t["tabs"] = [t['tabs'][0], t['tabs'][1], t['tabs'][2], t['tabs'][3], t['tabs'][4]]
         
-        st.caption("v105.0 Cloud Stable")
+        st.caption("v106.0 Cloud Stable")
         if st.button("🔄"):
             st.cache_data.clear()
             st.rerun()
         
-        # FIX: Safe access to dictionary key to prevent crash
+        # FIX: Acceso seguro al diccionario para prevenir crash
         logout_label = t.get('logout', '🔒 Logout')
         if st.button(logout_label): 
             st.session_state.authenticated = False
@@ -1170,7 +1164,7 @@ def main():
                     chart.set_style(10)
                     ws.insert_chart('H2', chart)
 
-                st.download_button(t['dl_excel'], data=buffer, file_name=f"Reporte_Dashboard_{datetime.now().strftime('%Y-%m-%d')}.xlsx", mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
+                st.download_button(t['dl_excel'], data=buffer, file_name=f"Reporte_Dashboard_{datetime.now().strftime('%Y-%m-%d')}.xlsx", mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             except Exception as ex: st.warning(f"⚠️ ({ex})")
 
     # TABS
