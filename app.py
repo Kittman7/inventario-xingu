@@ -248,7 +248,7 @@ TR = {
         "charts": ["Trend", "Mix", "Top Companies"],
         "stock_add_title": "📦 Add Stock",
         "stock_btn": "➕ Add",
-        "stock_alert": "Monitor",
+        "stock_alert": "Stock Monitor",
         "table_title": "Details",
         "forms": ["Client", "Product", "Kg", "Value", "✅ Confirm"],
         "actions": ["Save", "DELETE", "Search...", "✨ New...", "🗑️ Delete"],
@@ -555,7 +555,6 @@ def render_stock_management(t, productos_all, df_stock_in):
     st.write("")
     st.divider()
     
-    # --- ZONA DE HISTÓRICO Y EDICIÓN ---
     c_laz1, c_laz2 = st.columns([3,1])
     c_laz1.subheader(t['hist_entries'])
     use_all = c_laz2.checkbox(t['alerts']['show_all'], value=False)
@@ -572,7 +571,6 @@ def render_stock_management(t, productos_all, df_stock_in):
         if filtro_stock:
             df_view = df_view[df_view.astype(str).apply(lambda x: x.str.contains(filtro_stock, case=False)).any(axis=1)]
         
-        # TABLA EXCEL (OPTIMIZADA SMART SAVE)
         st.caption(f"{t['alerts']['excel_edit_mode']}")
         df_editor = df_view.iloc[::-1].copy()
         
@@ -589,21 +587,13 @@ def render_stock_management(t, productos_all, df_stock_in):
                 bk = get_book_direct()
                 sh_stk = bk.worksheet("Estoque")
                 updated_count = 0
-                
-                # --- SMART SAVE: SOLO ACTUALIZAR SI CAMBIA ALGO ---
-                # Comparamos el dataframe original (df_editor) con el editado (edited_df)
-                # Ojo: Iteramos y chequeamos cambio.
-                
                 for index, row in edited_df.iterrows():
-                    # Obtenemos fila original por indice para comparar
                     try:
                         orig_row = df_editor.loc[index]
-                        # Si hay cambio en Producto, Kg o Usuario...
                         if (str(row['Produto']) != str(orig_row['Produto']) or 
                             float(row['Kg']) != float(orig_row['Kg']) or 
                             str(row['Usuario']) != str(orig_row['Usuario'])):
                             
-                            # Buscamos en Google y actualizamos
                             cell = find_row_by_date(sh_stk, str(row['Data']))
                             if cell:
                                 sh_stk.update_cell(cell.row, 2, row['Produto'])
@@ -619,9 +609,8 @@ def render_stock_management(t, productos_all, df_stock_in):
                     time.sleep(1)
                     st.rerun()
                 else:
-                    st.toast("Sin cambios detectados", icon="ℹ️")
+                    st.toast("Sin cambios", icon="ℹ️")
 
-        # LISTA INDIVIDUAL
         st.write("---")
         st.caption(f"{t['alerts']['manual_mode']}")
         
@@ -723,7 +712,6 @@ def render_sales_management(t, df_sales, s):
             df_filtered = df_filtered[df_filtered.astype(str).apply(lambda x: x.str.contains(filtro, case=False)).any(axis=1)]
             st.info(f"Resultados: {len(df_filtered)}")
         
-        # MODO EXCEL (SMART SAVE)
         st.caption(f"{t['alerts']['excel_edit_mode']}")
         df_editor_sales = df_filtered.iloc[::-1].copy()
         
@@ -743,8 +731,6 @@ def render_sales_management(t, df_sales, s):
                 bk = get_book_direct()
                 sh_sl = bk.get_worksheet(0)
                 updated_count = 0
-                
-                # --- SMART SAVE LOOP ---
                 for index, row in edited_sales.iterrows():
                     try:
                         orig_row = df_editor_sales.loc[index]
@@ -773,7 +759,6 @@ def render_sales_management(t, df_sales, s):
                 else:
                     st.toast("Sin cambios", icon="ℹ️")
         
-        # LISTA INDIVIDUAL
         st.write("---")
         st.caption(f"{t['alerts']['manual_mode']}")
         
@@ -928,13 +913,20 @@ def render_log(t):
                 # LÓGICA DE "IR AL USUARIO"
                 if selection.selection.rows:
                     idx = selection.selection.rows[0]
+                    # El índice es visual, hay que mapearlo al dataframe invertido
                     row_data = show_log.iloc[::-1].iloc[idx]
+                    
                     details = str(row_data.get(t['col_map']['Detalles'], ''))
+                    
+                    # Intentar extraer algo útil (Nombre o Producto)
+                    # Formato usual: "Editado: [Fecha] | [Empresa] | [Cambio]"
                     parts = details.split('|')
                     possible_filter = ""
                     if len(parts) > 1:
+                        # Parte 1 suele ser la Empresa o Producto
                         possible_filter = parts[1].strip().split('->')[0].replace("Cli: ", "").replace("Prod: ", "").strip()
                     else:
+                        # Si no hay pipes, intentamos con guiones
                         parts_dash = details.split('-')
                         if len(parts_dash) > 1:
                              possible_filter = parts_dash[-1].strip()
@@ -1006,7 +998,7 @@ def main():
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         t = TR.get(lang, TR["Português"]) 
         t["tabs"] = [t['tabs'][0], t['tabs'][1], t['tabs'][2], t['tabs'][3], t['tabs'][4]]
-        st.caption("v101.0 Smart Save")
+        st.caption("v101.0 Mobile Pro")
         if st.button("🔄", use_container_width=True):
             st.cache_data.clear()
             st.rerun()
