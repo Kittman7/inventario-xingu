@@ -33,13 +33,12 @@ except:
 # ==========================================
 
 # --- CONFIGURACIÓN BÁSICA ---
-# Cargamos la imagen una sola vez al principio para usarla en la config
 try:
-    img_icon = Image.open(ICONO_ARCHIVO)
+    # Cargamos imagen solo para el favicon (pestaña del navegador)
+    img_favicon = Image.open(ICONO_ARCHIVO)
+    st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon=img_favicon, layout="wide", initial_sidebar_state="collapsed")
 except:
-    img_icon = "🍇" # Fallback si no hay logo
-
-st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon=img_icon, layout="wide", initial_sidebar_state="collapsed")
+    st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon="🍇", layout="wide", initial_sidebar_state="collapsed")
 
 # --- 🚀 FUERZA BRUTA PARA EL ICONO DEL CELULAR ---
 def inject_mobile_icon():
@@ -70,11 +69,13 @@ def inject_mobile_icon():
 
 inject_mobile_icon()
 
-# --- ESTILOS CSS OPTIMIZADOS PARA MÓVIL ---
+# --- ESTILOS CSS OPTIMIZADOS PARA MÓVIL (SIN USO DE PYTHON DEPRECADO) ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+    
+    /* Métricas estilo tarjeta oscura */
     div[data-testid="stMetric"] {
         background-color: #1E1E1E;
         border: 1px solid #333;
@@ -82,16 +83,23 @@ st.markdown("""
         border-radius: 12px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
-    .stButton>button {
-        width: 100%;
-        border-radius: 10px;
-        height: 3.5em;
-        font-weight: 600;
-        font-size: 16px;
-        border: none;
-        transition: 0.2s;
+    
+    /* FUERZA BRUTA: Hacer TODOS los botones anchos por defecto (Estilo Móvil) */
+    .stButton > button {
+        width: 100% !important;
+        border-radius: 10px !important;
+        height: 3.5em !important;
+        font-weight: 600 !important;
+        font-size: 16px !important;
+        border: none !important;
+        transition: 0.2s !important;
     }
-    .stButton>button:hover { transform: scale(1.01); }
+    .stButton > button:hover { 
+        transform: scale(1.01); 
+        filter: brightness(1.1);
+    }
+    
+    /* Ajustes extra para móviles */
     @media only screen and (max-width: 600px) {
         .block-container {
             padding-top: 2rem !important;
@@ -121,9 +129,9 @@ def check_password():
     with c2:
         st.write("")
         st.write("")
-        # Intentamos mostrar el logo de forma segura
+        # FIX CRÍTICO: Usar nombre de archivo STRING, no objeto PIL, para evitar KeyError en Cloud
         try: 
-            st.image(ICONO_ARCHIVO, use_container_width=True)
+            st.image(ICONO_ARCHIVO, use_column_width=True) 
         except: 
             st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA}</h1>", unsafe_allow_html=True)
         
@@ -132,7 +140,8 @@ def check_password():
             st.caption("⚠️ Modo Demo")
         with st.form("login_form"):
             input_pass = st.text_input("Senha / Contraseña", type="password")
-            submit_btn = st.form_submit_button("Entrar / Login", type="primary", use_container_width=True)
+            # CSS se encarga del ancho, no usamos argumentos deprecados
+            submit_btn = st.form_submit_button("Entrar / Login", type="primary")
         if submit_btn:
             if input_pass.strip() == CONTRASEÑA_MAESTRA:
                 st.session_state.authenticated = True
@@ -444,7 +453,7 @@ def render_dashboard(t, df_sales, stock_real, sales_real, prods_stock, prods_sal
 
             with st.expander(t['filter_viz']):
                 selected_view = st.multiselect("Select", all_prods_display, default=default_selection, label_visibility="collapsed")
-                if st.button(t['save_view'], use_container_width=True):
+                if st.button(t['save_view']):
                     bk = get_book_direct()
                     val_to_save = ",".join(selected_view)
                     save_conf(bk, "stock_view_pref", val_to_save)
@@ -515,7 +524,7 @@ def render_new_sale(t, empresas, productos_all, stock_real, df_sales, s):
         
         success_flag = False
         
-        if st.button(t['forms'][4], type="primary", use_container_width=True):
+        if st.button(t['forms'][4], type="primary"):
             if emp and prod:
                 if kg > current_stock:
                     st.error(f"🚫 {t['alerts']['err_stock']} {current_stock:.1f} kg {t['alerts']['try_sell']} {kg:.1f} kg.")
@@ -567,7 +576,7 @@ def render_stock_management(t, productos_all, df_stock_in):
         
         success_stock = False
         
-        if st.button(t['stock_btn'], type="primary", use_container_width=True):
+        if st.button(t['stock_btn'], type="primary"):
             with st.spinner(f"{t['alerts']['adding']}"):
                 bk = get_book_direct()
                 try:
@@ -621,7 +630,7 @@ def render_stock_management(t, productos_all, df_stock_in):
             key="stock_editor"
         )
         
-        if st.button(t['alerts']['save_table'], key="save_stk_table", use_container_width=True):
+        if st.button(t['alerts']['save_table'], key="save_stk_table"):
             with st.spinner(f"{t['alerts']['updating']}"):
                 bk = get_book_direct()
                 sh_stk = bk.worksheet("Estoque")
@@ -666,7 +675,7 @@ def render_stock_management(t, productos_all, df_stock_in):
                 
                 c_btn_s1, c_btn_s2 = st.columns(2)
                 
-                if c_btn_s1.button(t['save_changes'], key=f"sav_stk_{i}", use_container_width=True):
+                if c_btn_s1.button(t['save_changes'], key=f"sav_stk_{i}"):
                     with st.spinner(f"{t['alerts']['updating']}"):
                         bk = get_book_direct()
                         sh_stk = bk.worksheet("Estoque")
@@ -689,7 +698,7 @@ def render_stock_management(t, productos_all, df_stock_in):
                             else: st.error(f"Error: {err}")
                         else: st.error("No encontré la fila.")
 
-                if c_btn_s2.button(t['del_entry'], key=f"del_stk_{i}", type="secondary", use_container_width=True):
+                if c_btn_s2.button(t['del_entry'], key=f"del_stk_{i}", type="secondary"):
                     with st.spinner(f"{t['alerts']['deleting']}"):
                         bk = get_book_direct()
                         sh_stk = bk.worksheet("Estoque")
@@ -715,7 +724,7 @@ def render_stock_management(t, productos_all, df_stock_in):
         check_wipe_stk = st.checkbox(t['wipe_stk_check'], key="chk_wipe_stk")
         if check_wipe_stk:
             wipe_success = False
-            if st.button(t['wipe_stk_btn'], type="primary", use_container_width=True):
+            if st.button(t['wipe_stk_btn'], type="primary"):
                 with st.spinner(f"{t['alerts']['wiping']}"):
                     bk = get_book_direct()
                     try:
@@ -768,7 +777,7 @@ def render_sales_management(t, df_sales, s):
             }
         )
         
-        if st.button(t['alerts']['save_table'], key="save_sales_table", use_container_width=True):
+        if st.button(t['alerts']['save_table'], key="save_sales_table"):
             with st.spinner(f"{t['alerts']['updating']}"):
                 bk = get_book_direct()
                 sh_sl = bk.get_worksheet(0)
@@ -821,7 +830,7 @@ def render_sales_management(t, df_sales, s):
                 
                 c_btn1, c_btn2 = st.columns(2)
                 
-                if c_btn1.button(t['save_changes'], key=f"save_{i}", use_container_width=True):
+                if c_btn1.button(t['save_changes'], key=f"save_{i}"):
                     with st.spinner(f"{t['alerts']['updating']}"):
                         bk = get_book_direct()
                         sh_sl = bk.get_worksheet(0)
@@ -848,7 +857,7 @@ def render_sales_management(t, df_sales, s):
                             else: st.error(f"Error: {err}")
                         else: st.error("No encontrado (Error fecha).")
                 
-                if c_btn2.button(t['del_entry'], key=f"del_{i}", type="secondary", use_container_width=True):
+                if c_btn2.button(t['del_entry'], key=f"del_{i}", type="secondary"):
                     with st.spinner(f"{t['alerts']['deleting']}"):
                         bk = get_book_direct()
                         sh_sl = bk.get_worksheet(0)
@@ -871,7 +880,7 @@ def render_sales_management(t, df_sales, s):
             check_wipe_sales = st.checkbox(t['wipe_stk_check'], key="chk_wipe_sales")
             if check_wipe_sales:
                 wipe_sales_flag = False
-                if st.button(t['wipe_sales_btn'], type="primary", use_container_width=True):
+                if st.button(t['wipe_sales_btn'], type="primary"):
                     with st.spinner(f"{t['alerts']['wiping']}"):
                         bk = get_book_direct()
                         sh_sl = bk.get_worksheet(0)
@@ -893,7 +902,7 @@ def render_sales_management(t, df_sales, s):
         st.divider()
         with st.expander(t['alerts']['backup_title']):
             st.info(t['alerts']['backup_desc'])
-            if st.button(t['alerts']['backup_btn'], use_container_width=True):
+            if st.button(t['alerts']['backup_btn']):
                 with st.spinner(t['alerts']['backup_load']):
                     bk = get_book_direct()
                     d_sales = pd.DataFrame(bk.get_worksheet(0).get_all_records())
@@ -910,22 +919,21 @@ def render_sales_management(t, df_sales, s):
                         label="📥 Download",
                         data=buffer,
                         file_name=f"Backup_Xingu_{datetime.now().strftime('%Y-%m-%d')}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        use_container_width=True
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
 
 @st.fragment
 def render_log(t):
     st.title(t['headers'][3])
     col_btn, col_info = st.columns([1, 2])
-    if col_btn.button("🔄 Cargar/Ocultar Historial", type="secondary", use_container_width=True):
+    if col_btn.button("🔄 Cargar/Ocultar Historial", type="secondary"):
         st.session_state.show_log = not st.session_state.show_log
         st.rerun()
 
     # --- FILTRO ACTIVO ---
     if st.session_state.log_filter_override:
         st.info(f"🔎 Filtrando por: **{st.session_state.log_filter_override}**")
-        if st.button("❌ Limpar Filtro", use_container_width=True):
+        if st.button("❌ Limpar Filtro"):
             st.session_state.log_filter_override = ""
             st.rerun()
 
@@ -977,7 +985,7 @@ def render_log(t):
 
                     if possible_filter:
                         st.info(f"Seleccionado: {possible_filter}")
-                        if st.button(f"🔍 Filtrar historial por '{possible_filter}'", use_container_width=True):
+                        if st.button(f"🔍 Filtrar historial por '{possible_filter}'"):
                             st.session_state.log_filter_override = possible_filter
                             st.rerun()
 
@@ -988,7 +996,7 @@ def render_log(t):
                     opc_h = [f"{r['Fecha_Hora']} | {r['Accion']} | {r['Detalles']}" for i, r in rev_h.iterrows()]
                     sel_h = st.multiselect("Items", opc_h)
                     
-                    if st.button(t['actions'][4], key="btn_h", type="primary", use_container_width=True):
+                    if st.button(t['actions'][4], key="btn_h", type="primary"):
                         if sel_h:
                             with st.spinner(f"{t['alerts']['deleting']}"):
                                 dts_h = [x.split(" | ")[0] for x in sel_h]
@@ -1013,7 +1021,7 @@ def render_log(t):
                 col_danger1, col_danger2 = st.columns([3, 1])
                 check_danger = col_danger1.checkbox(t['wipe_stk_check'])
                 if check_danger:
-                    if col_danger2.button("🔥 BORRAR LOG", type="primary", use_container_width=True):
+                    if col_danger2.button("🔥 BORRAR LOG", type="primary"):
                         with st.spinner(f"{t['alerts']['wiping']}"):
                             def do_wipe():
                                 sh_log.clear()
@@ -1036,7 +1044,7 @@ def main():
     if not check_password(): return
 
     with st.sidebar:
-        try: st.image(img_icon, use_container_width=True) 
+        try: st.image(ICONO_ARCHIVO, use_column_width=True) 
         except: st.markdown(f"<h1 style='text-align: center; font-size: 50px; margin:0;'>🍇</h1>", unsafe_allow_html=True)
         st.markdown(f"<h3 style='text-align: center;'>{NOMBRE_EMPRESA}</h3>", unsafe_allow_html=True)
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
@@ -1045,14 +1053,14 @@ def main():
         t = TR.get(lang, TR["Português"]) 
         t["tabs"] = [t['tabs'][0], t['tabs'][1], t['tabs'][2], t['tabs'][3], t['tabs'][4]]
         
-        st.caption("v104.0 Cloud Stable")
-        if st.button("🔄", use_container_width=True):
+        st.caption("v105.0 Cloud Stable")
+        if st.button("🔄"):
             st.cache_data.clear()
             st.rerun()
         
         # FIX: Safe access to dictionary key to prevent crash
         logout_label = t.get('logout', '🔒 Logout')
-        if st.button(logout_label, use_container_width=True): 
+        if st.button(logout_label): 
             st.session_state.authenticated = False
             st.rerun()
     
@@ -1102,7 +1110,7 @@ def main():
     with st.sidebar:
         st.write(f"**{t['goal_lbl']} {MESES_UI_SIDEBAR[ahora.month]}**")
         meta = st.number_input("Meta", value=saved_meta, step=1000.0, label_visibility="collapsed")
-        if st.button(t['goal_btn'], use_container_width=True):
+        if st.button(t['goal_btn']):
             bk = get_book_direct()
             save_conf(bk, "meta_goal", meta)
             st.toast("Meta Atualizada", icon="🎯")
