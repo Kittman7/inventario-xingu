@@ -35,8 +35,8 @@ except:
 # --- CONFIGURACIÓN BÁSICA ---
 # Intentamos cargar el icono para la pestaña del navegador
 try:
-    favicon = Image.open(ICONO_ARCHIVO)
-    st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon=favicon, layout="wide", initial_sidebar_state="collapsed")
+    # Usamos la ruta directa como string para evitar errores de memoria
+    st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon=ICONO_ARCHIVO, layout="wide", initial_sidebar_state="collapsed")
 except:
     st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon="🍇", layout="wide", initial_sidebar_state="collapsed")
 
@@ -75,7 +75,6 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     
-    /* Métricas estilo tarjeta */
     div[data-testid="stMetric"] {
         background-color: #1E1E1E;
         border: 1px solid #333;
@@ -84,7 +83,6 @@ st.markdown("""
         box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
     
-    /* Botones grandes para dedos */
     .stButton > button {
         width: 100%;
         border-radius: 10px;
@@ -96,7 +94,6 @@ st.markdown("""
     }
     .stButton > button:hover { transform: scale(1.01); }
     
-    /* Ajustes móviles */
     @media only screen and (max-width: 600px) {
         .block-container {
             padding-top: 2rem !important;
@@ -126,9 +123,11 @@ def check_password():
     with c2:
         st.write("")
         st.write("")
-        # FIX CRÍTICO: Usar string directo para evitar error de memoria
-        try: st.image(ICONO_ARCHIVO, use_column_width=True)
-        except: st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA}</h1>", unsafe_allow_html=True)
+        # FIX DEFINITIVO: Cargar imagen por ruta string y ancho fijo (sin comandos deprecados)
+        try: 
+            st.image(ICONO_ARCHIVO, width=200) 
+        except: 
+            st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA}</h1>", unsafe_allow_html=True)
         
         st.write("")
         if not USING_SECRETS:
@@ -707,7 +706,7 @@ def render_stock_management(t, productos_all, df_stock_in):
                                 time.sleep(0.5)
                                 st.rerun()
                             else: st.error(f"Error: {err}")
-                        else: st.error("Error.")
+                        else: st.error("No encontrado.")
 
     else:
         st.info(t['msgs'][2])
@@ -1038,7 +1037,7 @@ def main():
     if not check_password(): return
 
     with st.sidebar:
-        try: st.image(ICONO_ARCHIVO, use_column_width=True) 
+        try: st.image(ICONO_ARCHIVO, width=200) 
         except: st.markdown(f"<h1 style='text-align: center; font-size: 50px; margin:0;'>🍇</h1>", unsafe_allow_html=True)
         st.markdown(f"<h3 style='text-align: center;'>{NOMBRE_EMPRESA}</h3>", unsafe_allow_html=True)
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
@@ -1047,7 +1046,7 @@ def main():
         t = TR.get(lang, TR["Português"]) 
         t["tabs"] = [t['tabs'][0], t['tabs'][1], t['tabs'][2], t['tabs'][3], t['tabs'][4]]
         
-        st.caption("v106.0 Cloud Stable")
+        st.caption("v107.0 Cloud Stable")
         if st.button("🔄"):
             st.cache_data.clear()
             st.rerun()
@@ -1164,7 +1163,7 @@ def main():
                     chart.set_style(10)
                     ws.insert_chart('H2', chart)
 
-                st.download_button(t['dl_excel'], data=buffer, file_name=f"Reporte_Dashboard_{datetime.now().strftime('%Y-%m-%d')}.xlsx", mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+                st.download_button(t['dl_excel'], data=buffer, file_name=f"Reporte_Dashboard_{datetime.now().strftime('%Y-%m-%d')}.xlsx", mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
             except Exception as ex: st.warning(f"⚠️ ({ex})")
 
     # TABS
