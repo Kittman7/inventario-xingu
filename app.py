@@ -148,7 +148,7 @@ if PDF_AVAILABLE:
         pdf.cell(0, 10, f"Cliente: {cli}", ln=True); pdf.ln(5)
         pdf.cell(100, 10, "Produto", 1); pdf.cell(40, 10, "Kg", 1); pdf.cell(50, 10, "Valor", 1); pdf.ln()
         pdf.cell(100, 10, f"{prod}", 1); pdf.cell(40, 10, f"{kg}", 1); pdf.cell(50, 10, f"R$ {val:,.2f}", 1)
-        return pdf.output(dest='S').encode('latin-1')
+        return bytes(pdf.output())
 
 # --- TRADUCCIONES ---
 MESES_PT = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto", 9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"}
@@ -198,7 +198,18 @@ TR = {
             "backup_load": "Gerando arquivo...", "last_sales": "📋 Últimas (Top 3):", "tot_sold": "Vendido",
             "excel_edit_mode": "📝 Edição Rápida (Excel)", "save_table": "💾 Salvar Tabela (Só Modificados)",
             "show_all": "👁️ Ver Tudo", "lazy_msg": "Mostrando últimas 50.", "manual_mode": "📝 Editar Individualmente"
-        }
+        },
+        "logout": "🔒 Sair",
+        "goal_lbl": "🎯 Meta de", 
+        "goal_btn": "💾 Salvar",
+        "new_labels": ["Nome Cliente:", "Nome Produto:"],
+        "dash_cols": {"val": "Valor", "com": "Comissão", "kg": "Kg", "emp": "Empresa", "prod": "Produto", "mes": "Mês"},
+        "bulk_label": "Gestão em Massa",
+        "clean_hist_label": "Limpeza",
+        "dl_excel": "📗 Relatório (Excel)",
+        "val_map": {"NEW": "🆕 Novo", "VENTA": "💰 Venda", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edição", "BORRAR": "🗑️ Apagado", "BORRADO_MASIVO": "🔥 Massa", "CREAR": "✨ Criar", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta", "EDIT_TABLE_STOCK": "✏️ Tbl Stock", "EDIT_TABLE_SALES": "✏️ Tbl Vendas"},
+        "xls_head": ["Data", "Mês", "Empresa", "Produto", "Kg", "Valor (R$)", "Comissão (R$)"],
+        "xls_tot": "TOTAL GERAL:"
     },
     "Español": {
         "tabs": [f"📊 Dash", "➕ Venta", "📦 Stock", "💰 Admin", "📜 Log"],
@@ -239,7 +250,18 @@ TR = {
             "backup_load": "Generando...", "last_sales": "📋 Últimas (Top 3):", "tot_sold": "Vendido",
             "excel_edit_mode": "📝 Edición Rápida (Excel)", "save_table": "💾 Guardar Tabla (Solo Cambios)",
             "show_all": "👁️ Ver Todo", "lazy_msg": "Mostrando últimas 50.", "manual_mode": "📝 Editar Individualmente"
-        }
+        },
+        "logout": "🔒 Salir",
+        "goal_lbl": "🎯 Meta de", 
+        "goal_btn": "💾 Salvar",
+        "new_labels": ["Nombre Cliente:", "Nombre Producto:"],
+        "dash_cols": {"val": "Valor", "com": "Comisión", "kg": "Kg", "emp": "Empresa", "prod": "Producto", "mes": "Mes"},
+        "bulk_label": "Gestión Masiva",
+        "clean_hist_label": "Limpieza",
+        "dl_excel": "📗 Reporte (Excel)",
+        "val_map": {"NEW": "🆕 Nuevo", "VENTA": "💰 Venta", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Del", "BORRADO_MASIVO": "🔥 Masa", "CREAR": "✨ Crear", "HIST_DEL": "🧹 Limp", "META_UPDATE": "🎯 Meta", "EDIT_TABLE_STOCK": "✏️ Tbl Stock", "EDIT_TABLE_SALES": "✏️ Tbl Ventas"},
+        "xls_head": ["Fecha", "Mes", "Empresa", "Producto", "Kg", "Valor ($)", "Comisión ($)"],
+        "xls_tot": "TOTAL:"
     },
     "English": {
         "tabs": [f"📊 Dash", "➕ Sale", "📦 Stock", "💰 Admin", "📜 Log"],
@@ -280,7 +302,18 @@ TR = {
             "backup_load": "Generating...", "last_sales": "📋 Latest (Top 3):", "tot_sold": "Sold",
             "excel_edit_mode": "📝 Quick Edit (Excel)", "save_table": "💾 Save Table (Diffs Only)",
             "show_all": "👁️ Show All", "lazy_msg": "Showing last 50.", "manual_mode": "📝 Edit Individually"
-        }
+        },
+        "logout": "🔒 Logout",
+        "goal_lbl": "🎯 Goal", 
+        "goal_btn": "💾 Save",
+        "new_labels": ["Client Name:", "Product Name:"],
+        "dash_cols": {"val": "Value", "com": "Comm", "kg": "Kg", "emp": "Company", "prod": "Product", "mes": "Month"},
+        "bulk_label": "Bulk Mgmt",
+        "clean_hist_label": "Clean",
+        "dl_excel": "📗 Report",
+        "val_map": {"NEW": "🆕 New", "VENTA": "💰 Sale", "STOCK_ADD": "📦 Stock", "EDITAR": "✏️ Edit", "BORRAR": "🗑️ Deleted", "BORRADO_MASIVO": "🔥 Bulk", "CREAR": "✨ Create", "HIST_DEL": "🧹 Clean", "META_UPDATE": "🎯 Goal", "EDIT_TABLE_STOCK": "✏️ Tbl Stock", "EDIT_TABLE_SALES": "✏️ Tbl Sales"},
+        "xls_head": ["Date", "Month", "Company", "Product", "Kg", "Value", "Commission"],
+        "xls_tot": "TOTAL:"
     }
 }
 RATES = { "Português": {"s": "R$", "r": 1.0}, "Español": {"s": "$", "r": 165.0}, "English": {"s": "USD", "r": 0.18} }
@@ -913,20 +946,13 @@ def render_log(t):
                 # LÓGICA DE "IR AL USUARIO"
                 if selection.selection.rows:
                     idx = selection.selection.rows[0]
-                    # El índice es visual, hay que mapearlo al dataframe invertido
                     row_data = show_log.iloc[::-1].iloc[idx]
-                    
                     details = str(row_data.get(t['col_map']['Detalles'], ''))
-                    
-                    # Intentar extraer algo útil (Nombre o Producto)
-                    # Formato usual: "Editado: [Fecha] | [Empresa] | [Cambio]"
                     parts = details.split('|')
                     possible_filter = ""
                     if len(parts) > 1:
-                        # Parte 1 suele ser la Empresa o Producto
                         possible_filter = parts[1].strip().split('->')[0].replace("Cli: ", "").replace("Prod: ", "").strip()
                     else:
-                        # Si no hay pipes, intentamos con guiones
                         parts_dash = details.split('-')
                         if len(parts_dash) > 1:
                              possible_filter = parts_dash[-1].strip()
@@ -992,17 +1018,25 @@ def main():
     if not check_password(): return
 
     with st.sidebar:
-        try: st.image(ICONO_APP, width=100) 
+        try: st.image(ICONO_APP, use_container_width=True) 
         except: st.markdown(f"<h1 style='text-align: center; font-size: 50px; margin:0;'>🍇</h1>", unsafe_allow_html=True)
         st.markdown(f"<h3 style='text-align: center;'>{NOMBRE_EMPRESA}</h3>", unsafe_allow_html=True)
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
+        
+        # FIX: Ensure TR has keys before accessing
         t = TR.get(lang, TR["Português"]) 
         t["tabs"] = [t['tabs'][0], t['tabs'][1], t['tabs'][2], t['tabs'][3], t['tabs'][4]]
-        st.caption("v101.0 Mobile Pro")
+        
+        st.caption("v102.0 Mobile Pro")
         if st.button("🔄", use_container_width=True):
             st.cache_data.clear()
             st.rerun()
-        if st.button(t['logout'], use_container_width=True): st.session_state.authenticated = False; st.rerun()
+        
+        # FIX: Safe access to dictionary key to prevent crash
+        logout_label = t.get('logout', '🔒 Logout')
+        if st.button(logout_label, use_container_width=True): 
+            st.session_state.authenticated = False
+            st.rerun()
     
     s = RATES[lang]["s"]; r = RATES[lang]["r"]
 
