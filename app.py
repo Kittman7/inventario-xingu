@@ -7,8 +7,8 @@ from oauth2client.service_account import ServiceAccountCredentials
 import time
 import io
 import xlsxwriter
-from PIL import Image
 import base64
+import os
 
 # INTENTO DE IMPORTAR FPDF
 try:
@@ -33,39 +33,38 @@ except:
 # ==========================================
 
 # --- CONFIGURACIÓN BÁSICA ---
-# Intentamos cargar el icono para la pestaña del navegador
-try:
-    # Usamos la ruta directa como string para evitar errores de memoria
-    st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon=ICONO_ARCHIVO, layout="wide", initial_sidebar_state="collapsed")
-except:
-    st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon="🍇", layout="wide", initial_sidebar_state="collapsed")
+# ESTRATEGIA SEGURA: Usamos un emoji para el icono de la pestaña.
+# Esto evita el error de lectura de archivos al arrancar la app.
+st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon="🍇", layout="wide", initial_sidebar_state="collapsed")
 
 # --- 🚀 FUERZA BRUTA PARA EL ICONO DEL CELULAR ---
 def inject_mobile_icon():
-    try:
-        with open(ICONO_ARCHIVO, "rb") as image_file:
-            encoded_string = base64.b64encode(image_file.read()).decode()
-        st.markdown(
-            f"""
-            <style>
-            </style>
-            <script>
-                var link = document.querySelector("link[rel~='icon']");
-                if (!link) {{
-                    link = document.createElement('link');
-                    link.rel = 'icon';
-                    document.getElementsByTagName('head')[0].appendChild(link);
-                }}
-                link.href = 'data:image/png;base64,{encoded_string}';
-            </script>
-            <head>
-                <link rel="apple-touch-icon" href="data:image/png;base64,{encoded_string}">
-                <link rel="shortcut icon" href="data:image/png;base64,{encoded_string}">
-            </head>
-            """,
-            unsafe_allow_html=True
-        )
-    except: pass
+    # Solo intentamos esto si el archivo existe
+    if os.path.exists(ICONO_ARCHIVO):
+        try:
+            with open(ICONO_ARCHIVO, "rb") as image_file:
+                encoded_string = base64.b64encode(image_file.read()).decode()
+            st.markdown(
+                f"""
+                <style>
+                </style>
+                <script>
+                    var link = document.querySelector("link[rel~='icon']");
+                    if (!link) {{
+                        link = document.createElement('link');
+                        link.rel = 'icon';
+                        document.getElementsByTagName('head')[0].appendChild(link);
+                    }}
+                    link.href = 'data:image/png;base64,{encoded_string}';
+                </script>
+                <head>
+                    <link rel="apple-touch-icon" href="data:image/png;base64,{encoded_string}">
+                    <link rel="shortcut icon" href="data:image/png;base64,{encoded_string}">
+                </head>
+                """,
+                unsafe_allow_html=True
+            )
+        except: pass
 
 inject_mobile_icon()
 
@@ -123,10 +122,13 @@ def check_password():
     with c2:
         st.write("")
         st.write("")
-        # FIX DEFINITIVO: Cargar imagen por ruta string y ancho fijo (sin comandos deprecados)
-        try: 
-            st.image(ICONO_ARCHIVO, width=200) 
-        except: 
+        
+        # MODO A PRUEBA DE FALLOS PARA EL LOGO
+        if os.path.exists(ICONO_ARCHIVO):
+            # Pasamos el NOMBRE DEL ARCHIVO (string), NO un objeto imagen
+            st.image(ICONO_ARCHIVO, width=200)
+        else:
+            # Si no encuentra el archivo, muestra el texto y sigue funcionando
             st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA}</h1>", unsafe_allow_html=True)
         
         st.write("")
@@ -706,7 +708,7 @@ def render_stock_management(t, productos_all, df_stock_in):
                                 time.sleep(0.5)
                                 st.rerun()
                             else: st.error(f"Error: {err}")
-                        else: st.error("No encontrado.")
+                        else: st.error("Error.")
 
     else:
         st.info(t['msgs'][2])
@@ -1037,21 +1039,23 @@ def main():
     if not check_password(): return
 
     with st.sidebar:
-        try: st.image(ICONO_ARCHIVO, width=200) 
-        except: st.markdown(f"<h1 style='text-align: center; font-size: 50px; margin:0;'>🍇</h1>", unsafe_allow_html=True)
+        # LOGO A PRUEBA DE FALLOS EN SIDEBAR
+        if os.path.exists(ICONO_ARCHIVO):
+            st.image(ICONO_ARCHIVO, width=200)
+        else:
+            st.markdown(f"<h1 style='text-align: center; font-size: 50px; margin:0;'>🍇</h1>", unsafe_allow_html=True)
+            
         st.markdown(f"<h3 style='text-align: center;'>{NOMBRE_EMPRESA}</h3>", unsafe_allow_html=True)
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
         
-        # FIX: Asegurar que TR tiene las claves antes de acceder
         t = TR.get(lang, TR["Português"]) 
         t["tabs"] = [t['tabs'][0], t['tabs'][1], t['tabs'][2], t['tabs'][3], t['tabs'][4]]
         
-        st.caption("v107.0 Cloud Stable")
+        st.caption("v108.0 Safe Cloud")
         if st.button("🔄"):
             st.cache_data.clear()
             st.rerun()
         
-        # FIX: Acceso seguro al diccionario para prevenir crash
         logout_label = t.get('logout', '🔒 Logout')
         if st.button(logout_label): 
             st.session_state.authenticated = False
@@ -1163,7 +1167,7 @@ def main():
                     chart.set_style(10)
                     ws.insert_chart('H2', chart)
 
-                st.download_button(t['dl_excel'], data=buffer, file_name=f"Reporte_Dashboard_{datetime.now().strftime('%Y-%m-%d')}.xlsx", mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
+                st.download_button(t['dl_excel'], data=buffer, file_name=f"Reporte_Dashboard_{datetime.now().strftime('%Y-%m-%d')}.xlsx", mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             except Exception as ex: st.warning(f"⚠️ ({ex})")
 
     # TABS
