@@ -33,11 +33,13 @@ except:
 # ==========================================
 
 # --- CONFIGURACIÓN BÁSICA ---
+# Cargamos la imagen una sola vez al principio para usarla en la config
 try:
     img_icon = Image.open(ICONO_ARCHIVO)
-    st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon=img_icon, layout="wide", initial_sidebar_state="collapsed")
 except:
-    st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon="🍇", layout="wide", initial_sidebar_state="collapsed")
+    img_icon = "🍇" # Fallback si no hay logo
+
+st.set_page_config(page_title=NOMBRE_EMPRESA, page_icon=img_icon, layout="wide", initial_sidebar_state="collapsed")
 
 # --- 🚀 FUERZA BRUTA PARA EL ICONO DEL CELULAR ---
 def inject_mobile_icon():
@@ -119,8 +121,12 @@ def check_password():
     with c2:
         st.write("")
         st.write("")
-        try: st.image(ICONO_ARCHIVO, use_container_width=True)
-        except: st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA}</h1>", unsafe_allow_html=True)
+        # Intentamos mostrar el logo de forma segura
+        try: 
+            st.image(ICONO_ARCHIVO, use_container_width=True)
+        except: 
+            st.markdown(f"<h1 style='text-align: center;'>🔒 {NOMBRE_EMPRESA}</h1>", unsafe_allow_html=True)
+        
         st.write("")
         if not USING_SECRETS:
             st.caption("⚠️ Modo Demo")
@@ -622,7 +628,7 @@ def render_stock_management(t, productos_all, df_stock_in):
                 updated_count = 0
                 for index, row in edited_df.iterrows():
                     try:
-                        # KEYERROR FIX: Verificamos que el índice exista en el dataframe original
+                        # KEYERROR FIX: Verificamos que el índice exista
                         if index in df_editor.index:
                             orig_row = df_editor.loc[index]
                             
@@ -951,13 +957,20 @@ def render_log(t):
                 # LÓGICA DE "IR AL USUARIO"
                 if selection.selection.rows:
                     idx = selection.selection.rows[0]
+                    # El índice es visual, hay que mapearlo al dataframe invertido
                     row_data = show_log.iloc[::-1].iloc[idx]
+                    
                     details = str(row_data.get(t['col_map']['Detalles'], ''))
+                    
+                    # Intentar extraer algo útil (Nombre o Producto)
+                    # Formato usual: "Editado: [Fecha] | [Empresa] | [Cambio]"
                     parts = details.split('|')
                     possible_filter = ""
                     if len(parts) > 1:
+                        # Parte 1 suele ser la Empresa o Producto
                         possible_filter = parts[1].strip().split('->')[0].replace("Cli: ", "").replace("Prod: ", "").strip()
                     else:
+                        # Si no hay pipes, intentamos con guiones
                         parts_dash = details.split('-')
                         if len(parts_dash) > 1:
                              possible_filter = parts_dash[-1].strip()
@@ -1023,7 +1036,7 @@ def main():
     if not check_password(): return
 
     with st.sidebar:
-        try: st.image(ICONO_APP, use_container_width=True) 
+        try: st.image(img_icon, use_container_width=True) 
         except: st.markdown(f"<h1 style='text-align: center; font-size: 50px; margin:0;'>🍇</h1>", unsafe_allow_html=True)
         st.markdown(f"<h3 style='text-align: center;'>{NOMBRE_EMPRESA}</h3>", unsafe_allow_html=True)
         lang = st.selectbox("Idioma", ["Português", "Español", "English"])
@@ -1032,7 +1045,7 @@ def main():
         t = TR.get(lang, TR["Português"]) 
         t["tabs"] = [t['tabs'][0], t['tabs'][1], t['tabs'][2], t['tabs'][3], t['tabs'][4]]
         
-        st.caption("v102.0 Mobile Pro")
+        st.caption("v104.0 Cloud Stable")
         if st.button("🔄", use_container_width=True):
             st.cache_data.clear()
             st.rerun()
