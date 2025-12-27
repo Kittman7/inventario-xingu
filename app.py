@@ -622,17 +622,20 @@ def render_stock_management(t, productos_all, df_stock_in):
                 updated_count = 0
                 for index, row in edited_df.iterrows():
                     try:
-                        orig_row = df_editor.loc[index]
-                        if (str(row['Produto']) != str(orig_row['Produto']) or 
-                            float(row['Kg']) != float(orig_row['Kg']) or 
-                            str(row['Usuario']) != str(orig_row['Usuario'])):
+                        # KEYERROR FIX: Verificamos que el índice exista en el dataframe original
+                        if index in df_editor.index:
+                            orig_row = df_editor.loc[index]
                             
-                            cell = find_row_by_date(sh_stk, str(row['Data']))
-                            if cell:
-                                sh_stk.update_cell(cell.row, 2, row['Produto'])
-                                sh_stk.update_cell(cell.row, 3, row['Kg'])
-                                sh_stk.update_cell(cell.row, 4, row['Usuario'])
-                                updated_count += 1
+                            if (str(row['Produto']) != str(orig_row['Produto']) or 
+                                float(row['Kg']) != float(orig_row['Kg']) or 
+                                str(row['Usuario']) != str(orig_row['Usuario'])):
+                                
+                                cell = find_row_by_date(sh_stk, str(row['Data']))
+                                if cell:
+                                    sh_stk.update_cell(cell.row, 2, row['Produto'])
+                                    sh_stk.update_cell(cell.row, 3, row['Kg'])
+                                    sh_stk.update_cell(cell.row, 4, row['Usuario'])
+                                    updated_count += 1
                     except: pass
                 
                 if updated_count > 0:
@@ -766,21 +769,23 @@ def render_sales_management(t, df_sales, s):
                 updated_count = 0
                 for index, row in edited_sales.iterrows():
                     try:
-                        orig_row = df_editor_sales.loc[index]
-                        
-                        if (str(row['Empresa']) != str(orig_row['Empresa']) or
-                            str(row['Producto']) != str(orig_row['Producto']) or
-                            float(row['Kg']) != float(orig_row['Kg']) or 
-                            float(row['Valor_BRL']) != float(orig_row['Valor_BRL'])):
+                        # KEYERROR FIX: Verificamos que el índice exista
+                        if index in df_editor_sales.index:
+                            orig_row = df_editor_sales.loc[index]
                             
-                            cell = find_row_by_date(sh_sl, str(row['Fecha_Registro']))
-                            if cell:
-                                sh_sl.update_cell(cell.row, 1, row['Empresa'])
-                                sh_sl.update_cell(cell.row, 2, row['Producto'])
-                                sh_sl.update_cell(cell.row, 3, row['Kg'])
-                                sh_sl.update_cell(cell.row, 4, row['Valor_BRL'])
-                                sh_sl.update_cell(cell.row, 5, float(row['Valor_BRL']) * 0.02)
-                                updated_count += 1
+                            if (str(row['Empresa']) != str(orig_row['Empresa']) or
+                                str(row['Producto']) != str(orig_row['Producto']) or
+                                float(row['Kg']) != float(orig_row['Kg']) or 
+                                float(row['Valor_BRL']) != float(orig_row['Valor_BRL'])):
+                                
+                                cell = find_row_by_date(sh_sl, str(row['Fecha_Registro']))
+                                if cell:
+                                    sh_sl.update_cell(cell.row, 1, row['Empresa'])
+                                    sh_sl.update_cell(cell.row, 2, row['Producto'])
+                                    sh_sl.update_cell(cell.row, 3, row['Kg'])
+                                    sh_sl.update_cell(cell.row, 4, row['Valor_BRL'])
+                                    sh_sl.update_cell(cell.row, 5, float(row['Valor_BRL']) * 0.02)
+                                    updated_count += 1
                     except: pass
                 
                 if updated_count > 0:
