@@ -1,11 +1,12 @@
-sstreamlit
+streamlit
 pandas
 plotly
 gspread
 oauth2client
-xlsxwriter
+XlsxWriter
 fpdf
 Pillow
+
 
 
 
